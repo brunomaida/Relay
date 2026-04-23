@@ -20,6 +20,7 @@ public sealed unsafe class RamPipe<T> : DispatchPipe<T> where T : unmanaged
 
     private long _head;
     private long _tail;
+    private bool _disposed;
 
     public RamPipe(long capacity = DefaultCapacity)
     {
@@ -58,6 +59,12 @@ public sealed unsafe class RamPipe<T> : DispatchPipe<T> where T : unmanaged
         }
     }
 
-    public override void Flush()   { }
-    public override void Dispose() => NativeMemory.Free(_buffer);
+    public override void Flush() { }
+
+    public override void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        NativeMemory.Free(_buffer);
+    }
 }

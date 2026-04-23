@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Relay.Pipes;
 
@@ -22,10 +23,11 @@ public sealed class MmfPipe<T> : SpscQueuePipe<T> where T : unmanaged
     private readonly MemoryMappedViewAccessor   _view;
     private readonly long                        _maxBytes;
 
+    // Written by consumer thread via Volatile.Write; read by producer thread via Volatile.Read in IsHealthy.
     private long _position;
 
     /// <summary>True while the file has remaining capacity.</summary>
-    public override bool IsHealthy => _healthy && _position + EntrySize <= _maxBytes;
+    public override bool IsHealthy => _healthy && Volatile.Read(ref _position) + EntrySize <= _maxBytes;
 
     public MmfPipe(
         string path,
@@ -45,7 +47,7 @@ public sealed class MmfPipe<T> : SpscQueuePipe<T> where T : unmanaged
     protected override void WriteToBackend(in T item)
     {
         _view.Write(_position, ref Unsafe.AsRef(in item));
-        _position += EntrySize;
+        Volatile.Write(ref _position, _position + EntrySize);
     }
 
     protected override void FlushBackend()   => _view.Flush();
