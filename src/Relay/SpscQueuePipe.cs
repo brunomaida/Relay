@@ -53,8 +53,12 @@ public abstract class SpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
     /// <summary>Non-null when the consumer thread crashed. Read on cold path only.</summary>
     public Exception? ConsumerException => _consumerException;
 
-    /// <summary>True when the backend is healthy and the ring has at least one free slot.</summary>
-    public override bool IsHealthy => _healthy && !_ring.IsFull;
+    /// <summary>
+    /// True when the backend is healthy. Ring capacity is NOT checked here — a full ring causes
+    /// <see cref="Accept"/> to return false, which triggers the same fallback path at lower cost
+    /// (avoids a redundant <see cref="System.Threading.Volatile.Read"/> of the consumer-owned head).
+    /// </summary>
+    public override bool IsHealthy => _healthy;
 
     /// <param name="ringCapacity">SPSC ring capacity in entries. Must be a positive power of two.</param>
     /// <param name="flushIntervalMs">Max time between forced flushes in milliseconds.</param>
@@ -167,6 +171,10 @@ public abstract class SpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
     }
 
     // On recovery, drain accumulated items back to the predecessor (which has recovered).
+    // SPSC caution: Prev.Enqueue is called from this consumer thread. If the original producer
+    // concurrently resumes feeding Prev, two threads enter Prev's Accept simultaneously — a race
+    // window proportional to cache-coherency latency. Callers must ensure the producer quiesces
+    // before this drain runs, or accept the narrow window for SPSC-violation in pathological cases.
     private void TryDrainToPrev()
     {
         if (Prev is not { IsHealthy: true }) return;
@@ -180,7 +188,7 @@ public abstract class SpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
     private bool ShouldKeepDraining()
     {
         if (_running) return true;
-        if (_ring.Count == 0) return false;
+        if (_ring.IsEmpty) return false;
         long deadline = Volatile.Read(ref _drainDeadlineTicks);
         return deadline == 0 || HfClock.NowTicks < deadline;
     }

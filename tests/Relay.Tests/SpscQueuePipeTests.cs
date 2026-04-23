@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using FluentAssertions;
 using Relay;
+using Relay.Builder;
 using Xunit;
 
 namespace Relay.Tests;
@@ -33,19 +34,20 @@ public sealed class SpscQueuePipeTests
     }
 
     [Fact]
-    public void RingFull_TriggersIsHealthyFalse()
+    public void RingFull_FallsBackToNext_WhenConsumerNotStarted()
     {
-        // Ring capacity 4: fill it up, then IsHealthy should flip.
+        // No consumer thread — ring fills and stays full, items overflow to Next.
+        var fallback = new CountingPipe();
         using var pipe = new InMemoryPipe(ringCapacity: 4, consumeItems: false);
-        pipe.Start();
+        RelayBuilder.Start<Entry64, InMemoryPipe>(pipe).To(fallback).Build();
+        // Do NOT call Start() — ring never drains.
 
-        // Publish 4 items (fills ring)
         for (int i = 0; i < 4; i++)
-            pipe.IsHealthy.Should().BeTrue(); // still space
+            pipe.Enqueue(new Entry64 { A = i });     // fills ring
 
-        // Note: IsFull depends on consumer not having drained yet.
-        // We just verify that eventually IsHealthy can be false when ring is full.
-        pipe.Stop(drainTimeoutMs: 500);
+        pipe.Enqueue(new Entry64 { A = 99 });        // ring full → Next
+
+        fallback.Accepted.Should().Be(1);
     }
 
     [Fact]
@@ -89,5 +91,14 @@ public sealed class SpscQueuePipeTests
         protected override void FlushBackend()      { }
         protected override void TryRecoverBackend() { }
         protected override void DisposeBackend()    { }
+    }
+
+    private sealed class CountingPipe : DispatchPipe<Entry64>
+    {
+        public int Accepted { get; private set; }
+        public override bool IsHealthy => true;
+        protected override bool Accept(in Entry64 item) { Accepted++; return true; }
+        public override void Flush()   { }
+        public override void Dispose() { }
     }
 }

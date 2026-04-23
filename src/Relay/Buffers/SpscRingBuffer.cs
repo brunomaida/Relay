@@ -46,6 +46,13 @@ internal sealed class SpscRingBuffer<T> where T : unmanaged
         get => _tail.Value - Volatile.Read(ref _head.Value) >= Capacity;
     }
 
+    /// <summary>True when no items are available. Call from consumer thread only — head read is non-volatile.</summary>
+    internal bool IsEmpty
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _head.Value >= Volatile.Read(ref _tail.Value);
+    }
+
     /// <param name="capacity">Must be a positive power of two.</param>
     public SpscRingBuffer(int capacity)
     {

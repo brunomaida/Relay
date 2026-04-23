@@ -12,6 +12,15 @@ namespace Relay.Tests;
 public sealed class RecoveryDrainTests
 {
     [Fact]
+    public void RamPipe_Dispose_IsIdempotent()
+    {
+        var ram = new RamPipe<Entry64>(capacity: 64);
+        ram.Dispose();
+        var act = () => ram.Dispose();
+        act.Should().NotThrow();
+    }
+
+    [Fact]
     public void RamPipe_DrainTo_TransfersAllItems()
     {
         using var ram = new RamPipe<Entry64>(capacity: 64);
