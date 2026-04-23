@@ -10,3 +10,6 @@ obj/
 # OS
 Thumbs.db
 .DS_Store
+
+# BenchmarkDotNet
+BenchmarkDotNet.Artifacts/
