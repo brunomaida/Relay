@@ -72,7 +72,7 @@ public sealed class FileStreamPipe<T> : SpscQueuePipe<T> where T : unmanaged
             _healthy      = true;
             _retryDelayMs = 1_000;
         }
-        catch (IOException)
+        catch (Exception)
         {
             _retryDelayMs = Math.Min(_retryDelayMs * 2, RetryMaxDelayMs);
             _retryAfterTicks = HfClock.NowTicks + (long)_retryDelayMs * TicksPerMs;
