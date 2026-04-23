@@ -42,13 +42,6 @@ src/
     Internal/
       PipeConstraints.cs     ← internal: cache-line alignment assertion (DEBUG)
       HfClock.cs             ← internal: Stopwatch.GetTimestamp() wrapper
-tests/
-  Relay.Tests/
-    Relay.Tests.csproj
-    DispatchPipeChainTests.cs
-    SpscQueuePipeTests.cs
-    FanOutPipeTests.cs
-    RecoveryDrainTests.cs
 ```
 
 # Namespaces
@@ -63,13 +56,12 @@ tests/
 
 # Performance — Everything Is Hot Path
 
-`Enqueue` is the sole public entry point and is called at tick-rate frequency.
-**All code on the `Enqueue → Accept` path must be treated as hot path.**
+**All code on the `Enqueue → Accept` path is hot path.** `Enqueue` is called at tick-rate frequency.
 
 ## Invariants
 - **Zero allocations** in steady state. `GC.AllocateArray(pinned: true)` only in constructors.
 - **No LINQ.** Not on any path.
-- **No `lock` / `Monitor`.**  Volatile + Interlocked only.
+- **No `lock` / `Monitor`.** Volatile + Interlocked only.
 - **No `async`/`await`** in the dispatch or consume path.
 - **No `DateTime.UtcNow`.** Use `HfClock.NowTicks` (`Stopwatch.GetTimestamp()`).
 - **`[MethodImpl(AggressiveInlining)]`** on `Enqueue`, `Accept`, `TryPublish`, `TryConsume`, and `IsFull`.
@@ -107,13 +99,10 @@ tests/
 - `IsHealthy` = OR over children (short-circuit: true as soon as one child is healthy).
 - `Accept` always returns true. Fallback to `Next` only when **all** children are unhealthy (`IsHealthy == false`).
 - Items are not re-delivered to unhealthy children; they silently miss them. Fan-out is not redundancy — it is broadcast.
+- **`FanOut2Pipe<T, TC1, TC2>` CRTP variant:** prefer when `TC1` and `TC2` are `sealed` — JIT devirtualizes and inlines both `Enqueue` calls, saving ~6c. Requires concrete sealed types known at compile time.
 
 ## `FilterPipe<T>` semantics
 - `Accept` returns true even when the predicate fails. Items that fail the predicate are silently consumed; they do NOT propagate to `Next`. This is intentional — filtered items must not trigger the fallback chain.
-
-## `FanOut2Pipe<T, TC1, TC2>` CRTP variant
-- Prefer over `FanOutPipe<T>` when `TC1` and `TC2` are `sealed` — JIT devirtualizes and inlines `Enqueue`, saving ~6c.
-- Requires children to be concrete sealed types known at compile time.
 
 ## `SpscRingBuffer<T>` contract
 - SPSC: one producer thread, one consumer thread. Violating this is undefined behaviour.
@@ -123,8 +112,7 @@ tests/
 
 ## `SpscQueuePipe<T>` lifecycle
 - `Start()` must be called before `Enqueue` — spawns consumer thread and pre-faults the ring.
-- `Stop(drainTimeoutMs)` signals stop and joins with drain window.
-- `Dispose()` calls `Stop()`. Always dispose via `using` or explicit `Stop`.
+- `Stop(drainTimeoutMs)` signals stop and joins with drain window. `Dispose()` calls `Stop()` — always dispose via `using` or explicit `Stop`.
 - `IsConsuming` is false only after the consumer thread exits due to an unhandled exception.
 - `ConsumerException` is set in the catch block; read only on cold path (diagnostic).
 
@@ -135,32 +123,7 @@ tests/
 | `FileStreamPipe<T>` | `FileStream`, POH write buffer | `IOException` in `FlushBuffer` | Reopen stream, backoff 1s → 60s |
 | `TcpPipe<T>` | `TcpClient` + `NetworkStream`, POH send buffer | `Exception` in `FlushBuffer` | Reconnect, backoff 1s → 30s |
 | `MmfPipe<T>` | `MemoryMappedViewAccessor` | Capacity exhaustion (`_position + sizeof(T) > maxBytes`) | None — capacity only |
-| `RamPipe<T>` | `NativeMemory.AllocZeroed`, unsafe circular ring | Ring full | None — `DrainTo(target)` on recovery |
-
-# Builder Usage
-
-```csharp
-using Relay.Builder;
-
-// Serial: FileStream → TCP → RAM
-var head = RelayBuilder
-    .Start<Entry, FileStreamPipe<Entry>>(new FileStreamPipe<Entry>("/data/out.bin"))
-    .To(new TcpPipe<Entry>("backup", 9090))
-    .To(new RamPipe<Entry>())
-    .Build();
-
-head.Start(); // SpscQueuePipe nodes only
-head.Enqueue(in entry);
-
-// Fan-out + serial fallback
-var fan = RelayBuilder
-    .Start<Entry, FanOutPipe<Entry>>(
-        new FanOutPipe<Entry>(
-            new FileStreamPipe<Entry>("/data/primary.bin"),
-            new TcpPipe<Entry>("remote", 9090)))
-    .To(new RamPipe<Entry>())
-    .Build();
-```
+| `RamPipe<T>` | `NativeMemory.AllocZeroed`, unsafe circular ring | Ring full | None — `DrainTo(target)` on recovery. **Must free in `Dispose`.** |
 
 # Testing
 - `dotnet test tests/Relay.Tests` must pass (0 failures) before any commit.
@@ -176,15 +139,6 @@ var fan = RelayBuilder
 - **`using` directives:** explicit (no implicit usings). Group: `System.*` first, then `Relay.*`. No blank lines between groups.
 - **`unsafe` methods:** annotate with `protected override unsafe void` — never suppress the compiler warning, use the `unsafe` keyword explicitly.
 
-# Invariants Never to Break
-1. `_healthy` is written only by the consumer thread. Producer reads only.
-2. `Next` is assigned only by `PipeChain.To()`. Pipes do not self-wire.
-3. `Accept` on `FanOutPipe` always returns true. Only `IsHealthy == false` triggers fallback.
-4. `FilterPipe.Accept` always returns true. Filtered items never reach `Next`.
-5. `SpscRingBuffer` is single-producer / single-consumer. No multi-threaded access.
-6. `NativeMemory.AllocZeroed` allocations in `RamPipe` must be freed in `Dispose`.
-7. No external dependencies in `src/Relay`. The lib must compile with no NuGet references.
-
 # Git Workflow
 - Branch: `feature/<yyMMdd>-<slug>`, `fix/<yyMMdd>-<slug>`, `refactor/<yyMMdd>-<slug>`
 - Base off `develop`; merge to `develop` when stable
@@ -193,9 +147,8 @@ var fan = RelayBuilder
 - Commit gate: all unit tests passing (`dotnet test tests/Relay.Tests`)
 
 # Model Routing
-- **Sonnet** — default for implementation, refactor, tests
+- **Sonnet** — implementation, refactor, tests
 - **Opus** — architectural decisions, new concrete pipes, performance analysis, scope review
-- **Haiku** — never; not used in this project
 
 # Response Format
 1. Prose in **PT-BR**, direct, no filler
