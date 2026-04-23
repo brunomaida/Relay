@@ -30,9 +30,6 @@ public class RingBufferBenchmarks
             _ringFull.TryPublish(in _item);
     }
 
-    [IterationSetup]
-    public void IterationSetup() => _ring.Reset();
-
     /// <summary>Failed consume on empty ring — Volatile.Read(tail) + early exit.</summary>
     [Benchmark(Baseline = true)]
     public bool TryConsume_Empty() => _ring.TryConsume(out _);
