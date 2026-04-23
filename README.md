@@ -94,7 +94,7 @@ dotnet build
 dotnet test tests/Relay.Tests
 ```
 
-**Struct requirements:** `T` must be `unmanaged` and cache-line-sized (32, 64, 128, or 256 bytes). In DEBUG builds, `PipeConstraints.AssertCacheLineAligned<T>()` enforces this at construction time.
+**Struct requirements:** `T` must be `unmanaged` and a positive multiple of 64 bytes (64, 128, 192, 256, …). In DEBUG builds, `PipeConstraints.AssertCacheLineAligned<T>()` enforces this at construction time.
 
 ```csharp
 [StructLayout(LayoutKind.Explicit, Size = 64)]
@@ -308,7 +308,7 @@ var head = RelayBuilder
 | **Recovery drain** | On each flush interval, if `Prev.IsHealthy` is true, the fallback pipe drains its accumulated items back upstream via `TryDrainToPrev`. |
 | **POH send buffer** | `GC.AllocateArray<byte>(size, pinned: true)` — allocated once in the constructor, never moved by the GC, safe to pin for native I/O. |
 | **`HfClock`** | All timestamps use `Stopwatch.GetTimestamp()`. `DateTime.UtcNow` is never used on any hot path. |
-| **Cache-line alignment** | `T` must be 32, 64, 128, or 256 bytes. Enforced in DEBUG by `PipeConstraints.AssertCacheLineAligned<T>()`. |
+| **Cache-line alignment** | `sizeof(T)` must be a positive multiple of 64B so adjacent ring slots never share a cache line. Enforced in DEBUG by `PipeConstraints.AssertCacheLineAligned<T>()`. |
 | **Zero external dependencies** | `src/Relay` has no NuGet references. Tests use xUnit 2.9.2 and FluentAssertions 6.12.1 via central package management. |
 <!-- /auto:key-concepts -->
 

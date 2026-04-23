@@ -65,7 +65,7 @@ src/
 - **No `async`/`await`** in the dispatch or consume path.
 - **No `DateTime.UtcNow`.** Use `HfClock.NowTicks` (`Stopwatch.GetTimestamp()`).
 - **`[MethodImpl(AggressiveInlining)]`** on `Enqueue`, `Accept`, `TryPublish`, `TryConsume`, and `IsFull`.
-- Hot path structs must be cache-line sized: 32, 64, 128, or 256 bytes. `PipeConstraints.AssertCacheLineAligned<T>()` enforces this in DEBUG.
+- Hot path structs must be a positive multiple of 64 bytes (64, 128, 192, 256, 320, …) so adjacent ring slots never share a cache line. `PipeConstraints.AssertCacheLineAligned<T>()` enforces this in DEBUG.
 
 ## Cycle Budget (reference: Intel i9-12900K, hot caches)
 | Operation | Cycles |
