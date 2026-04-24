@@ -31,6 +31,10 @@ public sealed class SinkChainBuilderTests
         var head   = new CollectingSink();
 
         SinkChainBuilder.Start(head).Fork(audit).To(next);
+
+        // Fork is the fallback of head — items reach fork when head is unhealthy.
+        // Fork delivers to audit (primary) and propagates to next (PropagateAfterAccept=true).
+        head.SetHealthy(false);
         head.Enqueue(Payload);
 
         audit.Received.Should().HaveCount(1);
