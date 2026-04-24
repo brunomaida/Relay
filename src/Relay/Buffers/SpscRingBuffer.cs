@@ -23,8 +23,10 @@ internal sealed class SpscRingBuffer<T> where T : unmanaged
     private readonly T[]  _buffer;
     private readonly int  _mask;
 
-    private PaddedLong _head;
-    private PaddedLong _tail;
+    private PaddedLong _head;        // consumer-owned
+    private PaddedLong _cachedTail;  // consumer-only snapshot of _tail; eliminates cross-core Volatile.Read on the fast path
+    private PaddedLong _tail;        // producer-owned
+    private PaddedLong _cachedHead;  // producer-only snapshot of _head; eliminates cross-core Volatile.Read on the fast path
 
     /// <summary>Number of slots in the ring buffer.</summary>
     public int Capacity { get; }
@@ -72,11 +74,13 @@ internal sealed class SpscRingBuffer<T> where T : unmanaged
     public bool TryPublish(in T item)
     {
         long tail = _tail.Value;
-        long head = Volatile.Read(ref _head.Value);
-
-        if (tail - head >= Capacity) return false;
-
-        _buffer[tail & _mask] = item;
+        long wrap = tail - Capacity;
+        if (_cachedHead.Value <= wrap)
+        {
+            _cachedHead.Value = Volatile.Read(ref _head.Value);
+            if (_cachedHead.Value <= wrap) return false;
+        }
+        Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_buffer), (nint)(tail & _mask)) = item;
         Volatile.Write(ref _tail.Value, tail + 1);
         return true;
     }
@@ -89,11 +93,12 @@ internal sealed class SpscRingBuffer<T> where T : unmanaged
     public bool TryConsume(out T item)
     {
         long head = _head.Value;
-        long tail = Volatile.Read(ref _tail.Value);
-
-        if (head >= tail) { item = default; return false; }
-
-        item = _buffer[head & _mask];
+        if (head >= _cachedTail.Value)
+        {
+            _cachedTail.Value = Volatile.Read(ref _tail.Value);
+            if (head >= _cachedTail.Value) { item = default; return false; }
+        }
+        item = Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_buffer), (nint)(head & _mask));
         Volatile.Write(ref _head.Value, head + 1);
         return true;
     }
@@ -105,16 +110,21 @@ internal sealed class SpscRingBuffer<T> where T : unmanaged
     internal bool TryReserveTail(out long tail)
     {
         tail = _tail.Value;
-        return tail - Volatile.Read(ref _head.Value) < Capacity;
+        long wrap = tail - Capacity;
+        if (_cachedHead.Value <= wrap)
+        {
+            _cachedHead.Value = Volatile.Read(ref _head.Value);
+            if (_cachedHead.Value <= wrap) return false;
+        }
+        return true;
     }
 
     /// <summary>Writes item into the reserved slot. No memory fence — caller issues fence.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal unsafe void WriteSlot(long tail, in T item) =>
-        Unsafe.CopyBlockUnaligned(
-            ref Unsafe.As<T, byte>(ref _buffer[tail & _mask]),
-            ref Unsafe.As<T, byte>(ref Unsafe.AsRef(in item)),
-            (uint)sizeof(T));
+    internal void WriteSlot(long tail, in T item)
+    {
+        Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_buffer), (nint)(tail & _mask)) = item;
+    }
 
     /// <summary>Advances tail after all slots are written and the caller has issued a fence.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

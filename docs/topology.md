@@ -171,7 +171,11 @@
                                      │    TryConsume → WriteToBackend  │
                                      │    batch up to 256 entries      │
                                      │    idle: SpinWait→Yield→Sleep   │
-                                     │    on flush interval:           │
+                                     │    flush check:                 │
+                                     │      after batch: always        │
+                                     │      spin phase: every 8 iters  │
+                                     │      yield/sleep: always        │
+                                     │    on flush deadline:           │
                                      │      FlushBackend()             │
                                      │      TryRecoverBackend()        │
                                      │      TryDrainToPrev()           │
@@ -273,23 +277,31 @@
   └─────────────────────────────┘   └─────────────────────────────┘
   ←── separate cache lines ──────────────────────────────────────────▶
 
-  TryPublish(in T item):           TryConsume(out T item):
-  ──────────────────────           ──────────────────────
-  tail = _tail.Value               head = _head.Value
-  head = Volatile.Read(_head)      tail = Volatile.Read(_tail)
-  if tail - head >= Capacity:      if head >= tail:
-      return false  [FULL]             item = default; return false  [EMPTY]
-  buf[tail & mask] = item          item = buf[head & mask]
-  Volatile.Write(_tail, tail+1)    Volatile.Write(_head, head+1)
-  return true                      return true
+  TryPublish(in T item):                  TryConsume(out T item):
+  ──────────────────────                  ──────────────────────
+  tail = _tail.Value                      head = _head.Value
+  wrap = tail - Capacity                  if head >= _cachedTail:
+  if _cachedHead <= wrap:                     _cachedTail = Volatile.Read(_tail)
+      _cachedHead = Volatile.Read(_head)      if head >= _cachedTail:
+      if _cachedHead <= wrap:                     item = default; return false [EMPTY]
+          return false  [FULL]            item = buf*[head & mask]
+  buf*[tail & mask] = item                Volatile.Write(_head, head+1)
+  Volatile.Write(_tail, tail+1)           return true
+  return true
+
+  * Unsafe.Add(GetArrayDataReference, idx) — no bounds check (mask guarantees range).
+
+  _cachedHead / _cachedTail: producer-only / consumer-only snapshots of the remote index.
+  Volatile.Read of the remote index only occurs when the buffer appears full or empty.
+  On the fast path (buffer has space / has items) the cross-core read is skipped entirely.
 
   IsFull:
     _tail.Value - Volatile.Read(_head.Value) >= Capacity
-    (read by producer as part of IsHealthy check)
+    (read by producer as part of IsHealthy check; no cache used here — cold path)
 
   Batched-write API (for FanOut2 with shared mfence):
-    TryReserveTail(out tail) → reserve slot without write
-    WriteSlot(tail, in item) → copy data, no fence
+    TryReserveTail(out tail) → reserve slot without write (uses _cachedHead)
+    WriteSlot(tail, in item) → Unsafe.Add write, no fence
     Thread.MemoryBarrier()   → single mfence for N writes
     CommitTail(tail)         → Volatile.Write advances tail
 
@@ -375,15 +387,17 @@
 ================================================================================
 
   SpscRingBuffer<T> (object on managed heap):
-  ┌──────────────────────────────────────────────────────────────┐
-  │  object header        (8B)                                   │
-  │  T[] _buffer ref      (8B) → T[] on POH (capacity × sizeof(T)) │
-  │  int  _mask           (4B)                                   │
-  │  int  Capacity        (4B)                                   │
-  │  ─── alignment gap to 128B boundary ───                      │
-  │  PaddedLong _head     (128B) ← _head.Value at offset [64]    │
-  │  PaddedLong _tail     (128B) ← _tail.Value at offset [64]    │
-  └──────────────────────────────────────────────────────────────┘
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  object header          (8B)                                     │
+  │  T[] _buffer ref        (8B) → T[] on POH (capacity × sizeof(T))│
+  │  int  _mask             (4B)                                     │
+  │  int  Capacity          (4B)                                     │
+  │  ─── alignment gap to 128B boundary ───                          │
+  │  PaddedLong _head       (128B) ← written by consumer            │
+  │  PaddedLong _cachedTail (128B) ← consumer-only copy of _tail    │
+  │  PaddedLong _tail       (128B) ← written by producer            │
+  │  PaddedLong _cachedHead (128B) ← producer-only copy of _head    │
+  └──────────────────────────────────────────────────────────────────┘
 
   PaddedLong:
   ┌────────────────────────────────────────────────────────────┐
@@ -430,7 +444,8 @@
   ┌─────────────────────────────────────────────────────┬──────────┬──────────┐
   │ Operation                                           │ Cycles   │ ~ns      │
   ├─────────────────────────────────────────────────────┼──────────┼──────────┤
-  │ SpscRingBuffer.TryPublish (ring not full)           │   ~25c   │   ~7 ns  │
+  │ SpscRingBuffer.TryPublish (ring not full, cache hit)│   ~8-12c │   ~3 ns  │
+  │ SpscRingBuffer.TryPublish (ring not full, no cache) │   ~25c   │   ~7 ns  │
   │ SpscQueuePipe.IsHealthy (healthy, L1 hot)           │    ~7c   │   ~2 ns  │
   │ SpscQueuePipe.IsHealthy (unhealthy, short-circuit)  │    ~1c   │  <1 ns   │
   │ Volatile.Write (mfence, x64)                        │   ~15c   │   ~4 ns  │
