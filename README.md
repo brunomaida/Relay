@@ -58,7 +58,7 @@ Producer
 | Project | Layer | Description |
 |---|---|---|
 | `src/Relay` | Library | Core pipeline: pipes, builder, ring buffer, native memory |
-| `tests/Relay.Tests` | Tests | xUnit tests per concern (chain, SPSC, fan-out, recovery drain) |
+| `tests/Relay.Tests` | Tests | xUnit tests per concern (chain, SPSC, multi-broadcast, recovery drain) |
 
 **Source layout inside `src/Relay`:**
 
@@ -66,7 +66,8 @@ Producer
 |---|---|
 | `DispatchPipe<T>` | Abstract base — `Enqueue` hot path, `IsHealthy` / `Accept` contract |
 | `SpscQueuePipe<T>` | Abstract async base — SPSC ring + consumer thread + recovery |
-| `FanOutPipe<T>` / `FanOut2Pipe<T,TC1,TC2>` | Broadcast to N children |
+| `MultiPipe<T>` / `Multi2Pipe<T,TC1,TC2>` | Broadcast to N children |
+| `ForkPipe<T>` | Propagate-after-accept: primary + continuation to `Next` |
 | `FilterPipe<T>` | Conditional gate — silently consumes non-matching items |
 | `NullPipe<T>` | No-op terminal sink |
 | `Pipes/FileStreamPipe<T>` | Binary append to `FileStream`, POH buffer, backoff recovery |
@@ -185,14 +186,14 @@ Each `TcpPipe` runs its own consumer thread. The producer is never blocked by a 
 
 ---
 
-### 4 — Fan-Out Broadcast (File + TCP simultaneously)
+### 4 — Multi Broadcast (File + TCP simultaneously)
 
-Every item is delivered to **all children**, regardless of individual child health. `FanOutPipe` is broadcast, not redundancy — a child that is unhealthy silently misses items.
+Every item is delivered to **all children**, regardless of individual child health. `MultiPipe` is broadcast, not redundancy — a child that is unhealthy silently misses items.
 
 ```csharp
 var head = RelayBuilder
-    .Start<SensorReading, FanOutPipe<SensorReading>>(
-        new FanOutPipe<SensorReading>(
+    .Start<SensorReading, MultiPipe<SensorReading>>(
+        new MultiPipe<SensorReading>(
             new FileStreamPipe<SensorReading>("/data/sensors.bin"),
             new TcpPipe<SensorReading>("dashboard.local", 9200)))
     .To(new RamPipe<SensorReading>())     // fallback when ALL children are unhealthy
@@ -202,10 +203,23 @@ head.Start();
 head.Enqueue(in reading);
 ```
 
-**Performance-critical variant:** when both children are `sealed` types, prefer `FanOut2Pipe<T,TC1,TC2>` — the JIT devirtualizes both `Enqueue` calls, saving ~6 cycles.
+Equivalent assembly using the fluent `.Multi` operator:
 
 ```csharp
-var fan = new FanOut2Pipe<SensorReading, FileStreamPipe<SensorReading>, TcpPipe<SensorReading>>(
+var head = RelayBuilder
+    .StartSpsc<SensorReading, FileStreamPipe<SensorReading>>(
+        new FileStreamPipe<SensorReading>("/data/primary.bin"))
+    .Multi(m => m
+        .Branch(new TcpPipe<SensorReading>("dashboard.local", 9200))
+        .Branch(new FileStreamPipe<SensorReading>("/data/audit.bin")))
+    .To(new RamPipe<SensorReading>())
+    .Build();
+```
+
+**Performance-critical variant:** when both children are `sealed` types, prefer `Multi2Pipe<T,TC1,TC2>` — the JIT devirtualizes both `Enqueue` calls, saving ~6 cycles.
+
+```csharp
+var multi = new Multi2Pipe<SensorReading, FileStreamPipe<SensorReading>, TcpPipe<SensorReading>>(
     new FileStreamPipe<SensorReading>("/data/sensors.bin"),
     new TcpPipe<SensorReading>("dashboard.local", 9200));
 ```

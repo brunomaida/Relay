@@ -7,9 +7,9 @@ using Xunit;
 namespace Relay.Tests.Examples;
 
 /// <summary>
-/// End-to-end smoke example: 4 producer threads fan in through a <see cref="TeePipe{T}"/> that
+/// End-to-end smoke example: 4 producer threads fan in through a <see cref="ForkPipe{T}"/> that
 /// routes every item to both an audit sink (side channel) and a main <see cref="MpscQueuePipe{T}"/>
-/// (primary delivery). Demonstrates that the typed MPSC + tee pattern is safe under multi-producer
+/// (primary delivery). Demonstrates that the typed MPSC + fork pattern is safe under multi-producer
 /// load and that the audit and main paths see identical item counts.
 /// </summary>
 /// <remarks>
@@ -19,12 +19,12 @@ namespace Relay.Tests.Examples;
 ///              │
 ///              ▼
 ///   ┌─────────────────────────┐
-///   │  TeePipe(audit=counter) │   PropagateAfterAccept = true
+///   │  ForkPipe(audit=counter)│   PropagateAfterAccept = true
 ///   └─────────────────────────┘
 ///       │                  │
 ///       │ local accept     │ always propagate
 ///       ▼                  ▼
-///   AuditCounter       MpscMainPipe (SPSC consumer drain)
+///   AuditCounter       MpscMainPipe (MPSC consumer drain)
 ///   (Interlocked)      (counts via WriteToBackend)
 /// </code>
 /// <para>
@@ -33,10 +33,10 @@ namespace Relay.Tests.Examples;
 /// single consumer thread and uses a plain write.
 /// </para>
 /// </remarks>
-public sealed class TeeAuditMpscSmoke
+public sealed class ForkAuditMpscSmoke
 {
     [Fact]
-    public void FourProducers_TeeWithAudit_BothPathsReceiveAllItems()
+    public void FourProducers_ForkWithAudit_BothPathsReceiveAllItems()
     {
         const int Producers   = 4;
         const int PerProducer = 50_000;
@@ -44,8 +44,8 @@ public sealed class TeeAuditMpscSmoke
 
         using var main    = new MainCounterMpscPipe(ringCapacity: 1 << 20, flushIntervalMs: 25);
         var       audit   = new AuditCounterPipe();
-        using var tee     = new TeePipe<Entry64>(audit);
-        tee.Next          = main;
+        using var fork    = new ForkPipe<Entry64>(audit);
+        fork.Next         = main;
 
         main.Start();
 
@@ -59,7 +59,7 @@ public sealed class TeeAuditMpscSmoke
                 var item = new Entry64 { A = pid };
                 barrier.Wait();
                 for (int i = 0; i < PerProducer; i++)
-                    tee.Enqueue(in item);
+                    fork.Enqueue(in item);
             })
             { IsBackground = true };
             threads[p].Start();
@@ -75,7 +75,7 @@ public sealed class TeeAuditMpscSmoke
         main.Consumed.Should().Be(Total,  "main pipe consumer must drain every enqueued item");
     }
 
-    /// <summary>Thread-safe synchronous counter used as a tee audit sink.</summary>
+    /// <summary>Thread-safe synchronous counter used as a fork audit sink.</summary>
     private sealed class AuditCounterPipe : DispatchPipe<Entry64>
     {
         private long _count;

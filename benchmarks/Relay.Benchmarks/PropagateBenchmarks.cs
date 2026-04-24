@@ -21,8 +21,8 @@ public class PropagateBenchmarks
 {
     private DispatchPipe<Entry64> _depth1Default       = null!;
     private DispatchPipe<Entry64> _depth1PropagateOnly = null!;
-    private DispatchPipe<Entry64> _depth2PropagateTee  = null!;
-    private DispatchPipe<Entry64> _depth2TeeWrapped    = null!;
+    private DispatchPipe<Entry64> _depth2PropagateFork = null!;
+    private DispatchPipe<Entry64> _depth2ForkWrapped   = null!;
 
     private Entry64 _item;
 
@@ -42,14 +42,14 @@ public class PropagateBenchmarks
         var sink2a = new CounterPipe();
         var prop2  = new PropagateCounterPipe();
         prop2.Next = sink2a;
-        _depth2PropagateTee = prop2;
+        _depth2PropagateFork = prop2;
 
-        // Depth 2: TeePipe(CounterPipe) → CounterPipe — actual TeePipe cost vs. custom propagate.
+        // Depth 2: ForkPipe(CounterPipe) → CounterPipe — actual ForkPipe cost vs. custom propagate.
         var primaryCounter = new CounterPipe();
         var auditCounter   = new CounterPipe();
-        var tee            = new TeePipe<Entry64>(primaryCounter);
-        tee.Next           = auditCounter;
-        _depth2TeeWrapped  = tee;
+        var fork           = new ForkPipe<Entry64>(primaryCounter);
+        fork.Next          = auditCounter;
+        _depth2ForkWrapped = fork;
     }
 
     /// <summary>
@@ -67,18 +67,18 @@ public class PropagateBenchmarks
     public void Depth1_Healthy_Propagate_NoNext() => _depth1PropagateOnly.Enqueue(in _item);
 
     /// <summary>
-    /// PropagateCounterPipe → CounterPipe: both pipes receive the item. Measures the tee
+    /// PropagateCounterPipe → CounterPipe: both pipes receive the item. Measures the fork
     /// pattern using a hand-rolled propagate override.
     /// </summary>
     [Benchmark]
-    public void Depth2_Propagate_Tee() => _depth2PropagateTee.Enqueue(in _item);
+    public void Depth2_Propagate_Fork() => _depth2PropagateFork.Enqueue(in _item);
 
     /// <summary>
-    /// TeePipe(CounterPipe) → CounterPipe: actual TeePipe wiring. Compare to
-    /// Depth2_Propagate_Tee to verify TeePipe adds no measurable overhead over a custom pipe.
+    /// ForkPipe(CounterPipe) → CounterPipe: actual ForkPipe wiring. Compare to
+    /// Depth2_Propagate_Fork to verify ForkPipe adds no measurable overhead over a custom pipe.
     /// </summary>
     [Benchmark]
-    public void Depth2_Tee_Wrapped() => _depth2TeeWrapped.Enqueue(in _item);
+    public void Depth2_Fork_Wrapped() => _depth2ForkWrapped.Enqueue(in _item);
 }
 
 /// <summary>

@@ -33,6 +33,7 @@ public abstract class MpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
     private readonly MpscRingBuffer<T> _ring;
     private readonly long              _flushIntervalTicks;
     private readonly string            _pipeName;
+    private readonly T[]               _consumeBuf;
 
     private Thread?       _thread;
     private volatile bool _running;
@@ -70,6 +71,7 @@ public abstract class MpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
         _ring               = new MpscRingBuffer<T>(ringCapacity);
         _flushIntervalTicks = (long)flushIntervalMs * (Stopwatch.Frequency / 1_000);
         _pipeName           = pipeName;
+        _consumeBuf         = GC.AllocateArray<T>(BatchSize, pinned: true);
     }
 
     /// <summary>Pre-faults the ring buffer and starts the consumer thread.</summary>
@@ -120,7 +122,11 @@ public abstract class MpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
     public override void Flush()   => FlushBackend();
 
     /// <inheritdoc/>
-    public override void Dispose() => Stop();
+    public override void Dispose()
+    {
+        Stop();
+        _ring.Dispose();
+    }
 
     private void ConsumeLoop()
     {
@@ -133,18 +139,14 @@ public abstract class MpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
             {
                 bool checkDeadline;
 
-                if (_ring.TryConsume(out var item))
+                int consumed = _ring.TryConsumeBatch(_consumeBuf);
+                if (consumed > 0)
                 {
-                    WriteToBackend(in item);
-                    idleSpin = 0;
-
-                    int batch = 1;
-                    while (batch < BatchSize && _ring.TryConsume(out item))
-                    {
-                        WriteToBackend(in item);
-                        batch++;
-                    }
-
+                    // Per-slot Published flag still gates each read, but head advances once per
+                    // batch — saves (N-1) mfences on the consumer-owned head write.
+                    for (int i = 0; i < consumed; i++)
+                        WriteToBackend(in _consumeBuf[i]);
+                    idleSpin      = 0;
                     checkDeadline = true;
                 }
                 else if (_running)

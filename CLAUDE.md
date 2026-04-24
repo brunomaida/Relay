@@ -28,8 +28,8 @@ src/
     SpscByteQueuePipe.cs     ← byte-variant SPSC consumer
     MpscQueuePipe.cs         ← async delivery via MPSC ring (multi-producer)
     MpscByteQueuePipe.cs     ← byte-variant MPSC consumer
-    TeePipe.cs               ← primary + Next propagation (audit/bypass pattern)
-    FanOutPipe.cs            ← broadcast (array-based + FanOut2Pipe CRTP variant)
+    ForkPipe.cs              ← primary + Next propagation (audit/bypass pattern)
+    MultiPipe.cs             ← broadcast (array-based + Multi2Pipe CRTP variant)
     FilterPipe.cs            ← conditional gate
     NullPipe.cs              ← no-op sink / terminal fallback
     NullBytePipe.cs          ← byte-variant no-op sink
@@ -44,8 +44,10 @@ src/
       TcpPipe.cs             ← TCP socket, POH send buffer, backoff reconnect
       RamPipe.cs             ← native memory circular ring, last-resort fallback
     Builder/
-      RelayBuilder.cs        ← static entry point: Start<T, THead>(head)
-      PipeChain.cs           ← fluent chain builder, wires Next + Prev
+      RelayBuilder.cs        ← static entry points: Start / StartSpsc / StartMpsc
+      PipeChain.cs           ← fluent chain builder; To / Fork / When / Multi; wires Next + Prev
+      MultiBuilder.cs        ← sub-builder: collects broadcast branches for MultiPipe
+      FilterBinding.cs       ← intermediate state: closes When(pred) with .To(downstream)
     Memory/
       RelayMemory.cs         ← internal: PreFault + VirtualLock on ring buffer
     Internal/
@@ -56,10 +58,10 @@ src/
 # Namespaces
 | Namespace | Content |
 |---|---|
-| `Relay` | `DispatchPipe<T>`, `SpscQueuePipe<T>`, `MpscQueuePipe<T>`, `FanOutPipe<T>`, `FanOut2Pipe<T,TC1,TC2>`, `FilterPipe<T>`, `NullPipe<T>`, `TeePipe<T>`, `BytePipe`, `SpscByteQueuePipe`, `MpscByteQueuePipe`, `NullBytePipe` |
+| `Relay` | `DispatchPipe<T>`, `SpscQueuePipe<T>`, `MpscQueuePipe<T>`, `MultiPipe<T>`, `Multi2Pipe<T,TC1,TC2>`, `FilterPipe<T>`, `NullPipe<T>`, `ForkPipe<T>`, `BytePipe`, `SpscByteQueuePipe`, `MpscByteQueuePipe`, `NullBytePipe` |
 | `Relay.Buffers` | `SpscRingBuffer<T>`, `MpscRingBuffer<T>`, `SpscByteRingBuffer`, `MpscByteRingBuffer` (internal to lib) |
 | `Relay.Pipes` | Concrete backends: `FileStreamPipe<T>`, `MmfPipe<T>`, `TcpPipe<T>`, `RamPipe<T>` |
-| `Relay.Builder` | `RelayBuilder`, `PipeChain<T,THead>` |
+| `Relay.Builder` | `RelayBuilder`, `PipeChain<T,THead>`, `MultiBuilder<T>`, `FilterBinding<T,THead>` |
 | `Relay.Memory` | `RelayMemory` (internal) |
 | `Relay.Internal` | `HfClock`, `PipeConstraints` (internal) |
 
@@ -99,33 +101,46 @@ src/
 - `Next == null` → silent drop. No exception, no log.
 
 ## `Prev` (recovery drain)
-- Set by `PipeChain.To()` on `SpscQueuePipe<T>` instances only.
+- Set by `PipeChain.To()` on `SpscQueuePipe<T>` and `MpscQueuePipe<T>` instances.
 - Used in `TryDrainToPrev()`: when the predecessor recovers, the fallback pipe drains accumulated items back upstream.
-- Only `SpscQueuePipe` participates in `Prev`-based drain. `DispatchPipe<T>` subclasses that are not `SpscQueuePipe` do not get `Prev` wired.
+- Only `SpscQueuePipe` / `MpscQueuePipe` participate in `Prev`-based drain. Other `DispatchPipe<T>` subclasses do not get `Prev` wired.
 
-## `FanOutPipe<T>` semantics
+## `MultiPipe<T>` semantics
 - Delivers to **all children** on every `Enqueue`, regardless of individual child health.
 - `IsHealthy` = OR over children (short-circuit: true as soon as one child is healthy).
 - `Accept` always returns true. Fallback to `Next` only when **all** children are unhealthy (`IsHealthy == false`).
-- Items are not re-delivered to unhealthy children; they silently miss them. Fan-out is not redundancy — it is broadcast.
-- **`FanOut2Pipe<T, TC1, TC2>` CRTP variant:** prefer when `TC1` and `TC2` are `sealed` — JIT devirtualizes and inlines both `Enqueue` calls, saving ~6c. Requires concrete sealed types known at compile time.
+- Items are not re-delivered to unhealthy children; they silently miss them. Multi-dispatch is not redundancy — it is broadcast.
+- **`Multi2Pipe<T, TC1, TC2>` CRTP variant:** prefer when `TC1` and `TC2` are `sealed` — JIT devirtualizes and inlines both `Enqueue` calls, saving ~6c. Requires concrete sealed types known at compile time.
 
 ## `FilterPipe<T>` semantics
 - `Accept` returns true even when the predicate fails. Items that fail the predicate are silently consumed; they do NOT propagate to `Next`. This is intentional — filtered items must not trigger the fallback chain.
 
-## `PropagateAfterAccept` and `TeePipe<T>`
+## `PropagateAfterAccept` and `ForkPipe<T>`
 
 - `DispatchPipe<T>.PropagateAfterAccept` is a virtual property, default `false`. When `true`,
   `Enqueue` continues to `Next?.Enqueue` **after** a successful local `Accept` — enabling
-  tee / audit / bypass patterns without restructuring the chain.
+  fork / audit / bypass patterns without restructuring the chain.
 - JIT note: sealed subclasses returning a compile-time constant (`=> false` or `=> true`)
   collapse the propagate branch at JIT time. Zero overhead on the default-false path.
 - Semantics: propagation engages only after a **successful** `Accept`. If `IsHealthy` is false
   or `Accept` returns false, the item still falls through to `Next` as before — propagation
   is not an "always deliver to Next" flag.
-- `TeePipe<T>` is the canonical propagate-true pipe: forwards to a primary via
+- `ForkPipe<T>` is the canonical propagate-true pipe: forwards to a primary via
   `_primary.Enqueue`, then the base `Enqueue` propagates to `Next`. `IsHealthy`, `Flush`, and
   `Dispose` mirror the primary.
+
+## Builder operators (`Relay.Builder`)
+
+| Entry / operator | Purpose |
+|---|---|
+| `RelayBuilder.Start<T, THead>(head)` | Generic entry. Any `DispatchPipe<T>` head. |
+| `RelayBuilder.StartSpsc<T, THead>(head)` | Single-producer entry. `THead : SpscQueuePipe<T>`. |
+| `RelayBuilder.StartMpsc<T, THead>(head)` | Multi-producer entry. `THead : MpscQueuePipe<T>`. |
+| `.To(pipe)` | Appends `pipe` as fallback; wires `Prev` for queue pipes. |
+| `.Fork(primary)` | Inserts `ForkPipe<T>`; every item goes to `primary` then propagates. |
+| `.When(pred).To(downstream)` | Inserts `FilterPipe<T>`; items failing `pred` are silently consumed. |
+| `.Multi(cfg)` | Broadcast via `MultiBuilder<T>` — array-based `MultiPipe<T>`. |
+| `.Multi<TC1,TC2>(c1, c2)` | 2-branch broadcast via CRTP `Multi2Pipe<T,TC1,TC2>`. |
 
 ## MPSC ring buffers
 
@@ -223,7 +238,7 @@ cleaner and costs nothing at runtime.
 
 # Testing
 - `dotnet test tests/Relay.Tests` must pass (0 failures) before any commit.
-- Test file per concern: `DispatchPipeChainTests`, `SpscQueuePipeTests`, `FanOutPipeTests`, `RecoveryDrainTests`.
+- Test file per concern: `DispatchPipeChainTests`, `SpscQueuePipeTests`, `MultiPipeTests`, `ForkPipeTests`, `RecoveryDrainTests`.
 - Local test pipes extend `DispatchPipe<T>` or `SpscQueuePipe<T>` directly — no mocking frameworks.
 - Tests that use `Thread.Sleep` for consumer timing must use short, deterministic windows. Prefer `Stop(drainTimeoutMs)` to signal completion rather than sleeping and asserting on side effects.
 

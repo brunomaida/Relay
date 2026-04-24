@@ -20,18 +20,26 @@ internal static unsafe class RelayMemory
 
         fixed (T* ptr = array)
         {
-            byte*  bp    = (byte*)ptr;
-            nuint  total = (nuint)(array.Length * sizeof(T));
-            nuint  page  = 4096;
-
-            for (nuint i = 0; i < total; i += page)
-                Volatile.Read(ref bp[i]);
-
-            Volatile.Read(ref bp[total - 1]);
-
-            if (OperatingSystem.IsWindows())
-                TryVirtualLock(bp, total);
+            PreFaultAndLock((byte*)ptr, (nuint)(array.Length * sizeof(T)));
         }
+    }
+
+    /// <summary>
+    /// Pointer-based overload for native-memory ring buffers (aligned allocations).
+    /// Touches every 4KB page then attempts VirtualLock on Windows.
+    /// </summary>
+    public static void PreFaultAndLock(byte* ptr, nuint bytes)
+    {
+        if (bytes == 0) return;
+
+        const nuint page = 4096;
+        for (nuint i = 0; i < bytes; i += page)
+            Volatile.Read(ref ptr[i]);
+
+        Volatile.Read(ref ptr[bytes - 1]);
+
+        if (OperatingSystem.IsWindows())
+            TryVirtualLock(ptr, bytes);
     }
 
     [SupportedOSPlatform("windows")]

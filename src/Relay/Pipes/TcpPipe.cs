@@ -47,7 +47,18 @@ public sealed class TcpPipe<T> : SpscQueuePipe<T> where T : unmanaged
         _host       = host ?? throw new ArgumentNullException(nameof(host));
         _port       = port;
         _sendBuffer = GC.AllocateArray<byte>(4096 * EntrySize, pinned: true);
-        TryConnect();
+
+        // Startup resilience: if the primary is unreachable at construction time, mark unhealthy
+        // and let TryRecoverBackend reconnect with backoff. Chains remain usable from the start.
+        try
+        {
+            TryConnect();
+        }
+        catch (Exception)
+        {
+            _healthy         = false;
+            _retryAfterTicks = HfClock.NowTicks + (long)_retryDelayMs * TicksPerMs;
+        }
     }
 
     /// <inheritdoc/>

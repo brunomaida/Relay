@@ -7,6 +7,45 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+### refactor!: renomeia `TeePipe`→`ForkPipe`, `FanOutPipe`→`MultiPipe`, `FanOut2Pipe`→`Multi2Pipe` + builder expandido
+
+**Breaking.** Renomeações públicas em `namespace Relay` e nova superfície fluente em
+`Relay.Builder`.
+
+**Renames:**
+- `TeePipe<T>` → `ForkPipe<T>` (`src/Relay/TeePipe.cs` → `ForkPipe.cs`)
+- `FanOutPipe<T>` → `MultiPipe<T>`, `FanOut2Pipe<T,TC1,TC2>` → `Multi2Pipe<T,TC1,TC2>`
+  (`src/Relay/FanOutPipe.cs` → `MultiPipe.cs`)
+- Testes: `TeePipeTests` → `ForkPipeTests`, `FanOutPipeTests` → `MultiPipeTests`,
+  `Examples/TeeAuditMpscSmoke` → `Examples/ForkAuditMpscSmoke`
+- Benchmarks: `FanOutEnqueueBenchmarks` / `FanOutIsHealthyBenchmarks` → `MultiEnqueueBenchmarks` /
+  `MultiIsHealthyBenchmarks`; `Depth2_Propagate_Tee` / `Depth2_Tee_Wrapped` → `_Fork_`
+
+**Builder novo (`Relay.Builder`):**
+- `RelayBuilder.StartSpsc<T,THead>(head)` — constraint `THead : SpscQueuePipe<T>`, didático.
+- `RelayBuilder.StartMpsc<T,THead>(head)` — constraint `THead : MpscQueuePipe<T>`, didático.
+- `PipeChain<T,THead>.Fork(primary)` — insere `ForkPipe<T>` no tail; propaga após accept.
+- `PipeChain<T,THead>.When(pred).To(downstream)` — gate condicional via `FilterBinding<T,THead>`.
+- `PipeChain<T,THead>.Multi(cfg)` — sub-builder `MultiBuilder<T>`; coleta branches, emite
+  `MultiPipe<T>`. Cada branch pode ter sub-chain própria (fallback por ramo).
+- `PipeChain<T,THead>.Multi<TC1,TC2>(c1,c2)` — overload sealed-CRTP → `Multi2Pipe`.
+- `PipeChain.To(next)` agora também wira `Prev` para `MpscQueuePipe<T>` (antes: só SPSC) —
+  alinhado com o contrato `TryDrainToPrev` documentado em `CLAUDE.md`.
+
+**Rationale:**
+- `Tee` → `Fork`: separação sem ambiguidade de redundância (tee sugeria apenas side-effect Unix).
+- `FanOut` → `Multi(plex)`: termo descreve broadcast N-way em linguagem de domínio sem sugerir
+  redundância. Variante curta `Multi` prevaleceu sobre `Multiplex`.
+- Builder fluente cobre fallback/fork/filter/multi sem obrigar construção manual de pipes
+  intermediários. Cada operador mapeia 1:1 a tipo existente — nada novo em runtime.
+
+**Files touched:** `src/Relay/{ForkPipe,MultiPipe}.cs`, `src/Relay/Builder/*`,
+`src/Relay/Buffers/SpscRingBuffer.cs` (comentário), `tests/Relay.Tests/{ForkPipeTests,
+MultiPipeTests,Examples/ForkAuditMpscSmoke}.cs`, `benchmarks/Relay.Benchmarks/{MultiBenchmarks,
+PropagateBenchmarks}.cs`, `CLAUDE.md`, `README.md`, `docs/topology.md`.
+
+---
+
 ### perf: Otimizações hot-path nos SPSC ring buffers
 
 **Performance impact:** `TryPublish`/`TryConsume` fast path ~25c → ~8-12c. Spin idle path ~60-80c/iter → ~25-40c/iter.
