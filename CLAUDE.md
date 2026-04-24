@@ -22,13 +22,17 @@ Directory.Packages.props
 src/
   Relay/
     Relay.csproj
-    DispatchPipe.cs          ← abstract base, Enqueue hot path
+    DispatchPipe.cs          ← abstract base (typed), Enqueue hot path
+    BytePipe.cs              ← abstract base (byte payloads), parallel hierarchy
     SpscQueuePipe.cs         ← async delivery via SPSC ring + consumer thread
+    SpscByteQueuePipe.cs     ← byte-variant SPSC consumer
     FanOutPipe.cs            ← broadcast (array-based + FanOut2Pipe CRTP variant)
     FilterPipe.cs            ← conditional gate
     NullPipe.cs              ← no-op sink / terminal fallback
+    NullBytePipe.cs          ← byte-variant no-op sink
     Buffers/
       SpscRingBuffer.cs      ← lock-free SPSC ring, 128B padded head/tail
+      SpscByteRingBuffer.cs  ← byte-variant length-prefixed ring
     Pipes/
       FileStreamPipe.cs      ← binary write to FileStream, POH buffer, backoff recovery
       MmfPipe.cs             ← MemoryMappedFile, capacity-only failure
@@ -47,8 +51,8 @@ src/
 # Namespaces
 | Namespace | Content |
 |---|---|
-| `Relay` | `DispatchPipe<T>`, `SpscQueuePipe<T>`, `FanOutPipe<T>`, `FanOut2Pipe<T,TC1,TC2>`, `FilterPipe<T>`, `NullPipe<T>` |
-| `Relay.Buffers` | `SpscRingBuffer<T>` (internal to lib) |
+| `Relay` | `DispatchPipe<T>`, `SpscQueuePipe<T>`, `FanOutPipe<T>`, `FanOut2Pipe<T,TC1,TC2>`, `FilterPipe<T>`, `NullPipe<T>`, `BytePipe`, `SpscByteQueuePipe`, `NullBytePipe` |
+| `Relay.Buffers` | `SpscRingBuffer<T>`, `SpscByteRingBuffer` (internal to lib) |
 | `Relay.Pipes` | Concrete backends: `FileStreamPipe<T>`, `MmfPipe<T>`, `TcpPipe<T>`, `RamPipe<T>` |
 | `Relay.Builder` | `RelayBuilder`, `PipeChain<T,THead>` |
 | `Relay.Memory` | `RelayMemory` (internal) |
@@ -103,6 +107,47 @@ src/
 
 ## `FilterPipe<T>` semantics
 - `Accept` returns true even when the predicate fails. Items that fail the predicate are silently consumed; they do NOT propagate to `Next`. This is intentional — filtered items must not trigger the fallback chain.
+
+## Byte-pipe hierarchy
+
+Parallel tree to `DispatchPipe<T>` for variable-length `ReadOnlySpan<byte>` payloads. The two
+hierarchies share no types — the unmanaged constraint on `DispatchPipe<T>` is incompatible with
+`ReadOnlySpan<byte>`, and a unifying generic would force `ref struct` on `T`. Parallelism is
+cleaner and costs nothing at runtime.
+
+### Types
+- `BytePipe` — abstract base. `Enqueue(ReadOnlySpan<byte>)` short-circuits on `IsHealthy`, then
+  `Accept`, falling through to `Next` on failure (or drops if `Next == null`). Same semantics as
+  the typed tree.
+- `SpscByteQueuePipe` — abstract SPSC consumer. Constructor takes `(int ringCapacity, int flushIntervalMs, string pipeName)`;
+  subclasses implement `WriteToBackend(ReadOnlySpan<byte>)` / `FlushBackend` / `TryRecoverBackend` / `DisposeBackend`.
+- `NullBytePipe` — singleton no-op (`NullBytePipe.Instance`).
+- `SpscByteRingBuffer` (internal) — lock-free length-prefixed SPSC ring.
+
+### `SpscByteRingBuffer` invariants
+- Capacity: power of two, minimum 16 bytes.
+- Record = `[uint32 length (LE)][payload, 4-byte aligned]`. Effective record size = `4 + ((len + 3) & ~3)`.
+- `_tail` is always 4-byte aligned — records advance tail by 4-byte multiples.
+- Header (4 bytes) is therefore always contiguous — no header ever straddles the wrap point.
+- **Payload is always contiguous too**: when a record would straddle the wrap point, the producer
+  writes a padding marker (sentinel header `0xFFFFFFFF`) at the current tail position and restarts
+  the record at offset 0. Consumer reads the padding marker and skips to the next wrap boundary.
+- This eliminates the split-payload scratch copy required by naive byte ring designs —
+  `TryPeek(out ReadOnlySpan<byte> payload, out int advanceBytes)` always returns a zero-copy span.
+- Head/tail padding: same 128-byte `PaddedLong` as `SpscRingBuffer<T>`.
+
+### When to use which tree
+| Use typed `DispatchPipe<T>` when... | Use `BytePipe` when... |
+|---|---|
+| Payload is a fixed-size unmanaged struct, multiple of 64B | Payload length varies per record |
+| Zero-copy fixed-layout matters (Struct-of-arrays, SIMD) | Payload is already a serialized/encoded byte blob |
+| `PipeConstraints.AssertCacheLineAligned<T>()` applies | You need a byte-oriented backend (text log, framed protocol) |
+
+### Status (current)
+- SPSC-only. No MPSC variant — add if multi-producer contention is demonstrated by BDN.
+- No `PropagateAfterAccept` / tee variant — deferred until a consumer requires it.
+- No dedicated builder (`ByteChain` / `ByteChainBuilder`) — chains are wired manually via
+  `BytePipe.Next` (internal setter). Builder will be added once 2+ consumers need one.
 
 ## `SpscRingBuffer<T>` contract
 - SPSC: one producer thread, one consumer thread. Violating this is undefined behaviour.
