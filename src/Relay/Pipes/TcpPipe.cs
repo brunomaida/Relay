@@ -43,6 +43,9 @@ public sealed class TcpPipe<T> : SpscQueuePipe<T> where T : unmanaged
         TryConnect();
     }
 
+    /// <inheritdoc/>
+    protected override bool PropagateAfterAccept => false;
+
     protected override unsafe void WriteToBackend(in T item)
     {
         if (_bufferPos + EntrySize > _sendBuffer.Length)
