@@ -130,6 +130,8 @@ public abstract class SpscByteQueuePipe : BytePipe
 
             while (ShouldKeepDraining())
             {
+                bool checkDeadline;
+
                 if (_ring.TryPeek(out var payload, out int advance))
                 {
                     WriteToBackend(payload);
@@ -143,16 +145,36 @@ public abstract class SpscByteQueuePipe : BytePipe
                         _ring.Advance(advance);
                         batch++;
                     }
+
+                    checkDeadline = true;
                 }
                 else if (_running)
                 {
-                    if      (idleSpin < SpinIter)               Thread.SpinWait(20);
-                    else if (idleSpin < SpinIter + YieldIter)   Thread.Yield();
-                    else                                         Thread.Sleep(SleepMs);
+                    if (idleSpin < SpinIter)
+                    {
+                        Thread.SpinWait(20);
+                        // QPC (~25c + LFENCE stall) throttled to every 8 spin iterations;
+                        // yield/sleep paths are already expensive enough that QPC is noise.
+                        checkDeadline = (idleSpin & 0x7) == 0;
+                    }
+                    else if (idleSpin < SpinIter + YieldIter)
+                    {
+                        Thread.Yield();
+                        checkDeadline = true;
+                    }
+                    else
+                    {
+                        Thread.Sleep(SleepMs);
+                        checkDeadline = true;
+                    }
                     idleSpin++;
                 }
+                else
+                {
+                    checkDeadline = true;
+                }
 
-                if (HfClock.NowTicks >= flushDeadline)
+                if (checkDeadline && HfClock.NowTicks >= flushDeadline)
                 {
                     FlushBackend();
                     TryRecoverBackend();

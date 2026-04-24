@@ -1,6 +1,6 @@
 using System;
-using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace Relay.Buffers;
@@ -40,8 +40,10 @@ internal sealed class SpscByteRingBuffer : IDisposable
     private readonly byte[] _buffer;
     private readonly int    _mask;
 
-    private PaddedLong _head;
-    private PaddedLong _tail;
+    private PaddedLong _head;        // consumer-owned
+    private PaddedLong _cachedTail;  // consumer-only snapshot of _tail; eliminates cross-core Volatile.Read on the fast path
+    private PaddedLong _tail;        // producer-owned
+    private PaddedLong _cachedHead;  // producer-only snapshot of _head; eliminates cross-core Volatile.Read on the fast path
 
     /// <summary>Number of bytes in the underlying storage.</summary>
     public int Capacity { get; }
@@ -89,29 +91,41 @@ internal sealed class SpscByteRingBuffer : IDisposable
         if (recordSize > Capacity) return false;
 
         long tail = _tail.Value;
-        long head = Volatile.Read(ref _head.Value);
+        long head = _cachedHead.Value;
         long free = Capacity - (tail - head);
 
         int pos        = (int)(tail & _mask);
         int contiguous = Capacity - pos;
 
+        ref byte bufRef = ref MemoryMarshal.GetArrayDataReference(_buffer);
+
         if (contiguous >= recordSize)
         {
-            if (free < recordSize) return false;
-            WriteHeader(pos, (uint)len);
-            payload.CopyTo(_buffer.AsSpan(pos + HeaderSize, len));
+            if (free < recordSize)
+            {
+                _cachedHead.Value = head = Volatile.Read(ref _head.Value);
+                free = Capacity - (tail - head);
+                if (free < recordSize) return false;
+            }
+            Unsafe.WriteUnaligned(ref Unsafe.Add(ref bufRef, (nint)pos), (uint)len);
+            payload.CopyTo(MemoryMarshal.CreateSpan(ref Unsafe.Add(ref bufRef, (nint)(pos + HeaderSize)), len));
             Volatile.Write(ref _tail.Value, tail + recordSize);
             return true;
         }
 
         // Wrap: pad from pos to end, then write record at offset 0.
         long totalNeeded = (long)contiguous + recordSize;
-        if (free < totalNeeded) return false;
+        if (free < totalNeeded)
+        {
+            _cachedHead.Value = head = Volatile.Read(ref _head.Value);
+            free = Capacity - (tail - head);
+            if (free < totalNeeded) return false;
+        }
 
-        WriteHeader(pos, PaddingMarker);
+        Unsafe.WriteUnaligned(ref Unsafe.Add(ref bufRef, (nint)pos), PaddingMarker);
         tail += contiguous;
-        WriteHeader(0, (uint)len);
-        payload.CopyTo(_buffer.AsSpan(HeaderSize, len));
+        Unsafe.WriteUnaligned(ref bufRef, (uint)len);
+        payload.CopyTo(MemoryMarshal.CreateSpan(ref Unsafe.Add(ref bufRef, (nint)HeaderSize), len));
         Volatile.Write(ref _tail.Value, tail + recordSize);
         return true;
     }
@@ -130,11 +144,16 @@ internal sealed class SpscByteRingBuffer : IDisposable
     public bool TryPeek(out ReadOnlySpan<byte> payload, out int advanceBytes)
     {
         long head = _head.Value;
-        long tail = Volatile.Read(ref _tail.Value);
-        if (head >= tail) { payload = default; advanceBytes = 0; return false; }
+        long tail = _cachedTail.Value;
+        if (head >= tail)
+        {
+            _cachedTail.Value = tail = Volatile.Read(ref _tail.Value);
+            if (head >= tail) { payload = default; advanceBytes = 0; return false; }
+        }
 
-        int pos  = (int)(head & _mask);
-        uint hdr = ReadHeader(pos);
+        ref byte bufRef = ref MemoryMarshal.GetArrayDataReference(_buffer);
+        int  pos = (int)(head & _mask);
+        uint hdr = Unsafe.ReadUnaligned<uint>(ref Unsafe.Add(ref bufRef, (nint)pos));
 
         if (hdr == PaddingMarker)
         {
@@ -143,13 +162,13 @@ internal sealed class SpscByteRingBuffer : IDisposable
             Volatile.Write(ref _head.Value, head);
             if (head >= tail) { payload = default; advanceBytes = 0; return false; }
             pos = (int)(head & _mask);
-            hdr = ReadHeader(pos);
+            hdr = Unsafe.ReadUnaligned<uint>(ref Unsafe.Add(ref bufRef, (nint)pos));
         }
 
-        int len        = (int)hdr;
-        int paddedLen  = (len + 3) & ~3;
-        payload        = _buffer.AsSpan(pos + HeaderSize, len);
-        advanceBytes   = HeaderSize + paddedLen;
+        int len      = (int)hdr;
+        int paddedLen = (len + 3) & ~3;
+        payload      = MemoryMarshal.CreateReadOnlySpan(ref Unsafe.Add(ref bufRef, (nint)(pos + HeaderSize)), len);
+        advanceBytes = HeaderSize + paddedLen;
         return true;
     }
 
@@ -166,12 +185,4 @@ internal sealed class SpscByteRingBuffer : IDisposable
 
     /// <summary>No-op; the POH-pinned array is reclaimed by the GC when the ring is collected.</summary>
     public void Dispose() { }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void WriteHeader(int pos, uint value) =>
-        BinaryPrimitives.WriteUInt32LittleEndian(_buffer.AsSpan(pos, HeaderSize), value);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private uint ReadHeader(int pos) =>
-        BinaryPrimitives.ReadUInt32LittleEndian(_buffer.AsSpan(pos, HeaderSize));
 }
