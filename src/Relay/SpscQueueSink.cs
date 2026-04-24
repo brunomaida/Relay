@@ -205,13 +205,16 @@ public abstract class SpscQueueSink<T> : DispatchSink<T> where T : unmanaged
 
                 if (flushNow || deadlineHit)
                 {
+                    // Clear BEFORE FlushBackend so a racing Flush() that flips the flag back
+                    // to 1 during backend work is picked up on the next iteration — not
+                    // silently overwritten to 0 after the fact.
+                    if (flushNow) Volatile.Write(ref _flushRequested, 0);
                     FlushBackend();
                     if (deadlineHit)
                     {
                         TryRecoverBackend();
                         TryDrainToPrev();
                     }
-                    if (flushNow) Volatile.Write(ref _flushRequested, 0);
                     flushDeadline = HfClock.NowTicks + _flushIntervalTicks;
                 }
             }

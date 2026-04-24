@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using FluentAssertions;
@@ -8,7 +8,7 @@ using Xunit;
 namespace Relay.Tests;
 
 /// <summary>Lifecycle, consumer delivery, fallback, and backend integration for
-/// <see cref="SpscByteQueueSink"/>.</summary>
+/// <see cref="SpscQueueSink"/>.</summary>
 public sealed class SpscByteQueueSinkTests
 {
     // ─────────────────────────────────────────────────────────────────────────
@@ -152,27 +152,35 @@ public sealed class SpscByteQueueSinkTests
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 7. Flush() delegates to FlushBackend().
+    // 7. Flush() signals the consumer — does not call FlushBackend on caller thread.
     // ─────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Flush_InvokesFlushBackend()
+    public void Flush_SignalsConsumer_NotCallerThread()
     {
         using var pipe = new FlushTrackingByteSink();
         pipe.Start();
         pipe.Enqueue(new byte[] { 1, 2 }.AsSpan());
 
-        pipe.Flush(); // producer-side call routes directly to FlushBackend()
+        int callerThread = Environment.CurrentManagedThreadId;
+        pipe.Flush(); // must NOT call FlushBackend on this thread
 
-        pipe.FlushCount.Should().BeGreaterThanOrEqualTo(1);
+        // FlushBackend must not have been called on the caller's thread yet.
+        if (pipe.FlushBackendThreadId.HasValue)
+            pipe.FlushBackendThreadId.Should().NotBe(callerThread);
+
         pipe.Stop(drainTimeoutMs: 2_000);
+
+        // After stop the consumer ran FlushBackend.
+        pipe.FlushBackendThreadId.Should().NotBeNull();
+        pipe.FlushBackendThreadId.Should().NotBe(callerThread);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Private test pipes
     // ─────────────────────────────────────────────────────────────────────────
 
-    private sealed class InMemoryByteSink : SpscByteQueueSink
+    private sealed class InMemoryByteSink : SpscQueueSink
     {
         private readonly List<byte[]> _received = new();
         private readonly object       _lock     = new();
@@ -193,7 +201,7 @@ public sealed class SpscByteQueueSinkTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class CrashingByteSink : SpscByteQueueSink
+    private sealed class CrashingByteSink : SpscQueueSink
     {
         public CrashingByteSink() : base(64, 50, "crash") { }
 
@@ -205,7 +213,7 @@ public sealed class SpscByteQueueSinkTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class UnhealthyByteSink : SpscByteQueueSink
+    private sealed class UnhealthyByteSink : SpscQueueSink
     {
         private readonly bool _healthyFlag;
         public int Consumed { get; private set; }
@@ -239,17 +247,16 @@ public sealed class SpscByteQueueSinkTests
         public override void Dispose() { }
     }
 
-    private sealed class FlushTrackingByteSink : SpscByteQueueSink
+    private sealed class FlushTrackingByteSink : SpscQueueSink
     {
-        private int _flushCount;
-        public int FlushCount => _flushCount;
+        public int? FlushBackendThreadId { get; private set; }
 
         public FlushTrackingByteSink() : base(256, 50, "flush-track") { }
 
         protected override void WriteToBackend(ReadOnlySpan<byte> payload) { }
 
         protected override void FlushBackend() =>
-            Interlocked.Increment(ref _flushCount);
+            FlushBackendThreadId = Environment.CurrentManagedThreadId;
 
         protected override void TryRecoverBackend() { }
         protected override void DisposeBackend()    { }

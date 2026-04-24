@@ -25,7 +25,7 @@ src/
     DispatchSink.cs          ← abstract base (typed), Enqueue hot path
     PacketSink.cs            ← abstract base (byte payloads), parallel hierarchy
     SpscQueueSink.cs         ← async delivery via SPSC ring + consumer thread
-    SpscByteQueueSink.cs     ← byte-variant SPSC consumer
+    SpscQueueSink.Packet.cs  ← byte-payload SPSC consumer (non-generic)
     MpscQueueSink.cs         ← async delivery via MPSC ring (multi-producer)
     MpscByteQueueSink.cs     ← byte-variant MPSC consumer
     ForkSink.cs              ← primary + Next propagation (audit/bypass pattern)
@@ -58,7 +58,7 @@ src/
 # Namespaces
 | Namespace | Content |
 |---|---|
-| `Relay` | `DispatchSink<T>`, `SpscQueueSink<T>`, `MpscQueueSink<T>`, `MultiSink<T>`, `Multi2Sink<T,TC1,TC2>`, `FilterSink<T>`, `NullSink<T>`, `ForkSink<T>`, `PacketSink`, `SpscByteQueueSink`, `MpscByteQueueSink`, `NullByteSink` |
+| `Relay` | `DispatchSink<T>`, `SpscQueueSink<T>`, `MpscQueueSink<T>`, `MultiSink<T>`, `Multi2Sink<T,TC1,TC2>`, `FilterSink<T>`, `NullSink<T>`, `ForkSink<T>`, `PacketSink`, `SpscQueueSink`, `MpscByteQueueSink`, `NullByteSink` |
 | `Relay.Buffers` | `SpscRingBuffer<T>`, `MpscRingBuffer<T>`, `SpscByteRingBuffer`, `MpscByteRingBuffer` (internal to lib) |
 | `Relay.Sinks` | Concrete backends: `FileStreamSink<T>`, `MmfSink<T>`, `TcpSink<T>`, `RamSink<T>` |
 | `Relay.Builder` | `RelayBuilder`, `SinkChain<T,THead>`, `MultiBuilder<T>`, `FilterBinding<T,THead>` |
@@ -185,8 +185,9 @@ cleaner and costs nothing at runtime.
 - `PacketSink` — abstract base. `Enqueue(ReadOnlySpan<byte>)` short-circuits on `IsHealthy`, then
   `Accept`, falling through to `Next` on failure (or drops if `Next == null`). Same semantics as
   the typed tree.
-- `SpscByteQueueSink` — abstract SPSC consumer. Constructor takes `(int ringCapacity, int flushIntervalMs, string sinkName)`;
+- `SpscQueueSink` — abstract SPSC consumer (non-generic). Constructor takes `(int ringCapacity, int flushIntervalMs, string sinkName)`;
   subclasses implement `WriteToBackend(ReadOnlySpan<byte>)` / `FlushBackend` / `TryRecoverBackend` / `DisposeBackend`.
+  `Flush()` signals via `_flushRequested` — never calls `FlushBackend()` from the producer thread.
 - `NullByteSink` — singleton no-op (`NullByteSink.Instance`).
 - `SpscByteRingBuffer` (internal) — lock-free length-prefixed SPSC ring.
 

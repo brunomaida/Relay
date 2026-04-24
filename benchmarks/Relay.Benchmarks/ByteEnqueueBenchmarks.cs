@@ -1,4 +1,4 @@
-ï»¿using System;
+using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using BenchmarkDotNet.Attributes;
@@ -7,7 +7,7 @@ using Relay;
 namespace Relay.Benchmarks;
 
 /// <summary>
-/// Measures <see cref="ByteSink.Enqueue"/> throughput across chain configurations.
+/// Measures <see cref="PacketSink.Enqueue"/> throughput across chain configurations.
 /// Healthy = payload consumed at first pipe; Unhealthy/Reject = fallback hop to Next.
 /// Fixed 64-byte payload matches <see cref="Entry64"/> in the typed suite for direct A/B comparison.
 /// </summary>
@@ -15,10 +15,10 @@ namespace Relay.Benchmarks;
 [DisassemblyDiagnoser(maxDepth: 3)]
 public class ByteEnqueueBenchmarks
 {
-    private ByteSink _depth1Healthy        = null!;
-    private ByteSink _depth2AcceptReject   = null!;
-    private ByteSink _depth2HeadUnhealthy  = null!;
-    private ByteSink _depth3AllUnhealthy   = null!;
+    private PacketSink _depth1Healthy        = null!;
+    private PacketSink _depth2AcceptReject   = null!;
+    private PacketSink _depth2HeadUnhealthy  = null!;
+    private PacketSink _depth3AllUnhealthy   = null!;
 
     private byte[] _payload = null!;
 
@@ -29,20 +29,20 @@ public class ByteEnqueueBenchmarks
         _payload[0] = 1;
         _payload[1] = 2;
 
-        // Depth 1: single ByteCounterPipe â€” Volatile.Write prevents DCE, real baseline cost.
+        // Depth 1: single ByteCounterPipe — Volatile.Write prevents DCE, real baseline cost.
         _depth1Healthy = new ByteCounterPipe();
 
-        // Depth 2: ByteRejectPipe (Accept=false) â†’ ByteCounterPipe â€” 1 accept-reject hop.
+        // Depth 2: ByteRejectPipe (Accept=false) ? ByteCounterPipe — 1 accept-reject hop.
         var head1 = new ByteRejectPipe();
         head1.Next = new ByteCounterPipe();
         _depth2AcceptReject = head1;
 
-        // Depth 2: ByteDeadPipe (IsHealthy=false) â†’ ByteCounterPipe â€” 1 IsHealthy-miss hop.
+        // Depth 2: ByteDeadPipe (IsHealthy=false) ? ByteCounterPipe — 1 IsHealthy-miss hop.
         var head2 = new ByteDeadPipe();
         head2.Next = new ByteCounterPipe();
         _depth2HeadUnhealthy = head2;
 
-        // Depth 3: ByteDeadPipe â†’ ByteDeadPipe â†’ ByteCounterPipe â€” 2 fallback hops.
+        // Depth 3: ByteDeadPipe ? ByteDeadPipe ? ByteCounterPipe — 2 fallback hops.
         var head3 = new ByteDeadPipe();
         var mid3  = new ByteDeadPipe();
         head3.Next = mid3;
@@ -50,7 +50,7 @@ public class ByteEnqueueBenchmarks
         _depth3AllUnhealthy = head3;
     }
 
-    /// <summary>Baseline: single ByteCounterPipe â€” IsHealthy + Accept + Volatile.Write.</summary>
+    /// <summary>Baseline: single ByteCounterPipe — IsHealthy + Accept + Volatile.Write.</summary>
     [Benchmark(Baseline = true)]
     public void Depth1_Byte_Healthy() => _depth1Healthy.Enqueue(_payload);
 
@@ -62,18 +62,18 @@ public class ByteEnqueueBenchmarks
     [Benchmark]
     public void Depth2_Byte_HeadUnhealthy() => _depth2HeadUnhealthy.Enqueue(_payload);
 
-    /// <summary>Two unhealthy hops, ByteCounterPipe terminal â€” measures cumulative fallback cost.</summary>
+    /// <summary>Two unhealthy hops, ByteCounterPipe terminal — measures cumulative fallback cost.</summary>
     [Benchmark]
     public void Depth3_Byte_AllUnhealthy() => _depth3AllUnhealthy.Enqueue(_payload);
 }
 
-#region Helper pipes (byte variants â€” parallel to BenchmarkTypes.cs typed helpers)
+#region Helper pipes (byte variants — parallel to BenchmarkTypes.cs typed helpers)
 
 /// <summary>
 /// Healthy no-op sink for byte chains. Volatile.Write on first payload byte prevents
 /// JIT dead-code elimination while keeping hot-path cost observable.
 /// </summary>
-internal sealed class ByteCounterPipe : ByteSink
+internal sealed class ByteCounterPipe : PacketSink
 {
     public long LastValue;
 
@@ -90,8 +90,8 @@ internal sealed class ByteCounterPipe : ByteSink
     public override void Dispose() { }
 }
 
-/// <summary>Always-unhealthy pipe â€” forces every Enqueue to fall through to Next.</summary>
-internal sealed class ByteDeadPipe : ByteSink
+/// <summary>Always-unhealthy pipe — forces every Enqueue to fall through to Next.</summary>
+internal sealed class ByteDeadPipe : PacketSink
 {
     public override bool IsHealthy => false;
 
@@ -102,8 +102,8 @@ internal sealed class ByteDeadPipe : ByteSink
     public override void Dispose() { }
 }
 
-/// <summary>Healthy pipe that rejects every payload â€” forces fallback via Accept returning false.</summary>
-internal sealed class ByteRejectPipe : ByteSink
+/// <summary>Healthy pipe that rejects every payload — forces fallback via Accept returning false.</summary>
+internal sealed class ByteRejectPipe : PacketSink
 {
     public override bool IsHealthy => true;
 
