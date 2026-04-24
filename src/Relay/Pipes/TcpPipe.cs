@@ -2,20 +2,28 @@ using System;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Relay.Internal;
 
 namespace Relay.Pipes;
 
 /// <summary>
 /// Pipe that sends blittable items over a TCP socket (<c>sizeof(T)</c> bytes per item).
-/// Uses a POH-pinned send buffer. IOException sets <c>_healthy = false</c>;
-/// <see cref="TryRecoverBackend"/> reconnects with exponential backoff 1s → 30s.
+/// Uses a POH-pinned send buffer and a non-blocking <see cref="Socket"/>. Brief backpressure
+/// on the send buffer is absorbed by a bounded spin; persistent backpressure marks the pipe
+/// unhealthy so new items fall through to <c>Next</c>. <see cref="TryRecoverBackend"/>
+/// reconnects with exponential backoff 1s → 30s.
 /// </summary>
 public sealed class TcpPipe<T> : SpscQueuePipe<T> where T : unmanaged
 {
     private const int DefaultRingCapacity  = 16_384;
     private const int DefaultFlushInterval = 250;
     private const int RetryMaxDelayMs      = 30_000;
+
+    // Bounded spin on WouldBlock: ~64 iterations × Thread.SpinWait(32) ≈ 6μs.
+    // Short enough not to starve the ring, long enough to absorb brief TCP backpressure.
+    private const int MaxWouldBlockSpins = 64;
+    private const int SpinIterations     = 32;
 
     private static readonly long TicksPerMs = Stopwatch.Frequency / 1_000;
     private static readonly int  EntrySize  = Unsafe.SizeOf<T>();
@@ -24,11 +32,10 @@ public sealed class TcpPipe<T> : SpscQueuePipe<T> where T : unmanaged
     private readonly int    _port;
     private readonly byte[] _sendBuffer;
 
-    private TcpClient?    _client;
-    private NetworkStream? _stream;
-    private int            _bufferPos;
-    private int            _retryDelayMs = 1_000;
-    private long           _retryAfterTicks;
+    private Socket? _socket;
+    private int     _bufferPos;
+    private int     _retryDelayMs = 1_000;
+    private long    _retryAfterTicks;
 
     public TcpPipe(
         string host,
@@ -51,6 +58,11 @@ public sealed class TcpPipe<T> : SpscQueuePipe<T> where T : unmanaged
         if (_bufferPos + EntrySize > _sendBuffer.Length)
             FlushBuffer();
 
+        // If send buffer is still full (socket backpressured), drop this item.
+        // The ring stops feeding once _healthy=false; future items take the fallback path.
+        if (_bufferPos + EntrySize > _sendBuffer.Length)
+            return;
+
         Unsafe.CopyBlockUnaligned(
             ref _sendBuffer[_bufferPos],
             ref Unsafe.As<T, byte>(ref Unsafe.AsRef(in item)),
@@ -70,12 +82,11 @@ public sealed class TcpPipe<T> : SpscQueuePipe<T> where T : unmanaged
 
         try
         {
-            _stream?.Dispose();
-            _client?.Dispose();
+            _socket?.Dispose();
             TryConnect();
-            if (_bufferPos > 0) { _stream!.Write(_sendBuffer.AsSpan(0, _bufferPos)); _bufferPos = 0; }
             _healthy      = true;
             _retryDelayMs = 1_000;
+            if (_bufferPos > 0) FlushBuffer();
         }
         catch (Exception)
         {
@@ -86,27 +97,83 @@ public sealed class TcpPipe<T> : SpscQueuePipe<T> where T : unmanaged
 
     protected override void DisposeBackend()
     {
-        try { _stream?.Dispose(); _client?.Dispose(); } catch { /* best-effort */ }
+        try { _socket?.Dispose(); } catch { /* best-effort */ }
     }
 
     private void FlushBuffer()
     {
-        try
+        if (_socket is null) { MarkUnhealthy(); return; }
+
+        int offset          = 0;
+        int stalledAttempts = 0;
+
+        while (offset < _bufferPos)
         {
-            _stream!.Write(_sendBuffer.AsSpan(0, _bufferPos));
-            _bufferPos = 0;
+            int sent;
+            SocketError err;
+            try
+            {
+                sent = _socket.Send(
+                    _sendBuffer.AsSpan(offset, _bufferPos - offset),
+                    SocketFlags.None,
+                    out err);
+            }
+            catch (Exception)
+            {
+                MarkUnhealthy();
+                return;
+            }
+
+            if (err == SocketError.Success && sent > 0)
+            {
+                offset += sent;
+                stalledAttempts = 0;
+                continue;
+            }
+
+            if (err == SocketError.WouldBlock)
+            {
+                if (++stalledAttempts >= MaxWouldBlockSpins)
+                {
+                    // Persistent backpressure — preserve unsent bytes, mark unhealthy,
+                    // let the fallback chain take new items until recovery.
+                    ShiftUnsent(offset);
+                    MarkUnhealthy();
+                    return;
+                }
+                Thread.SpinWait(SpinIterations);
+                continue;
+            }
+
+            MarkUnhealthy();
+            return;
         }
-        catch (Exception)
-        {
-            _healthy         = false;
-            _retryAfterTicks = HfClock.NowTicks + (long)_retryDelayMs * TicksPerMs;
-        }
+
+        ShiftUnsent(offset);
+    }
+
+    private void ShiftUnsent(int offset)
+    {
+        int remaining = _bufferPos - offset;
+        if (remaining > 0 && offset > 0)
+            Buffer.BlockCopy(_sendBuffer, offset, _sendBuffer, 0, remaining);
+        _bufferPos = remaining;
+    }
+
+    private void MarkUnhealthy()
+    {
+        _healthy         = false;
+        _retryAfterTicks = HfClock.NowTicks + (long)_retryDelayMs * TicksPerMs;
     }
 
     private void TryConnect()
     {
-        _client         = new TcpClient { NoDelay = true };
-        _client.Connect(_host, _port);
-        _stream         = _client.GetStream();
+        var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+        {
+            NoDelay = true,
+        };
+        socket.Connect(_host, _port);
+        socket.Blocking = false; // non-blocking sends — WouldBlock surfaced via SocketError
+        _socket = socket;
     }
 }
