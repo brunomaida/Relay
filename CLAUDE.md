@@ -26,6 +26,9 @@ src/
     BytePipe.cs              ← abstract base (byte payloads), parallel hierarchy
     SpscQueuePipe.cs         ← async delivery via SPSC ring + consumer thread
     SpscByteQueuePipe.cs     ← byte-variant SPSC consumer
+    MpscQueuePipe.cs         ← async delivery via MPSC ring (multi-producer)
+    MpscByteQueuePipe.cs     ← byte-variant MPSC consumer
+    TeePipe.cs               ← primary + Next propagation (audit/bypass pattern)
     FanOutPipe.cs            ← broadcast (array-based + FanOut2Pipe CRTP variant)
     FilterPipe.cs            ← conditional gate
     NullPipe.cs              ← no-op sink / terminal fallback
@@ -33,6 +36,8 @@ src/
     Buffers/
       SpscRingBuffer.cs      ← lock-free SPSC ring, 128B padded head/tail
       SpscByteRingBuffer.cs  ← byte-variant length-prefixed ring
+      MpscRingBuffer.cs      ← MPSC ring: CAS tail + HeadCache + inline Slot (Log2 FIX #18)
+      MpscByteRingBuffer.cs  ← byte-variant MPSC: CAS reservation + header publish-bit
     Pipes/
       FileStreamPipe.cs      ← binary write to FileStream, POH buffer, backoff recovery
       MmfPipe.cs             ← MemoryMappedFile, capacity-only failure
@@ -51,8 +56,8 @@ src/
 # Namespaces
 | Namespace | Content |
 |---|---|
-| `Relay` | `DispatchPipe<T>`, `SpscQueuePipe<T>`, `FanOutPipe<T>`, `FanOut2Pipe<T,TC1,TC2>`, `FilterPipe<T>`, `NullPipe<T>`, `BytePipe`, `SpscByteQueuePipe`, `NullBytePipe` |
-| `Relay.Buffers` | `SpscRingBuffer<T>`, `SpscByteRingBuffer` (internal to lib) |
+| `Relay` | `DispatchPipe<T>`, `SpscQueuePipe<T>`, `MpscQueuePipe<T>`, `FanOutPipe<T>`, `FanOut2Pipe<T,TC1,TC2>`, `FilterPipe<T>`, `NullPipe<T>`, `TeePipe<T>`, `BytePipe`, `SpscByteQueuePipe`, `MpscByteQueuePipe`, `NullBytePipe` |
+| `Relay.Buffers` | `SpscRingBuffer<T>`, `MpscRingBuffer<T>`, `SpscByteRingBuffer`, `MpscByteRingBuffer` (internal to lib) |
 | `Relay.Pipes` | Concrete backends: `FileStreamPipe<T>`, `MmfPipe<T>`, `TcpPipe<T>`, `RamPipe<T>` |
 | `Relay.Builder` | `RelayBuilder`, `PipeChain<T,THead>` |
 | `Relay.Memory` | `RelayMemory` (internal) |
@@ -107,6 +112,52 @@ src/
 
 ## `FilterPipe<T>` semantics
 - `Accept` returns true even when the predicate fails. Items that fail the predicate are silently consumed; they do NOT propagate to `Next`. This is intentional — filtered items must not trigger the fallback chain.
+
+## `PropagateAfterAccept` and `TeePipe<T>`
+
+- `DispatchPipe<T>.PropagateAfterAccept` is a virtual property, default `false`. When `true`,
+  `Enqueue` continues to `Next?.Enqueue` **after** a successful local `Accept` — enabling
+  tee / audit / bypass patterns without restructuring the chain.
+- JIT note: sealed subclasses returning a compile-time constant (`=> false` or `=> true`)
+  collapse the propagate branch at JIT time. Zero overhead on the default-false path.
+- Semantics: propagation engages only after a **successful** `Accept`. If `IsHealthy` is false
+  or `Accept` returns false, the item still falls through to `Next` as before — propagation
+  is not an "always deliver to Next" flag.
+- `TeePipe<T>` is the canonical propagate-true pipe: forwards to a primary via
+  `_primary.Enqueue`, then the base `Enqueue` propagates to `Next`. `IsHealthy`, `Flush`, and
+  `Dispose` mirror the primary.
+
+## MPSC ring buffers
+
+Both `MpscRingBuffer<T>` (typed) and `MpscByteRingBuffer` (byte) share the Log2 `FIX #18`
+layout:
+
+- Three `PaddedLong` counters (128-byte isolated cache lines): `_claimedTail`, `_headCache`,
+  `_head`. Zero false sharing between producer CAS, producer head-cache read, and consumer
+  head write.
+- **HeadCache**: producers read a local cached head on the fast path; the cross-core
+  volatile read of `_head` happens only when the ring appears full. Under contention this
+  eliminates the dominant cache-line bounce.
+- Single consumer — multi-consumer is undefined behaviour.
+
+**Typed (`MpscRingBuffer<T>`):**
+- Per-slot inline struct `Slot { int Published; T Value; }` on a POH-pinned `Slot[]`.
+- Producer CAS on `_claimedTail` by 1 → write `slot.Value` → `Volatile.Write(Published, 1)`.
+- Consumer: `Volatile.Read(Published)` → copy out `T` → zero `Value` → `Volatile.Write(Published, 0)` → advance head.
+
+**Byte (`MpscByteRingBuffer`):**
+- Variable-length records on POH-pinned `byte[]`. Header = 4 bytes LE with high bit = publish flag.
+- Producer CAS on `_claimedTail` by `recordSize` (or `wrapPadding + recordSize` on wrap).
+  Writes payload, then `Volatile.Write` header = `len | 0x80000000`. Wrap case stamps
+  `0xFFFFFFFF` padding marker at the original tail position.
+- Consumer: `Volatile.Read` header → check high bit → if padding, skip to wrap + retry →
+  zero-copy `ReadOnlySpan<byte>` return. `Advance()` clears the header (volatile zero) before
+  advancing head — recycles the slot for the next producer generation.
+- Max payload length: `2^31 - 2 = 0x7FFFFFFE` (one less than the padding sentinel).
+
+**Prev-based recovery drain** applies to both MPSC consumer pipes just as for SPSC — the
+drain runs on the single consumer thread, with the same narrow-window caveat on concurrent
+resumed producers.
 
 ## Byte-pipe hierarchy
 
