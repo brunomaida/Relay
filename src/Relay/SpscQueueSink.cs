@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -12,15 +12,15 @@ namespace Relay;
 /// via a dedicated consumer thread. Subclasses implement the backend (file, TCP, MMF, RAM).
 /// </summary>
 /// <remarks>
-/// Producer (caller) calls <see cref="DispatchPipe{T}.Enqueue"/> — zero allocation, zero lock.
+/// Producer (caller) calls <see cref="DispatchSink{T}.Enqueue"/> — zero allocation, zero lock.
 /// Consumer thread runs <see cref="WriteToBackend"/>, <see cref="FlushBackend"/>,
 /// <see cref="TryRecoverBackend"/>, and <see cref="TryDrainToPrev"/> on a flush-interval cadence.
 /// <para>
-/// Recovery drain: on flush interval, if <see cref="DispatchPipe{T}.Next"/> (set via builder as
+/// Recovery drain: on flush interval, if <see cref="DispatchSink{T}.Next"/> (set via builder as
 /// <see cref="Prev"/>) has recovered, items buffered during failure are drained back upstream.
 /// </para>
 /// </remarks>
-public abstract class SpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
+public abstract class SpscQueueSink<T> : DispatchSink<T> where T : unmanaged
 {
     private const int SpinIter  = 10;
     private const int YieldIter = 5;
@@ -45,8 +45,8 @@ public abstract class SpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
     /// </summary>
     protected volatile bool _healthy = true;
 
-    /// <summary>Set by <see cref="Builder.PipeChain{T,THead}.To"/> — predecessor in the chain.</summary>
-    internal DispatchPipe<T>? Prev { get; set; }
+    /// <summary>Set by <see cref="Builder.SinkChain{T,THead}.To"/> — predecessor in the chain.</summary>
+    internal DispatchSink<T>? Prev { get; set; }
 
     /// <summary>False if the consumer thread terminated with an unhandled exception.</summary>
     public bool IsConsuming => _running && _consumerException is null;
@@ -64,9 +64,9 @@ public abstract class SpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
     /// <param name="ringCapacity">SPSC ring capacity in entries. Must be a positive power of two.</param>
     /// <param name="flushIntervalMs">Max time between forced flushes in milliseconds.</param>
     /// <param name="pipeName">Optional name used as thread suffix for debugger/profiler visibility.</param>
-    protected SpscQueuePipe(int ringCapacity, int flushIntervalMs, string pipeName = "")
+    protected SpscQueueSink(int ringCapacity, int flushIntervalMs, string pipeName = "")
     {
-        PipeConstraints.AssertCacheLineAligned<T>();
+        SinkConstraints.AssertCacheLineAligned<T>();
         _ring               = new SpscRingBuffer<T>(ringCapacity);
         _flushIntervalTicks = (long)flushIntervalMs * (Stopwatch.Frequency / 1_000);
         _pipeName           = pipeName;
@@ -104,7 +104,7 @@ public abstract class SpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
 
     /// <summary>
     /// Publishes up to <paramref name="items"/>.Length entries in a single producer fence.
-    /// Items that don't fit locally fall through to <see cref="DispatchPipe{T}.Next"/> one by one
+    /// Items that don't fit locally fall through to <see cref="DispatchSink{T}.Next"/> one by one
     /// (or drop if Next is null). Unhealthy backend routes the whole batch to Next.
     /// Single producer thread only.
     /// </summary>

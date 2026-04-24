@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using FluentAssertions;
 using Relay;
 using Xunit;
@@ -6,16 +6,16 @@ using Xunit;
 namespace Relay.Tests;
 
 /// <summary>
-/// Verifies <see cref="ForkPipe{T}"/> semantics: every item is forwarded to the primary pipe
-/// AND to <see cref="DispatchPipe{T}.Next"/> (when set), regardless of the primary's internal
+/// Verifies <see cref="ForkSink{T}"/> semantics: every item is forwarded to the primary pipe
+/// AND to <see cref="DispatchSink{T}.Next"/> (when set), regardless of the primary's internal
 /// accept outcome. Lifecycle calls delegate exclusively to the primary.
 /// </summary>
-public sealed class ForkPipeTests
+public sealed class ForkSinkTests
 {
     [Fact]
     public void Constructor_NullPrimary_Throws()
     {
-        var act = () => new ForkPipe<Entry64>(null!);
+        var act = () => new ForkSink<Entry64>(null!);
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -25,7 +25,7 @@ public sealed class ForkPipeTests
         // Fork delivers to primary via Accept, then propagates to Next (PropagateAfterAccept=true).
         var primary   = new CountingPipe();
         var auditNext = new CountingPipe();
-        var fork      = new ForkPipe<Entry64>(primary);
+        var fork      = new ForkSink<Entry64>(primary);
         fork.Next     = auditNext;
 
         fork.Enqueue(new Entry64 { A = 1 });
@@ -41,7 +41,7 @@ public sealed class ForkPipeTests
         // called. Item falls through to Next via standard fallback.
         var primary   = new DeadPipe();
         var auditNext = new CountingPipe();
-        var fork      = new ForkPipe<Entry64>(primary);
+        var fork      = new ForkSink<Entry64>(primary);
         fork.Next     = auditNext;
 
         fork.IsHealthy.Should().BeFalse();
@@ -54,7 +54,7 @@ public sealed class ForkPipeTests
     public void Fork_Flush_DelegatesToPrimary()
     {
         var primary = new FlushTrackingPipe();
-        var fork    = new ForkPipe<Entry64>(primary);
+        var fork    = new ForkSink<Entry64>(primary);
 
         fork.Flush();
 
@@ -65,7 +65,7 @@ public sealed class ForkPipeTests
     public void Fork_Dispose_DelegatesToPrimary()
     {
         var primary = new DisposeTrackingPipe();
-        var fork    = new ForkPipe<Entry64>(primary);
+        var fork    = new ForkSink<Entry64>(primary);
 
         fork.Dispose();
 
@@ -80,7 +80,7 @@ public sealed class ForkPipeTests
         // returns true unconditionally. PropagateAfterAccept=true ensures Next always fires.
         var primary   = new InternalRejectPipe();
         var auditNext = new CountingPipe();
-        var fork      = new ForkPipe<Entry64>(primary);
+        var fork      = new ForkSink<Entry64>(primary);
         fork.Next     = auditNext;
 
         fork.Enqueue(new Entry64 { A = 1 });
@@ -91,7 +91,7 @@ public sealed class ForkPipeTests
 
     // ── Private test helpers ──────────────────────────────────────────────────
 
-    private sealed class CountingPipe : DispatchPipe<Entry64>
+    private sealed class CountingPipe : DispatchSink<Entry64>
     {
         public int Accepted;
         public override bool IsHealthy => true;
@@ -100,7 +100,7 @@ public sealed class ForkPipeTests
         public override void Dispose() { }
     }
 
-    private sealed class DeadPipe : DispatchPipe<Entry64>
+    private sealed class DeadPipe : DispatchSink<Entry64>
     {
         public override bool IsHealthy => false;
         protected override bool Accept(in Entry64 item) => true;
@@ -113,7 +113,7 @@ public sealed class ForkPipeTests
     /// silently rejects (e.g., ring full). Fork.Accept calls _primary.Enqueue, which drops
     /// internally; Fork still returns true so Next is always called.
     /// </summary>
-    private sealed class InternalRejectPipe : DispatchPipe<Entry64>
+    private sealed class InternalRejectPipe : DispatchSink<Entry64>
     {
         public override bool IsHealthy => true;
         protected override bool Accept(in Entry64 item) => false;
@@ -121,7 +121,7 @@ public sealed class ForkPipeTests
         public override void Dispose() { }
     }
 
-    private sealed class FlushTrackingPipe : DispatchPipe<Entry64>
+    private sealed class FlushTrackingPipe : DispatchSink<Entry64>
     {
         public int Flushes;
         public override bool IsHealthy => true;
@@ -130,7 +130,7 @@ public sealed class ForkPipeTests
         public override void Dispose() { }
     }
 
-    private sealed class DisposeTrackingPipe : DispatchPipe<Entry64>
+    private sealed class DisposeTrackingPipe : DispatchSink<Entry64>
     {
         public bool Disposed;
         public override bool IsHealthy => true;

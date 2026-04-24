@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using FluentAssertions;
@@ -8,8 +8,8 @@ using Xunit;
 namespace Relay.Tests;
 
 /// <summary>Lifecycle, consumer delivery, fallback, and backend integration for
-/// <see cref="SpscByteQueuePipe"/>.</summary>
-public sealed class SpscByteQueuePipeTests
+/// <see cref="SpscByteQueueSink"/>.</summary>
+public sealed class SpscByteQueueSinkTests
 {
     // ─────────────────────────────────────────────────────────────────────────
     // 1. Start / Stop lifecycle.
@@ -18,7 +18,7 @@ public sealed class SpscByteQueuePipeTests
     [Fact]
     public void Start_Stop_LifeCycle()
     {
-        using var pipe = new InMemoryBytePipe();
+        using var pipe = new InMemoryByteSink();
         pipe.Start();
         pipe.IsConsuming.Should().BeTrue();
 
@@ -33,7 +33,7 @@ public sealed class SpscByteQueuePipeTests
     [Fact]
     public void Enqueue_ConsumerReceivesPayloadBytewise()
     {
-        using var pipe    = new InMemoryBytePipe();
+        using var pipe    = new InMemoryByteSink();
         var       payload = new byte[] { 10, 20, 30 };
 
         pipe.Start();
@@ -58,7 +58,7 @@ public sealed class SpscByteQueuePipeTests
     public void Enqueue_MultipleRecords_AllDelivered_InOrder()
     {
         // Use a larger ring so all records fit before the consumer has to drain.
-        using var pipe = new InMemoryBytePipe(ringCapacity: 4096, flushIntervalMs: 50);
+        using var pipe = new InMemoryByteSink(ringCapacity: 4096, flushIntervalMs: 50);
         pipe.Start();
 
         const int Count = 32;
@@ -93,7 +93,7 @@ public sealed class SpscByteQueuePipeTests
     [Fact]
     public void ConsumerException_ExposedAfterCrash()
     {
-        using var pipe = new CrashingBytePipe();
+        using var pipe = new CrashingByteSink();
         pipe.Start();
         pipe.Enqueue(new byte[] { 1 }.AsSpan());
 
@@ -113,8 +113,8 @@ public sealed class SpscByteQueuePipeTests
     {
         // capacity=16: record for a 12-byte payload = 4 header + 12 padded = 16 bytes (fills ring).
         // Second 12-byte enqueue: TryPublish returns false → fallback to Next.
-        var primary  = new InMemoryBytePipe(ringCapacity: 16);
-        var fallback = new CountingBytePipe();
+        var primary  = new InMemoryByteSink(ringCapacity: 16);
+        var fallback = new CountingByteSink();
         primary.Next = fallback; // wire manually (InternalsVisibleTo)
 
         // Do NOT call Start() — consumer never drains.
@@ -133,8 +133,8 @@ public sealed class SpscByteQueuePipeTests
     [Fact]
     public void Serial_ItemRoutedToFallback_WhenPrimaryUnhealthy()
     {
-        using var primary  = new UnhealthyBytePipe(healthy: false);
-        using var fallback = new InMemoryBytePipe();
+        using var primary  = new UnhealthyByteSink(healthy: false);
+        using var fallback = new InMemoryByteSink();
 
         primary.Next = fallback; // wire chain manually
 
@@ -158,7 +158,7 @@ public sealed class SpscByteQueuePipeTests
     [Fact]
     public void Flush_InvokesFlushBackend()
     {
-        using var pipe = new FlushTrackingBytePipe();
+        using var pipe = new FlushTrackingByteSink();
         pipe.Start();
         pipe.Enqueue(new byte[] { 1, 2 }.AsSpan());
 
@@ -172,12 +172,12 @@ public sealed class SpscByteQueuePipeTests
     // Private test pipes
     // ─────────────────────────────────────────────────────────────────────────
 
-    private sealed class InMemoryBytePipe : SpscByteQueuePipe
+    private sealed class InMemoryByteSink : SpscByteQueueSink
     {
         private readonly List<byte[]> _received = new();
         private readonly object       _lock     = new();
 
-        public InMemoryBytePipe(int ringCapacity = 4096, int flushIntervalMs = 50, string name = "test")
+        public InMemoryByteSink(int ringCapacity = 4096, int flushIntervalMs = 50, string name = "test")
             : base(ringCapacity, flushIntervalMs, name) { }
 
         public int ReceivedCount { get { lock (_lock) return _received.Count; } }
@@ -193,9 +193,9 @@ public sealed class SpscByteQueuePipeTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class CrashingBytePipe : SpscByteQueuePipe
+    private sealed class CrashingByteSink : SpscByteQueueSink
     {
-        public CrashingBytePipe() : base(64, 50, "crash") { }
+        public CrashingByteSink() : base(64, 50, "crash") { }
 
         protected override void WriteToBackend(ReadOnlySpan<byte> payload) =>
             throw new InvalidOperationException("crash");
@@ -205,12 +205,12 @@ public sealed class SpscByteQueuePipeTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class UnhealthyBytePipe : SpscByteQueuePipe
+    private sealed class UnhealthyByteSink : SpscByteQueueSink
     {
         private readonly bool _healthyFlag;
         public int Consumed { get; private set; }
 
-        public UnhealthyBytePipe(bool healthy) : base(64, 50, "unhealthy")
+        public UnhealthyByteSink(bool healthy) : base(64, 50, "unhealthy")
         {
             _healthyFlag = healthy;
         }
@@ -223,7 +223,7 @@ public sealed class SpscByteQueuePipeTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class CountingBytePipe : BytePipe
+    private sealed class CountingByteSink : ByteSink
     {
         private int _count;
         public int Accepted => _count;
@@ -239,12 +239,12 @@ public sealed class SpscByteQueuePipeTests
         public override void Dispose() { }
     }
 
-    private sealed class FlushTrackingBytePipe : SpscByteQueuePipe
+    private sealed class FlushTrackingByteSink : SpscByteQueueSink
     {
         private int _flushCount;
         public int FlushCount => _flushCount;
 
-        public FlushTrackingBytePipe() : base(256, 50, "flush-track") { }
+        public FlushTrackingByteSink() : base(256, 50, "flush-track") { }
 
         protected override void WriteToBackend(ReadOnlySpan<byte> payload) { }
 

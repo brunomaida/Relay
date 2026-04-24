@@ -5,16 +5,16 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Relay.Internal;
 
-namespace Relay.Pipes;
+namespace Relay.Sinks;
 
 /// <summary>
-/// Pipe that sends blittable items over a TCP socket (<c>sizeof(T)</c> bytes per item).
+/// Sink that sends blittable items over a TCP socket (<c>sizeof(T)</c> bytes per item).
 /// Uses a POH-pinned send buffer and a non-blocking <see cref="Socket"/>. Brief backpressure
 /// on the send buffer is absorbed by a bounded spin; persistent backpressure marks the pipe
 /// unhealthy so new items fall through to <c>Next</c>. <see cref="TryRecoverBackend"/>
 /// reconnects with exponential backoff 1s → 30s.
 /// </summary>
-public sealed class TcpPipe<T> : SpscQueuePipe<T> where T : unmanaged
+public sealed class TcpSink<T> : SpscQueueSink<T> where T : unmanaged
 {
     private const int DefaultRingCapacity  = 16_384;
     private const int DefaultFlushInterval = 250;
@@ -37,7 +37,7 @@ public sealed class TcpPipe<T> : SpscQueuePipe<T> where T : unmanaged
     private int     _retryDelayMs = 1_000;
     private long    _retryAfterTicks;
 
-    public TcpPipe(
+    public TcpSink(
         string host,
         int    port,
         int    ringCapacity  = DefaultRingCapacity,

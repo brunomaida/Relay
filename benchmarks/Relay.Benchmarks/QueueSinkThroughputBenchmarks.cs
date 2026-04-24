@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using BenchmarkDotNet.Attributes;
 using Relay;
@@ -6,7 +6,7 @@ using Relay;
 namespace Relay.Benchmarks;
 
 /// <summary>
-/// End-to-end throughput: producer pushes N items into an <see cref="SpscQueuePipe{T}"/>,
+/// End-to-end throughput: producer pushes N items into an <see cref="SpscQueueSink{T}"/>,
 /// consumer thread drains them via a trivial <see cref="WriteToBackend"/>. Measures the
 /// cumulative cost of ring ops + consumer loop + drain on Stop.
 /// </summary>
@@ -95,7 +95,7 @@ public class QueuePipeThroughputBenchmarks
 /// Trivial SPSC queue pipe: increments <see cref="Sum"/> on every consumed item.
 /// No backend I/O — exercises pure ring + consumer-loop cost.
 /// </summary>
-internal sealed class TestSpscPipe : SpscQueuePipe<Entry64>
+internal sealed class TestSpscPipe : SpscQueueSink<Entry64>
 {
     private readonly int _backendSpinCycles;
     public long Sum;

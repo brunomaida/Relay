@@ -1,34 +1,34 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Relay.Buffers;
 using Relay.Internal;
+using Relay.Memory;
 
 namespace Relay;
 
 /// <summary>
-/// Abstract base for a pipe that buffers byte payloads in a lock-free MPSC ring and delivers them
+/// Abstract base for a pipe that buffers byte payloads in a lock-free SPSC ring and delivers them
 /// via a dedicated consumer thread. Subclasses implement the backend (file, TCP, MMF, RAM).
 /// </summary>
 /// <remarks>
-/// Any number of producer threads may call <see cref="BytePipe.Enqueue"/> concurrently —
-/// zero allocation, one CAS per write (via <see cref="MpscByteRingBuffer"/> HeadCache reservation).
+/// Producer (caller) calls <see cref="ByteSink.Enqueue"/> — zero allocation, zero lock.
 /// Consumer thread runs <see cref="WriteToBackend"/>, <see cref="FlushBackend"/>,
 /// <see cref="TryRecoverBackend"/>, and <see cref="TryDrainToPrev"/> on a flush-interval cadence.
 /// <para>
-/// Recovery drain: on flush interval, if <see cref="BytePipe.Next"/> (set via builder as
+/// Recovery drain: on flush interval, if <see cref="ByteSink.Next"/> (set via builder as
 /// <see cref="Prev"/>) has recovered, byte payloads buffered during failure are drained back upstream.
 /// </para>
 /// </remarks>
-public abstract class MpscByteQueuePipe : BytePipe
+public abstract class SpscByteQueueSink : ByteSink
 {
     private const int SpinIter  = 10;
     private const int YieldIter = 5;
     private const int SleepMs   = 1;
     private const int BatchSize = 256;
 
-    private readonly MpscByteRingBuffer _ring;
+    private readonly SpscByteRingBuffer _ring;
     private readonly long               _flushIntervalTicks;
     private readonly string             _pipeName;
 
@@ -46,7 +46,7 @@ public abstract class MpscByteQueuePipe : BytePipe
 
     /// <summary>Predecessor in the chain. Wired by byte-pipe test harness today; a dedicated
     /// builder will set this once multiple consumers require one.</summary>
-    internal BytePipe? Prev { get; set; }
+    internal ByteSink? Prev { get; set; }
 
     /// <summary>False if the consumer thread terminated with an unhandled exception.</summary>
     public bool IsConsuming => _running && _consumerException is null;
@@ -61,12 +61,12 @@ public abstract class MpscByteQueuePipe : BytePipe
     /// </summary>
     public override bool IsHealthy => _healthy;
 
-    /// <param name="ringCapacity">MPSC ring capacity in bytes. Must be a positive power of two.</param>
+    /// <param name="ringCapacity">SPSC ring capacity in bytes. Must be a positive power of two.</param>
     /// <param name="flushIntervalMs">Max time between forced flushes in milliseconds.</param>
     /// <param name="pipeName">Optional name used as thread suffix for debugger/profiler visibility.</param>
-    protected MpscByteQueuePipe(int ringCapacity, int flushIntervalMs, string pipeName = "")
+    protected SpscByteQueueSink(int ringCapacity, int flushIntervalMs, string pipeName = "")
     {
-        _ring               = new MpscByteRingBuffer(ringCapacity);
+        _ring               = new SpscByteRingBuffer(ringCapacity);
         _flushIntervalTicks = (long)flushIntervalMs * (Stopwatch.Frequency / 1_000);
         _pipeName           = pipeName;
     }
@@ -76,10 +76,10 @@ public abstract class MpscByteQueuePipe : BytePipe
     {
         if (_running) return;
         _running = true;
-        _ring.PreFaultAndLock();
+        RelayMemory.PreFaultAndLock(_ring.Buffer);
         _thread = new Thread(ConsumeLoop)
         {
-            Name         = string.IsNullOrEmpty(_pipeName) ? "relay-mpsc-byte" : $"relay-mpsc-byte-{_pipeName}",
+            Name         = string.IsNullOrEmpty(_pipeName) ? "relay-byte" : $"relay-byte-{_pipeName}",
             IsBackground = true,
             Priority     = ThreadPriority.BelowNormal
         };
@@ -195,10 +195,10 @@ public abstract class MpscByteQueuePipe : BytePipe
     }
 
     // On recovery, drain accumulated byte payloads back to the predecessor (which has recovered).
-    // MPSC caution: Prev.Enqueue is called from this consumer thread. If the original producers
-    // concurrently resume feeding Prev, multiple threads enter Prev's Accept simultaneously — a race
-    // window proportional to cache-coherency latency. Callers must ensure producers quiesce
-    // before this drain runs, or accept the narrow window for MPSC-violation in pathological cases.
+    // SPSC caution: Prev.Enqueue is called from this consumer thread. If the original producer
+    // concurrently resumes feeding Prev, two threads enter Prev's Accept simultaneously — a race
+    // window proportional to cache-coherency latency. Callers must ensure the producer quiesces
+    // before this drain runs, or accept the narrow window for SPSC-violation in pathological cases.
     private void TryDrainToPrev()
     {
         if (Prev is not { IsHealthy: true }) return;

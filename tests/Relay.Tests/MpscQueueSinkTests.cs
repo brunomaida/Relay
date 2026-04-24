@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using FluentAssertions;
 using Relay;
@@ -7,8 +7,8 @@ using Xunit;
 
 namespace Relay.Tests;
 
-/// <summary>MpscQueuePipe lifecycle, multi-producer delivery, ring-full fallback, and crash semantics.</summary>
-public sealed class MpscQueuePipeTests
+/// <summary>MpscQueueSink lifecycle, multi-producer delivery, ring-full fallback, and crash semantics.</summary>
+public sealed class MpscQueueSinkTests
 {
     // ── lifecycle ─────────────────────────────────────────────────────────────
 
@@ -153,7 +153,7 @@ public sealed class MpscQueuePipeTests
 
     // ── private test pipes ────────────────────────────────────────────────────
 
-    private sealed class InMemoryMpscPipe : MpscQueuePipe<Entry64>
+    private sealed class InMemoryMpscPipe : MpscQueueSink<Entry64>
     {
         private readonly bool _consume;
         private int           _count;
@@ -177,7 +177,7 @@ public sealed class MpscQueuePipeTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class CrashingMpscPipe : MpscQueuePipe<Entry64>
+    private sealed class CrashingMpscPipe : MpscQueueSink<Entry64>
     {
         public CrashingMpscPipe() : base(16, 50, "crash") { }
 
@@ -190,7 +190,7 @@ public sealed class MpscQueuePipeTests
     }
 
     /// <summary>Always-unhealthy MPSC pipe — routes every item to Next without consuming.</summary>
-    private sealed class UnhealthyMpscPipe : MpscQueuePipe<Entry64>
+    private sealed class UnhealthyMpscPipe : MpscQueueSink<Entry64>
     {
         public UnhealthyMpscPipe() : base(64, 50, "unhealthy") { }
 
@@ -202,7 +202,7 @@ public sealed class MpscQueuePipeTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class CountingMpscPipe : DispatchPipe<Entry64>
+    private sealed class CountingMpscPipe : DispatchSink<Entry64>
     {
         public int Accepted { get; private set; }
         public override bool IsHealthy => true;

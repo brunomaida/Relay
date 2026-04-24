@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 
 namespace Relay.Internal;
 
-internal static class PipeConstraints
+internal static class SinkConstraints
 {
     /// <summary>
     /// DEBUG-only assert: <c>sizeof(T)</c> must be a positive multiple of 64 bytes so that

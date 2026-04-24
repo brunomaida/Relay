@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 
 namespace Relay;
 
 /// <summary>
 /// Conditional gate pipe: items passing the predicate are forwarded downstream;
-/// items that fail are silently consumed (not forwarded to <see cref="DispatchPipe{T}.Next"/>).
+/// items that fail are silently consumed (not forwarded to <see cref="DispatchSink{T}.Next"/>).
 /// Always reports healthy.
 /// </summary>
 /// <remarks>
@@ -13,12 +13,12 @@ namespace Relay;
 /// chain from receiving items that were intentionally filtered. If you need a "try next on
 /// filter miss" behaviour, compose two serial pipes instead.
 /// </remarks>
-public sealed class FilterPipe<T> : DispatchPipe<T> where T : unmanaged
+public sealed class FilterSink<T> : DispatchSink<T> where T : unmanaged
 {
-    private readonly DispatchPipe<T> _downstream;
+    private readonly DispatchSink<T> _downstream;
     private readonly Predicate<T>    _predicate;
 
-    public FilterPipe(Predicate<T> predicate, DispatchPipe<T> downstream)
+    public FilterSink(Predicate<T> predicate, DispatchSink<T> downstream)
     {
         _predicate  = predicate  ?? throw new ArgumentNullException(nameof(predicate));
         _downstream = downstream ?? throw new ArgumentNullException(nameof(downstream));

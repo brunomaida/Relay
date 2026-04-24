@@ -5,10 +5,10 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
 
-namespace Relay.Pipes;
+namespace Relay.Sinks;
 
 /// <summary>
-/// Pipe that writes items to a pre-allocated <see cref="MemoryMappedFile"/>.
+/// Sink that writes items to a pre-allocated <see cref="MemoryMappedFile"/>.
 /// Writes via a raw pointer acquired once from <see cref="SafeMemoryMappedViewHandle"/> —
 /// never throws IOException; failure mode is capacity exhaustion, at which point
 /// <see cref="IsHealthy"/> returns false and subsequent items fall through to <c>Next</c>.
@@ -19,7 +19,7 @@ namespace Relay.Pipes;
 /// <see cref="SafeBuffer.AcquirePointer"/>. The pointer is valid for the lifetime of the
 /// pipe; <see cref="SafeBuffer.ReleasePointer"/> is called from <see cref="DisposeBackend"/>.
 /// </remarks>
-public sealed class MmfPipe<T> : SpscQueuePipe<T> where T : unmanaged
+public sealed class MmfSink<T> : SpscQueueSink<T> where T : unmanaged
 {
     private const int DefaultRingCapacity  = 65_536;
     private const int DefaultFlushInterval = 250;
@@ -41,7 +41,7 @@ public sealed class MmfPipe<T> : SpscQueuePipe<T> where T : unmanaged
     /// <inheritdoc/>
     protected override bool PropagateAfterAccept => false;
 
-    public unsafe MmfPipe(
+    public unsafe MmfSink(
         string path,
         long   maxBytes,
         int    ringCapacity  = DefaultRingCapacity,

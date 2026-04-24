@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using FluentAssertions;
 using Relay;
@@ -6,11 +6,11 @@ using Xunit;
 
 namespace Relay.Tests;
 
-/// <summary>Verifies PipeConstraints.AssertCacheLineAligned&lt;T&gt; accepts multiples of 64B and rejects all others.</summary>
-public sealed class PipeConstraintsTests
+/// <summary>Verifies SinkConstraints.AssertCacheLineAligned&lt;T&gt; accepts multiples of 64B and rejects all others.</summary>
+public sealed class SinkConstraintsTests
 {
     [Fact]
-    public void SpscQueuePipe_Accepts_192B_Struct()
+    public void SpscQueueSink_Accepts_192B_Struct()
     {
         Action act = () =>
         {
@@ -21,7 +21,7 @@ public sealed class PipeConstraintsTests
 
 #if DEBUG
     [Fact]
-    public void SpscQueuePipe_Rejects_96B_Struct_In_Debug()
+    public void SpscQueueSink_Rejects_96B_Struct_In_Debug()
     {
         Action act = () => _ = new InMemoryPipe96(ringCapacity: 8, flushIntervalMs: 50);
         act.Should().Throw<InvalidOperationException>()
@@ -29,7 +29,7 @@ public sealed class PipeConstraintsTests
     }
 
     [Fact]
-    public void SpscQueuePipe_Rejects_32B_Struct_In_Debug()
+    public void SpscQueueSink_Rejects_32B_Struct_In_Debug()
     {
         Action act = () => _ = new InMemoryPipe32(ringCapacity: 8, flushIntervalMs: 50);
         act.Should().Throw<InvalidOperationException>()
@@ -48,9 +48,9 @@ public sealed class PipeConstraintsTests
     [StructLayout(LayoutKind.Sequential, Size = 32)]
     private struct Entry32  { public long A; }
 
-    // --- minimal SpscQueuePipe helpers, one per payload type ---
+    // --- minimal SpscQueueSink helpers, one per payload type ---
 
-    private sealed class InMemoryPipe192 : SpscQueuePipe<Entry192>
+    private sealed class InMemoryPipe192 : SpscQueueSink<Entry192>
     {
         public InMemoryPipe192(int ringCapacity, int flushIntervalMs)
             : base(ringCapacity, flushIntervalMs, "test") { }
@@ -61,7 +61,7 @@ public sealed class PipeConstraintsTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class InMemoryPipe96 : SpscQueuePipe<Entry96>
+    private sealed class InMemoryPipe96 : SpscQueueSink<Entry96>
     {
         public InMemoryPipe96(int ringCapacity, int flushIntervalMs)
             : base(ringCapacity, flushIntervalMs, "test") { }
@@ -72,7 +72,7 @@ public sealed class PipeConstraintsTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class InMemoryPipe32 : SpscQueuePipe<Entry32>
+    private sealed class InMemoryPipe32 : SpscQueueSink<Entry32>
     {
         public InMemoryPipe32(int ringCapacity, int flushIntervalMs)
             : base(ringCapacity, flushIntervalMs, "test") { }

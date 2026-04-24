@@ -4,16 +4,16 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Relay.Internal;
 
-namespace Relay.Pipes;
+namespace Relay.Sinks;
 
 /// <summary>
-/// Pipe that writes blittable items as raw binary to a <see cref="FileStream"/>.
+/// Sink that writes blittable items as raw binary to a <see cref="FileStream"/>.
 /// Each item occupies exactly <c>sizeof(T)</c> bytes on disk.
 /// Uses a POH-pinned write buffer; flushes on the flush-interval cadence.
 /// IOException sets <c>_healthy = false</c>; <see cref="TryRecoverBackend"/> reopens the stream
 /// with exponential backoff 1s → <see cref="RetryMaxDelayMs"/>.
 /// </summary>
-public sealed class FileStreamPipe<T> : SpscQueuePipe<T> where T : unmanaged
+public sealed class FileStreamSink<T> : SpscQueueSink<T> where T : unmanaged
 {
     private const int DefaultRingCapacity  = 524_288;
     private const int DefaultFlushInterval = 250;
@@ -31,7 +31,7 @@ public sealed class FileStreamPipe<T> : SpscQueuePipe<T> where T : unmanaged
     private int         _retryDelayMs = 1_000;
     private long        _retryAfterTicks;
 
-    public FileStreamPipe(
+    public FileStreamSink(
         string path,
         int    ringCapacity  = DefaultRingCapacity,
         int    flushInterval = DefaultFlushInterval)

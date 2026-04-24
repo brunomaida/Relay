@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Threading;
 using BenchmarkDotNet.Attributes;
 using Relay;
@@ -6,7 +6,7 @@ using Relay;
 namespace Relay.Benchmarks;
 
 /// <summary>
-/// Measures the overhead of <see cref="DispatchPipe{T}.PropagateAfterAccept"/> on the default
+/// Measures the overhead of <see cref="DispatchSink{T}.PropagateAfterAccept"/> on the default
 /// (false) path and the tee (always-propagate) path.
 /// <para>
 /// Performance gate: <see cref="Depth1_Healthy_Default"/> must stay within ~5% of
@@ -19,10 +19,10 @@ namespace Relay.Benchmarks;
 [DisassemblyDiagnoser(maxDepth: 3)]
 public class PropagateBenchmarks
 {
-    private DispatchPipe<Entry64> _depth1Default       = null!;
-    private DispatchPipe<Entry64> _depth1PropagateOnly = null!;
-    private DispatchPipe<Entry64> _depth2PropagateFork = null!;
-    private DispatchPipe<Entry64> _depth2ForkWrapped   = null!;
+    private DispatchSink<Entry64> _depth1Default       = null!;
+    private DispatchSink<Entry64> _depth1PropagateOnly = null!;
+    private DispatchSink<Entry64> _depth2PropagateFork = null!;
+    private DispatchSink<Entry64> _depth2ForkWrapped   = null!;
 
     private Entry64 _item;
 
@@ -44,10 +44,10 @@ public class PropagateBenchmarks
         prop2.Next = sink2a;
         _depth2PropagateFork = prop2;
 
-        // Depth 2: ForkPipe(CounterPipe) → CounterPipe — actual ForkPipe cost vs. custom propagate.
+        // Depth 2: ForkSink(CounterPipe) → CounterPipe — actual ForkSink cost vs. custom propagate.
         var primaryCounter = new CounterPipe();
         var auditCounter   = new CounterPipe();
-        var fork           = new ForkPipe<Entry64>(primaryCounter);
+        var fork           = new ForkSink<Entry64>(primaryCounter);
         fork.Next          = auditCounter;
         _depth2ForkWrapped = fork;
     }
@@ -74,8 +74,8 @@ public class PropagateBenchmarks
     public void Depth2_Propagate_Fork() => _depth2PropagateFork.Enqueue(in _item);
 
     /// <summary>
-    /// ForkPipe(CounterPipe) → CounterPipe: actual ForkPipe wiring. Compare to
-    /// Depth2_Propagate_Fork to verify ForkPipe adds no measurable overhead over a custom pipe.
+    /// ForkSink(CounterPipe) → CounterPipe: actual ForkSink wiring. Compare to
+    /// Depth2_Propagate_Fork to verify ForkSink adds no measurable overhead over a custom pipe.
     /// </summary>
     [Benchmark]
     public void Depth2_Fork_Wrapped() => _depth2ForkWrapped.Enqueue(in _item);
@@ -85,7 +85,7 @@ public class PropagateBenchmarks
 /// Healthy propagate pipe with an observable side-effect — prevents JIT dead-code elimination.
 /// PropagateAfterAccept=true ensures Next is always called after a successful accept.
 /// </summary>
-internal sealed class PropagateCounterPipe : DispatchPipe<Entry64>
+internal sealed class PropagateCounterPipe : DispatchSink<Entry64>
 {
     public long LastValue;
 

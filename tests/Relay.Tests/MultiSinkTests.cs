@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using FluentAssertions;
 using Relay;
 using Relay.Builder;
@@ -7,14 +7,14 @@ using Xunit;
 namespace Relay.Tests;
 
 /// <summary>Multi-broadcast delivery, partial failure, and CRTP variant.</summary>
-public sealed class MultiPipeTests
+public sealed class MultiSinkTests
 {
     [Fact]
     public void Multi_DeliversToAllChildren()
     {
         var c1 = new CountingPipe();
         var c2 = new CountingPipe();
-        var multi = new MultiPipe<Entry64>(c1, c2);
+        var multi = new MultiSink<Entry64>(c1, c2);
 
         multi.Enqueue(new Entry64 { A = 1 });
         multi.Enqueue(new Entry64 { A = 2 });
@@ -28,7 +28,7 @@ public sealed class MultiPipeTests
     {
         var c1 = new CountingPipe(healthy: false);
         var c2 = new CountingPipe();
-        var multi = new MultiPipe<Entry64>(c1, c2);
+        var multi = new MultiSink<Entry64>(c1, c2);
 
         multi.IsHealthy.Should().BeTrue(); // c2 is healthy
         multi.Enqueue(new Entry64 { A = 1 });
@@ -44,7 +44,7 @@ public sealed class MultiPipeTests
         var c2   = new CountingPipe(healthy: false);
         var next = new CountingPipe();
         var multi = RelayBuilder
-            .Start<Entry64, MultiPipe<Entry64>>(new MultiPipe<Entry64>(c1, c2))
+            .Start<Entry64, MultiSink<Entry64>>(new MultiSink<Entry64>(c1, c2))
             .To(next)
             .Build();
 
@@ -58,7 +58,7 @@ public sealed class MultiPipeTests
     [Fact]
     public void Multi_RequiresAtLeastOneChild()
     {
-        Action act = () => new MultiPipe<Entry64>();
+        Action act = () => new MultiSink<Entry64>();
         act.Should().Throw<ArgumentException>();
     }
 
@@ -67,7 +67,7 @@ public sealed class MultiPipeTests
     {
         var c1  = new CountingPipe();
         var c2  = new CountingPipe();
-        var multi = new Multi2Pipe<Entry64, CountingPipe, CountingPipe>(c1, c2);
+        var multi = new Multi2Sink<Entry64, CountingPipe, CountingPipe>(c1, c2);
 
         multi.Enqueue(new Entry64 { A = 10 });
 
@@ -80,12 +80,12 @@ public sealed class MultiPipeTests
     {
         var c1  = new CountingPipe(healthy: false);
         var c2  = new CountingPipe();
-        var multi = new Multi2Pipe<Entry64, CountingPipe, CountingPipe>(c1, c2);
+        var multi = new Multi2Sink<Entry64, CountingPipe, CountingPipe>(c1, c2);
 
         multi.IsHealthy.Should().BeTrue();
     }
 
-    private sealed class CountingPipe : DispatchPipe<Entry64>
+    private sealed class CountingPipe : DispatchSink<Entry64>
     {
         private readonly bool _healthy;
         public int Accepted { get; private set; }

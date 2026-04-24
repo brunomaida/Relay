@@ -1,24 +1,25 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using FluentAssertions;
 using Relay;
 using Relay.Builder;
+using Relay.Sinks;
 using Xunit;
 
 namespace Relay.Tests;
 
-/// <summary>SpscQueuePipe lifecycle, consumer drain, and ring-full fallback.</summary>
-public sealed class SpscQueuePipeTests
+/// <summary>SpscQueueSink lifecycle, consumer drain, and ring-full fallback.</summary>
+public sealed class SpscQueueSinkTests
 {
     [Fact]
-    public void FileStreamPipe_WritesAllEntries()
+    public void FileStreamSink_WritesAllEntries()
     {
         var path = Path.GetTempFileName();
         try
         {
-            using var pipe = new Pipes.FileStreamPipe<Entry64>(path, ringCapacity: 64, flushInterval: 50);
+            using var pipe = new FileStreamSink<Entry64>(path, ringCapacity: 64, flushInterval: 50);
             pipe.Start();
 
             const int count = 32;
@@ -64,7 +65,7 @@ public sealed class SpscQueuePipeTests
     }
 
     // In-memory pipe for ring-full testing.
-    private sealed class InMemoryPipe : SpscQueuePipe<Entry64>
+    private sealed class InMemoryPipe : SpscQueueSink<Entry64>
     {
         private readonly bool _consume;
         private int _count;
@@ -81,7 +82,7 @@ public sealed class SpscQueuePipeTests
     }
 
     // Pipe whose WriteToBackend always throws.
-    private sealed class CrashingPipe : SpscQueuePipe<Entry64>
+    private sealed class CrashingPipe : SpscQueueSink<Entry64>
     {
         public CrashingPipe() : base(16, 50, "crash") { }
 
@@ -93,7 +94,7 @@ public sealed class SpscQueuePipeTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class CountingPipe : DispatchPipe<Entry64>
+    private sealed class CountingPipe : DispatchSink<Entry64>
     {
         public int Accepted { get; private set; }
         public override bool IsHealthy => true;

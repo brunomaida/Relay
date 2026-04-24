@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using FluentAssertions;
 using Relay;
@@ -11,12 +11,12 @@ namespace Relay.Tests;
 public struct Entry64 { public long A; public long B; }
 
 /// <summary>Chain routing and fallback behaviour.</summary>
-public sealed class DispatchPipeChainTests
+public sealed class DispatchSinkChainTests
 {
     [Fact]
-    public void NullPipe_AlwaysAccepts()
+    public void NullSink_AlwaysAccepts()
     {
-        var pipe = NullPipe<Entry64>.Instance;
+        var pipe = NullSink<Entry64>.Instance;
         pipe.IsHealthy.Should().BeTrue();
         pipe.Enqueue(new Entry64 { A = 1 }); // no throw, no fallback
     }
@@ -87,7 +87,7 @@ public sealed class DispatchPipeChainTests
     }
 
     // Minimal testing pipe — synchronous, in-memory.
-    private sealed class CountingPipe : DispatchPipe<Entry64>
+    private sealed class CountingPipe : DispatchSink<Entry64>
     {
         private readonly bool _healthy;
         public int Accepted { get; private set; }

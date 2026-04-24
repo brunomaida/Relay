@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -12,18 +12,18 @@ namespace Relay;
 /// via a dedicated consumer thread. Subclasses implement the backend (file, TCP, MMF, RAM).
 /// </summary>
 /// <remarks>
-/// Any number of producer threads may call <see cref="DispatchPipe{T}.Enqueue"/> concurrently —
+/// Any number of producer threads may call <see cref="DispatchSink{T}.Enqueue"/> concurrently —
 /// zero allocation, one CAS per write. Consumer thread runs <see cref="WriteToBackend"/>,
 /// <see cref="FlushBackend"/>, <see cref="TryRecoverBackend"/>, and <see cref="TryDrainToPrev"/>
 /// on a flush-interval cadence.
 /// <para>
-/// Recovery drain: on flush interval, if <see cref="DispatchPipe{T}.Next"/> (set via builder as
+/// Recovery drain: on flush interval, if <see cref="DispatchSink{T}.Next"/> (set via builder as
 /// <see cref="Prev"/>) has recovered, items buffered during failure are drained back upstream.
 /// Drain-to-Prev is SPSC w.r.t. Prev — the consumer thread is the sole caller of Prev.Enqueue
 /// during drain, matching the single-consumer contract on this ring.
 /// </para>
 /// </remarks>
-public abstract class MpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
+public abstract class MpscQueueSink<T> : DispatchSink<T> where T : unmanaged
 {
     private const int SpinIter  = 10;
     private const int YieldIter = 5;
@@ -47,8 +47,8 @@ public abstract class MpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
     /// </summary>
     protected volatile bool _healthy = true;
 
-    /// <summary>Set by <see cref="Builder.PipeChain{T,THead}.To"/> — predecessor in the chain.</summary>
-    internal DispatchPipe<T>? Prev { get; set; }
+    /// <summary>Set by <see cref="Builder.SinkChain{T,THead}.To"/> — predecessor in the chain.</summary>
+    internal DispatchSink<T>? Prev { get; set; }
 
     /// <summary>False if the consumer thread terminated with an unhandled exception.</summary>
     public bool IsConsuming => _running && _consumerException is null;
@@ -66,7 +66,7 @@ public abstract class MpscQueuePipe<T> : DispatchPipe<T> where T : unmanaged
     /// <param name="ringCapacity">MPSC ring capacity in entries. Must be a positive power of two.</param>
     /// <param name="flushIntervalMs">Max time between forced flushes in milliseconds.</param>
     /// <param name="pipeName">Optional name used as thread suffix for debugger/profiler visibility.</param>
-    protected MpscQueuePipe(int ringCapacity, int flushIntervalMs, string pipeName = "")
+    protected MpscQueueSink(int ringCapacity, int flushIntervalMs, string pipeName = "")
     {
         _ring               = new MpscRingBuffer<T>(ringCapacity);
         _flushIntervalTicks = (long)flushIntervalMs * (Stopwatch.Frequency / 1_000);

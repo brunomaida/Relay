@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FluentAssertions;
 using Relay;
@@ -6,8 +6,8 @@ using Xunit;
 
 namespace Relay.Tests;
 
-/// <summary>Chain routing and fallback semantics for <see cref="BytePipe"/>.</summary>
-public sealed class BytePipeChainTests
+/// <summary>Chain routing and fallback semantics for <see cref="ByteSink"/>.</summary>
+public sealed class ByteSinkChainTests
 {
     // ─────────────────────────────────────────────────────────────────────────
     // 1. Healthy head consumes locally; Next never sees the payload.
@@ -16,8 +16,8 @@ public sealed class BytePipeChainTests
     [Fact]
     public void Enqueue_HealthyPipe_ConsumesLocally_NextNotCalled()
     {
-        var head = new CountingBytePipe();
-        var next = new CountingBytePipe();
+        var head = new CountingByteSink();
+        var next = new CountingByteSink();
         head.Next = next;
 
         head.Enqueue(new byte[] { 1, 2, 3 }.AsSpan());
@@ -33,8 +33,8 @@ public sealed class BytePipeChainTests
     [Fact]
     public void Enqueue_UnhealthyPipe_ForwardsToNext()
     {
-        var head = new DeadBytePipe();
-        var next = new CountingBytePipe();
+        var head = new DeadByteSink();
+        var next = new CountingByteSink();
         head.Next = next;
 
         head.Enqueue(new byte[] { 7 }.AsSpan());
@@ -49,8 +49,8 @@ public sealed class BytePipeChainTests
     [Fact]
     public void Enqueue_AcceptReturnsFalse_ForwardsToNext()
     {
-        var head = new RejectBytePipe();
-        var next = new CountingBytePipe();
+        var head = new RejectByteSink();
+        var next = new CountingByteSink();
         head.Next = next;
 
         head.Enqueue(new byte[] { 5, 6 }.AsSpan());
@@ -65,7 +65,7 @@ public sealed class BytePipeChainTests
     [Fact]
     public void Enqueue_NextNull_SilentlyDropped()
     {
-        var head = new DeadBytePipe();
+        var head = new DeadByteSink();
         // Next is null by default — not wired.
 
         var act = () => head.Enqueue(new byte[] { 99 }.AsSpan());
@@ -79,8 +79,8 @@ public sealed class BytePipeChainTests
     [Fact]
     public void Enqueue_PayloadFlowsIntact_AcrossFallback()
     {
-        var head    = new DeadBytePipe();
-        var capture = new CaptureBytePipe();
+        var head    = new DeadByteSink();
+        var capture = new CaptureByteSink();
         head.Next = capture;
 
         var expected = new byte[] { 1, 2, 3, 4, 5 };
@@ -96,7 +96,7 @@ public sealed class BytePipeChainTests
     [Fact]
     public void Dispose_Idempotent()
     {
-        var pipe = new CountingBytePipe();
+        var pipe = new CountingByteSink();
         pipe.Dispose();
         var act = () => pipe.Dispose();
         act.Should().NotThrow();
@@ -106,12 +106,12 @@ public sealed class BytePipeChainTests
     // Private test pipes
     // ─────────────────────────────────────────────────────────────────────────
 
-    private sealed class CountingBytePipe : BytePipe
+    private sealed class CountingByteSink : ByteSink
     {
         private readonly int _maxAccept;
         private int          _count;
 
-        public CountingBytePipe(int maxAccept = int.MaxValue) => _maxAccept = maxAccept;
+        public CountingByteSink(int maxAccept = int.MaxValue) => _maxAccept = maxAccept;
         public int Accepted => _count;
 
         public override bool IsHealthy => _count < _maxAccept;
@@ -127,7 +127,7 @@ public sealed class BytePipeChainTests
         public override void Dispose() { }
     }
 
-    private sealed class DeadBytePipe : BytePipe
+    private sealed class DeadByteSink : ByteSink
     {
         public override bool IsHealthy                          => false;
         protected override bool Accept(ReadOnlySpan<byte> payload) => true;
@@ -135,7 +135,7 @@ public sealed class BytePipeChainTests
         public override void Dispose() { }
     }
 
-    private sealed class RejectBytePipe : BytePipe
+    private sealed class RejectByteSink : ByteSink
     {
         public override bool IsHealthy                          => true;
         protected override bool Accept(ReadOnlySpan<byte> payload) => false;
@@ -144,7 +144,7 @@ public sealed class BytePipeChainTests
     }
 
     /// <summary>Captures the last received payload for inspection.</summary>
-    private sealed class CaptureBytePipe : BytePipe
+    private sealed class CaptureByteSink : ByteSink
     {
         private readonly List<byte[]> _received = new();
 

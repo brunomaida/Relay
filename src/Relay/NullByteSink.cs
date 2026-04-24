@@ -1,23 +1,21 @@
+﻿using System;
 using System.Runtime.CompilerServices;
-// No additional usings needed — System.Runtime.CompilerServices covers MethodImplOptions.
+
 namespace Relay;
 
 /// <summary>
-/// No-op sink: accepts every item and discards it immediately.
+/// No-op sink: accepts every byte payload and discards it immediately.
 /// Useful as a terminal fallback, in tests, or to disable a pipe without restructuring the chain.
 /// </summary>
-public sealed class NullPipe<T> : DispatchPipe<T> where T : unmanaged
+public sealed class NullByteSink : ByteSink
 {
     /// <summary>Shared singleton — allocation-free.</summary>
-    public static readonly NullPipe<T> Instance = new();
+    public static readonly NullByteSink Instance = new();
 
     public override bool IsHealthy => true;
 
-    /// <inheritdoc/>
-    protected override bool PropagateAfterAccept => false;
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected override bool Accept(in T item) => true;
+    protected override bool Accept(ReadOnlySpan<byte> payload) => true;
 
     public override void Flush()   { }
     public override void Dispose() { }

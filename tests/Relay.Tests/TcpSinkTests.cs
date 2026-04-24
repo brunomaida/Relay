@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -7,22 +7,22 @@ using System.Threading;
 using FluentAssertions;
 using Relay;
 using Relay.Builder;
-using Relay.Pipes;
+using Relay.Sinks;
 using Xunit;
 
 namespace Relay.Tests;
 
-/// <summary>TcpPipe loopback write, reconnect backoff, and backpressure fallback.</summary>
-public sealed class TcpPipeTests
+/// <summary>TcpSink loopback write, reconnect backoff, and backpressure fallback.</summary>
+public sealed class TcpSinkTests
 {
     private static readonly int EntrySize = Unsafe.SizeOf<Entry64>();
 
     [Fact]
-    public void TcpPipe_WritesAllEntries_ReadbackMatches()
+    public void TcpSink_WritesAllEntries_ReadbackMatches()
     {
         using var server = new LoopbackServer();
 
-        using (var pipe = new TcpPipe<Entry64>("127.0.0.1", server.Port,
+        using (var pipe = new TcpSink<Entry64>("127.0.0.1", server.Port,
                    ringCapacity: 64, flushInterval: 25))
         {
             pipe.Start();
@@ -47,7 +47,7 @@ public sealed class TcpPipeTests
     }
 
     [Fact]
-    public void TcpPipe_ConnectFailure_FallsBackAndRetries()
+    public void TcpSink_ConnectFailure_FallsBackAndRetries()
     {
         // Nothing is listening on this port — constructor connect fails.
         int deadPort = GetFreePort();
@@ -56,9 +56,9 @@ public sealed class TcpPipeTests
 
         Action ctor = () =>
         {
-            using var pipe = new TcpPipe<Entry64>("127.0.0.1", deadPort,
+            using var pipe = new TcpSink<Entry64>("127.0.0.1", deadPort,
                 ringCapacity: 16, flushInterval: 50);
-            RelayBuilder.Start<Entry64, TcpPipe<Entry64>>(pipe).To(fallback).Build();
+            RelayBuilder.Start<Entry64, TcpSink<Entry64>>(pipe).To(fallback).Build();
             pipe.Start();
 
             pipe.Enqueue(new Entry64 { A = 1 });
@@ -73,7 +73,7 @@ public sealed class TcpPipeTests
 
     [Fact]
     [Trait("Category", "Stress")]
-    public void TcpPipe_ReconnectLoop_RecoversAndFallsBackCleanly()
+    public void TcpSink_ReconnectLoop_RecoversAndFallsBackCleanly()
     {
         // Producer sustains load while the server is dropped and accepted in a loop.
         // Validates: pipe does not crash, IsHealthy toggles, fallback captures items during outages.
@@ -84,9 +84,9 @@ public sealed class TcpPipeTests
         using var server   = new ReconnectableServer();
         var       fallback = new CountingPipe();
 
-        using var pipe = new TcpPipe<Entry64>("127.0.0.1", server.Port,
+        using var pipe = new TcpSink<Entry64>("127.0.0.1", server.Port,
             ringCapacity: 1024, flushInterval: 25);
-        RelayBuilder.Start<Entry64, TcpPipe<Entry64>>(pipe).To(fallback).Build();
+        RelayBuilder.Start<Entry64, TcpSink<Entry64>>(pipe).To(fallback).Build();
         pipe.Start();
 
         int produced = 0;
@@ -111,11 +111,11 @@ public sealed class TcpPipeTests
     }
 
     [Fact]
-    public void TcpPipe_ServerDropsConnection_MarksUnhealthy()
+    public void TcpSink_ServerDropsConnection_MarksUnhealthy()
     {
         using var server = new LoopbackServer();
 
-        using var pipe = new TcpPipe<Entry64>("127.0.0.1", server.Port,
+        using var pipe = new TcpSink<Entry64>("127.0.0.1", server.Port,
             ringCapacity: 1024, flushInterval: 25);
         pipe.Start();
 
@@ -154,7 +154,7 @@ public sealed class TcpPipeTests
         return port;
     }
 
-    private sealed class CountingPipe : DispatchPipe<Entry64>
+    private sealed class CountingPipe : DispatchSink<Entry64>
     {
         public int Accepted { get; private set; }
         public override bool IsHealthy => true;

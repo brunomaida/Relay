@@ -1,8 +1,8 @@
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Relay.Pipes;
+namespace Relay.Sinks;
 
 /// <summary>
 /// Last-resort native-memory circular ring pipe.
@@ -10,7 +10,7 @@ namespace Relay.Pipes;
 /// Never throws IOException; <see cref="IsHealthy"/> is false only when the ring is full.
 /// Drain via <see cref="DrainTo"/> when the primary pipe recovers.
 /// </summary>
-public sealed unsafe class RamPipe<T> : DispatchPipe<T> where T : unmanaged
+public sealed unsafe class RamSink<T> : DispatchSink<T> where T : unmanaged
 {
     private const int DefaultCapacity = 1 << 23; // 8_388_608 entries — ~512 MB for T=64B
 
@@ -22,7 +22,7 @@ public sealed unsafe class RamPipe<T> : DispatchPipe<T> where T : unmanaged
     private long _tail;
     private bool _disposed;
 
-    public RamPipe(long capacity = DefaultCapacity)
+    public RamSink(long capacity = DefaultCapacity)
     {
         if (capacity <= 0 || (capacity & (capacity - 1)) != 0)
             throw new ArgumentException("Capacity must be a positive power of two.", nameof(capacity));
@@ -52,7 +52,7 @@ public sealed unsafe class RamPipe<T> : DispatchPipe<T> where T : unmanaged
     /// Stops early if <paramref name="target"/> becomes unhealthy.
     /// Call from a single thread (typically <paramref name="target"/>'s consumer recovery path).
     /// </summary>
-    public void DrainTo(DispatchPipe<T> target)
+    public void DrainTo(DispatchSink<T> target)
     {
         while (_head < _tail)
         {

@@ -1,22 +1,22 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using FluentAssertions;
 using Relay;
 using Relay.Builder;
-using Relay.Pipes;
+using Relay.Sinks;
 using Xunit;
 
 namespace Relay.Tests;
 
-/// <summary>MmfPipe write/readback, capacity exhaustion, and fallback behaviour.</summary>
-public sealed class MmfPipeTests
+/// <summary>MmfSink write/readback, capacity exhaustion, and fallback behaviour.</summary>
+public sealed class MmfSinkTests
 {
     private static readonly int EntrySize = Unsafe.SizeOf<Entry64>();
 
     [Fact]
-    public void MmfPipe_WritesAllEntries_ReadbackMatches()
+    public void MmfSink_WritesAllEntries_ReadbackMatches()
     {
         var path = Path.GetTempFileName();
         File.Delete(path); // MMF creates the file
@@ -25,7 +25,7 @@ public sealed class MmfPipeTests
             const int count = 16;
             long maxBytes = EntrySize * count;
 
-            using (var pipe = new MmfPipe<Entry64>(path, maxBytes, ringCapacity: 64, flushInterval: 50))
+            using (var pipe = new MmfSink<Entry64>(path, maxBytes, ringCapacity: 64, flushInterval: 50))
             {
                 pipe.Start();
                 for (int i = 0; i < count; i++)
@@ -48,7 +48,7 @@ public sealed class MmfPipeTests
     }
 
     [Fact]
-    public void MmfPipe_CapacityExhausted_IsHealthyFalse()
+    public void MmfSink_CapacityExhausted_IsHealthyFalse()
     {
         var path = Path.GetTempFileName();
         File.Delete(path);
@@ -56,7 +56,7 @@ public sealed class MmfPipeTests
         {
             long maxBytes = EntrySize * 4;
 
-            using var pipe = new MmfPipe<Entry64>(path, maxBytes, ringCapacity: 8, flushInterval: 25);
+            using var pipe = new MmfSink<Entry64>(path, maxBytes, ringCapacity: 8, flushInterval: 25);
             pipe.Start();
 
             for (int i = 0; i < 4; i++)
@@ -71,7 +71,7 @@ public sealed class MmfPipeTests
     }
 
     [Fact]
-    public void MmfPipe_Full_FallsBackToNext()
+    public void MmfSink_Full_FallsBackToNext()
     {
         var path = Path.GetTempFileName();
         File.Delete(path);
@@ -80,8 +80,8 @@ public sealed class MmfPipeTests
             long maxBytes = EntrySize * 2;
 
             var fallback = new CountingPipe();
-            using var pipe = new MmfPipe<Entry64>(path, maxBytes, ringCapacity: 8, flushInterval: 25);
-            RelayBuilder.Start<Entry64, MmfPipe<Entry64>>(pipe).To(fallback).Build();
+            using var pipe = new MmfSink<Entry64>(path, maxBytes, ringCapacity: 8, flushInterval: 25);
+            RelayBuilder.Start<Entry64, MmfSink<Entry64>>(pipe).To(fallback).Build();
             pipe.Start();
 
             for (int i = 0; i < 2; i++)
@@ -100,19 +100,19 @@ public sealed class MmfPipeTests
     }
 
     [Fact]
-    public void MmfPipe_ThrowsWhenMaxBytesBelowEntrySize()
+    public void MmfSink_ThrowsWhenMaxBytesBelowEntrySize()
     {
         var path = Path.GetTempFileName();
         File.Delete(path);
         try
         {
-            Action act = () => new MmfPipe<Entry64>(path, EntrySize - 1);
+            Action act = () => new MmfSink<Entry64>(path, EntrySize - 1);
             act.Should().Throw<ArgumentException>();
         }
         finally { if (File.Exists(path)) File.Delete(path); }
     }
 
-    private sealed class CountingPipe : DispatchPipe<Entry64>
+    private sealed class CountingPipe : DispatchSink<Entry64>
     {
         public int Accepted { get; private set; }
         public override bool IsHealthy => true;

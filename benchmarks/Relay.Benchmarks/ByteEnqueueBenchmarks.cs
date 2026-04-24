@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using BenchmarkDotNet.Attributes;
@@ -7,7 +7,7 @@ using Relay;
 namespace Relay.Benchmarks;
 
 /// <summary>
-/// Measures <see cref="BytePipe.Enqueue"/> throughput across chain configurations.
+/// Measures <see cref="ByteSink.Enqueue"/> throughput across chain configurations.
 /// Healthy = payload consumed at first pipe; Unhealthy/Reject = fallback hop to Next.
 /// Fixed 64-byte payload matches <see cref="Entry64"/> in the typed suite for direct A/B comparison.
 /// </summary>
@@ -15,10 +15,10 @@ namespace Relay.Benchmarks;
 [DisassemblyDiagnoser(maxDepth: 3)]
 public class ByteEnqueueBenchmarks
 {
-    private BytePipe _depth1Healthy        = null!;
-    private BytePipe _depth2AcceptReject   = null!;
-    private BytePipe _depth2HeadUnhealthy  = null!;
-    private BytePipe _depth3AllUnhealthy   = null!;
+    private ByteSink _depth1Healthy        = null!;
+    private ByteSink _depth2AcceptReject   = null!;
+    private ByteSink _depth2HeadUnhealthy  = null!;
+    private ByteSink _depth3AllUnhealthy   = null!;
 
     private byte[] _payload = null!;
 
@@ -73,7 +73,7 @@ public class ByteEnqueueBenchmarks
 /// Healthy no-op sink for byte chains. Volatile.Write on first payload byte prevents
 /// JIT dead-code elimination while keeping hot-path cost observable.
 /// </summary>
-internal sealed class ByteCounterPipe : BytePipe
+internal sealed class ByteCounterPipe : ByteSink
 {
     public long LastValue;
 
@@ -91,7 +91,7 @@ internal sealed class ByteCounterPipe : BytePipe
 }
 
 /// <summary>Always-unhealthy pipe — forces every Enqueue to fall through to Next.</summary>
-internal sealed class ByteDeadPipe : BytePipe
+internal sealed class ByteDeadPipe : ByteSink
 {
     public override bool IsHealthy => false;
 
@@ -103,7 +103,7 @@ internal sealed class ByteDeadPipe : BytePipe
 }
 
 /// <summary>Healthy pipe that rejects every payload — forces fallback via Accept returning false.</summary>
-internal sealed class ByteRejectPipe : BytePipe
+internal sealed class ByteRejectPipe : ByteSink
 {
     public override bool IsHealthy => true;
 

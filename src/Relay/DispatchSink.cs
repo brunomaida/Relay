@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 
 namespace Relay;
@@ -13,10 +13,10 @@ namespace Relay;
 /// <see cref="Accept"/>. On any failure, delegates to <see cref="Next"/> (if set) or drops silently.
 /// The chain is decentralized — no orchestrator; each pipe manages its own health and routing.
 /// </remarks>
-public abstract class DispatchPipe<T> : IDisposable where T : unmanaged
+public abstract class DispatchSink<T> : IDisposable where T : unmanaged
 {
-    /// <summary>Next pipe in the fallback chain. Set by <see cref="Builder.PipeChain{T,THead}"/>.</summary>
-    public DispatchPipe<T>? Next { get; internal set; }
+    /// <summary>Next pipe in the fallback chain. Set by <see cref="Builder.SinkChain{T,THead}"/>.</summary>
+    public DispatchSink<T>? Next { get; internal set; }
 
     /// <summary>
     /// True when this pipe can accept items. Set and cleared exclusively by the consumer thread

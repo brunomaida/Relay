@@ -2,7 +2,7 @@
 Infrastructure library for composable fallback dispatch pipelines over `T : unmanaged`.
 Reason from hardware and runtime first principles. Measure before optimizing.
 
-Single responsibility: receive `T`, deliver to the configured backend, and if delivery fails, forward to the next pipe in the chain. No logging. No telemetry. No orchestration.
+Single responsibility: receive `T`, deliver to the configured backend, and if delivery fails, forward to the next sink in the chain. No logging. No telemetry. No orchestration.
 
 # Stack
 - Runtime: **.NET 9.0** (`net9.0`)
@@ -22,48 +22,48 @@ Directory.Packages.props
 src/
   Relay/
     Relay.csproj
-    DispatchPipe.cs          ← abstract base (typed), Enqueue hot path
-    BytePipe.cs              ← abstract base (byte payloads), parallel hierarchy
-    SpscQueuePipe.cs         ← async delivery via SPSC ring + consumer thread
-    SpscByteQueuePipe.cs     ← byte-variant SPSC consumer
-    MpscQueuePipe.cs         ← async delivery via MPSC ring (multi-producer)
-    MpscByteQueuePipe.cs     ← byte-variant MPSC consumer
-    ForkPipe.cs              ← primary + Next propagation (audit/bypass pattern)
-    MultiPipe.cs             ← broadcast (array-based + Multi2Pipe CRTP variant)
-    FilterPipe.cs            ← conditional gate
-    NullPipe.cs              ← no-op sink / terminal fallback
-    NullBytePipe.cs          ← byte-variant no-op sink
+    DispatchSink.cs          ← abstract base (typed), Enqueue hot path
+    ByteSink.cs              ← abstract base (byte payloads), parallel hierarchy
+    SpscQueueSink.cs         ← async delivery via SPSC ring + consumer thread
+    SpscByteQueueSink.cs     ← byte-variant SPSC consumer
+    MpscQueueSink.cs         ← async delivery via MPSC ring (multi-producer)
+    MpscByteQueueSink.cs     ← byte-variant MPSC consumer
+    ForkSink.cs              ← primary + Next propagation (audit/bypass pattern)
+    MultiSink.cs             ← broadcast (array-based + Multi2Sink CRTP variant)
+    FilterSink.cs            ← conditional gate
+    NullSink.cs              ← no-op sink / terminal fallback
+    NullByteSink.cs          ← byte-variant no-op sink
     Buffers/
       SpscRingBuffer.cs      ← lock-free SPSC ring, 128B padded head/tail
       SpscByteRingBuffer.cs  ← byte-variant length-prefixed ring
       MpscRingBuffer.cs      ← MPSC ring: CAS tail + HeadCache + inline Slot (Log2 FIX #18)
       MpscByteRingBuffer.cs  ← byte-variant MPSC: CAS reservation + header publish-bit
-    Pipes/
-      FileStreamPipe.cs      ← binary write to FileStream, POH buffer, backoff recovery
-      MmfPipe.cs             ← MemoryMappedFile, capacity-only failure
-      TcpPipe.cs             ← TCP socket, POH send buffer, backoff reconnect
-      RamPipe.cs             ← native memory circular ring, last-resort fallback
+    Sinks/
+      FileStreamSink.cs      ← binary write to FileStream, POH buffer, backoff recovery
+      MmfSink.cs             ← MemoryMappedFile, capacity-only failure
+      TcpSink.cs             ← TCP socket, POH send buffer, backoff reconnect
+      RamSink.cs             ← native memory circular ring, last-resort fallback
     Builder/
       RelayBuilder.cs        ← static entry points: Start / StartSpsc / StartMpsc
-      PipeChain.cs           ← fluent chain builder; To / Fork / When / Multi; wires Next + Prev
-      MultiBuilder.cs        ← sub-builder: collects broadcast branches for MultiPipe
+      SinkChain.cs           ← fluent chain builder; To / Fork / When / Multi; wires Next + Prev
+      MultiBuilder.cs        ← sub-builder: collects broadcast branches for MultiSink
       FilterBinding.cs       ← intermediate state: closes When(pred) with .To(downstream)
     Memory/
       RelayMemory.cs         ← internal: PreFault + VirtualLock on ring buffer
     Internal/
-      PipeConstraints.cs     ← internal: cache-line alignment assertion (DEBUG)
+      SinkConstraints.cs     ← internal: cache-line alignment assertion (DEBUG)
       HfClock.cs             ← internal: Stopwatch.GetTimestamp() wrapper
 ```
 
 # Namespaces
 | Namespace | Content |
 |---|---|
-| `Relay` | `DispatchPipe<T>`, `SpscQueuePipe<T>`, `MpscQueuePipe<T>`, `MultiPipe<T>`, `Multi2Pipe<T,TC1,TC2>`, `FilterPipe<T>`, `NullPipe<T>`, `ForkPipe<T>`, `BytePipe`, `SpscByteQueuePipe`, `MpscByteQueuePipe`, `NullBytePipe` |
+| `Relay` | `DispatchSink<T>`, `SpscQueueSink<T>`, `MpscQueueSink<T>`, `MultiSink<T>`, `Multi2Sink<T,TC1,TC2>`, `FilterSink<T>`, `NullSink<T>`, `ForkSink<T>`, `ByteSink`, `SpscByteQueueSink`, `MpscByteQueueSink`, `NullByteSink` |
 | `Relay.Buffers` | `SpscRingBuffer<T>`, `MpscRingBuffer<T>`, `SpscByteRingBuffer`, `MpscByteRingBuffer` (internal to lib) |
-| `Relay.Pipes` | Concrete backends: `FileStreamPipe<T>`, `MmfPipe<T>`, `TcpPipe<T>`, `RamPipe<T>` |
-| `Relay.Builder` | `RelayBuilder`, `PipeChain<T,THead>`, `MultiBuilder<T>`, `FilterBinding<T,THead>` |
+| `Relay.Sinks` | Concrete backends: `FileStreamSink<T>`, `MmfSink<T>`, `TcpSink<T>`, `RamSink<T>` |
+| `Relay.Builder` | `RelayBuilder`, `SinkChain<T,THead>`, `MultiBuilder<T>`, `FilterBinding<T,THead>` |
 | `Relay.Memory` | `RelayMemory` (internal) |
-| `Relay.Internal` | `HfClock`, `PipeConstraints` (internal) |
+| `Relay.Internal` | `HfClock`, `SinkConstraints` (internal) |
 
 # Performance — Everything Is Hot Path
 
@@ -76,13 +76,13 @@ src/
 - **No `async`/`await`** in the dispatch or consume path.
 - **No `DateTime.UtcNow`.** Use `HfClock.NowTicks` (`Stopwatch.GetTimestamp()`).
 - **`[MethodImpl(AggressiveInlining)]`** on `Enqueue`, `Accept`, `TryPublish`, `TryConsume`, and `IsFull`.
-- Hot path structs must be a positive multiple of 64 bytes (64, 128, 192, 256, 320, …) so adjacent ring slots never share a cache line. `PipeConstraints.AssertCacheLineAligned<T>()` enforces this in DEBUG.
+- Hot path structs must be a positive multiple of 64 bytes (64, 128, 192, 256, 320, …) so adjacent ring slots never share a cache line. `SinkConstraints.AssertCacheLineAligned<T>()` enforces this in DEBUG.
 
 ## Cycle Budget (reference: Intel i9-12900K, hot caches)
 | Operation | Cycles |
 |---|---|
 | `TryPublish` (ring not full) | ~25c |
-| `IsHealthy` check (SpscQueuePipe, healthy) | ~7c |
+| `IsHealthy` check (SpscQueueSink, healthy) | ~7c |
 | Successful `Enqueue` (depth 1) | ~32c |
 | Fallback hop (unhealthy, SPSC target) | +4c per hop |
 | `Volatile.Write` (mfence, x64) | ~15c |
@@ -96,28 +96,28 @@ src/
 - `IsHealthy` and `Accept` are independent gates in `Enqueue`: both must return true for local delivery to succeed.
 
 ## Fallback and `Next`
-- `Next` is set by `PipeChain.To()`. Pipes never assign their own `Next`.
+- `Next` is set by `SinkChain.To()`. Pipes never assign their own `Next`.
 - On any failure (`IsHealthy == false` OR `Accept == false`), `Next?.Enqueue(item)` is called.
 - `Next == null` → silent drop. No exception, no log.
 
 ## `Prev` (recovery drain)
-- Set by `PipeChain.To()` on `SpscQueuePipe<T>` and `MpscQueuePipe<T>` instances.
+- Set by `SinkChain.To()` on `SpscQueueSink<T>` and `MpscQueueSink<T>` instances.
 - Used in `TryDrainToPrev()`: when the predecessor recovers, the fallback pipe drains accumulated items back upstream.
-- Only `SpscQueuePipe` / `MpscQueuePipe` participate in `Prev`-based drain. Other `DispatchPipe<T>` subclasses do not get `Prev` wired.
+- Only `SpscQueueSink` / `MpscQueueSink` participate in `Prev`-based drain. Other `DispatchSink<T>` subclasses do not get `Prev` wired.
 
-## `MultiPipe<T>` semantics
+## `MultiSink<T>` semantics
 - Delivers to **all children** on every `Enqueue`, regardless of individual child health.
 - `IsHealthy` = OR over children (short-circuit: true as soon as one child is healthy).
 - `Accept` always returns true. Fallback to `Next` only when **all** children are unhealthy (`IsHealthy == false`).
 - Items are not re-delivered to unhealthy children; they silently miss them. Multi-dispatch is not redundancy — it is broadcast.
-- **`Multi2Pipe<T, TC1, TC2>` CRTP variant:** prefer when `TC1` and `TC2` are `sealed` — JIT devirtualizes and inlines both `Enqueue` calls, saving ~6c. Requires concrete sealed types known at compile time.
+- **`Multi2Sink<T, TC1, TC2>` CRTP variant:** prefer when `TC1` and `TC2` are `sealed` — JIT devirtualizes and inlines both `Enqueue` calls, saving ~6c. Requires concrete sealed types known at compile time.
 
-## `FilterPipe<T>` semantics
+## `FilterSink<T>` semantics
 - `Accept` returns true even when the predicate fails. Items that fail the predicate are silently consumed; they do NOT propagate to `Next`. This is intentional — filtered items must not trigger the fallback chain.
 
-## `PropagateAfterAccept` and `ForkPipe<T>`
+## `PropagateAfterAccept` and `ForkSink<T>`
 
-- `DispatchPipe<T>.PropagateAfterAccept` is a virtual property, default `false`. When `true`,
+- `DispatchSink<T>.PropagateAfterAccept` is a virtual property, default `false`. When `true`,
   `Enqueue` continues to `Next?.Enqueue` **after** a successful local `Accept` — enabling
   fork / audit / bypass patterns without restructuring the chain.
 - JIT note: sealed subclasses returning a compile-time constant (`=> false` or `=> true`)
@@ -125,7 +125,7 @@ src/
 - Semantics: propagation engages only after a **successful** `Accept`. If `IsHealthy` is false
   or `Accept` returns false, the item still falls through to `Next` as before — propagation
   is not an "always deliver to Next" flag.
-- `ForkPipe<T>` is the canonical propagate-true pipe: forwards to a primary via
+- `ForkSink<T>` is the canonical propagate-true sink: forwards to a primary via
   `_primary.Enqueue`, then the base `Enqueue` propagates to `Next`. `IsHealthy`, `Flush`, and
   `Dispose` mirror the primary.
 
@@ -133,14 +133,14 @@ src/
 
 | Entry / operator | Purpose |
 |---|---|
-| `RelayBuilder.Start<T, THead>(head)` | Generic entry. Any `DispatchPipe<T>` head. |
-| `RelayBuilder.StartSpsc<T, THead>(head)` | Single-producer entry. `THead : SpscQueuePipe<T>`. |
-| `RelayBuilder.StartMpsc<T, THead>(head)` | Multi-producer entry. `THead : MpscQueuePipe<T>`. |
-| `.To(pipe)` | Appends `pipe` as fallback; wires `Prev` for queue pipes. |
-| `.Fork(primary)` | Inserts `ForkPipe<T>`; every item goes to `primary` then propagates. |
-| `.When(pred).To(downstream)` | Inserts `FilterPipe<T>`; items failing `pred` are silently consumed. |
-| `.Multi(cfg)` | Broadcast via `MultiBuilder<T>` — array-based `MultiPipe<T>`. |
-| `.Multi<TC1,TC2>(c1, c2)` | 2-branch broadcast via CRTP `Multi2Pipe<T,TC1,TC2>`. |
+| `RelayBuilder.Start<T, THead>(head)` | Generic entry. Any `DispatchSink<T>` head. |
+| `RelayBuilder.StartSpsc<T, THead>(head)` | Single-producer entry. `THead : SpscQueueSink<T>`. |
+| `RelayBuilder.StartMpsc<T, THead>(head)` | Multi-producer entry. `THead : MpscQueueSink<T>`. |
+| `.To(sink)` | Appends `sink` as fallback; wires `Prev` for queue sinks. |
+| `.Fork(primary)` | Inserts `ForkSink<T>`; every item goes to `primary` then propagates. |
+| `.When(pred).To(downstream)` | Inserts `FilterSink<T>`; items failing `pred` are silently consumed. |
+| `.Multi(cfg)` | Broadcast via `MultiBuilder<T>` — array-based `MultiSink<T>`. |
+| `.Multi<TC1,TC2>(c1, c2)` | 2-branch broadcast via CRTP `Multi2Sink<T,TC1,TC2>`. |
 
 ## MPSC ring buffers
 
@@ -170,24 +170,24 @@ layout:
   advancing head — recycles the slot for the next producer generation.
 - Max payload length: `2^31 - 2 = 0x7FFFFFFE` (one less than the padding sentinel).
 
-**Prev-based recovery drain** applies to both MPSC consumer pipes just as for SPSC — the
+**Prev-based recovery drain** applies to both MPSC consumer sinks just as for SPSC — the
 drain runs on the single consumer thread, with the same narrow-window caveat on concurrent
 resumed producers.
 
-## Byte-pipe hierarchy
+## Byte-sink hierarchy
 
-Parallel tree to `DispatchPipe<T>` for variable-length `ReadOnlySpan<byte>` payloads. The two
-hierarchies share no types — the unmanaged constraint on `DispatchPipe<T>` is incompatible with
+Parallel tree to `DispatchSink<T>` for variable-length `ReadOnlySpan<byte>` payloads. The two
+hierarchies share no types — the unmanaged constraint on `DispatchSink<T>` is incompatible with
 `ReadOnlySpan<byte>`, and a unifying generic would force `ref struct` on `T`. Parallelism is
 cleaner and costs nothing at runtime.
 
 ### Types
-- `BytePipe` — abstract base. `Enqueue(ReadOnlySpan<byte>)` short-circuits on `IsHealthy`, then
+- `ByteSink` — abstract base. `Enqueue(ReadOnlySpan<byte>)` short-circuits on `IsHealthy`, then
   `Accept`, falling through to `Next` on failure (or drops if `Next == null`). Same semantics as
   the typed tree.
-- `SpscByteQueuePipe` — abstract SPSC consumer. Constructor takes `(int ringCapacity, int flushIntervalMs, string pipeName)`;
+- `SpscByteQueueSink` — abstract SPSC consumer. Constructor takes `(int ringCapacity, int flushIntervalMs, string sinkName)`;
   subclasses implement `WriteToBackend(ReadOnlySpan<byte>)` / `FlushBackend` / `TryRecoverBackend` / `DisposeBackend`.
-- `NullBytePipe` — singleton no-op (`NullBytePipe.Instance`).
+- `NullByteSink` — singleton no-op (`NullByteSink.Instance`).
 - `SpscByteRingBuffer` (internal) — lock-free length-prefixed SPSC ring.
 
 ### `SpscByteRingBuffer` invariants
@@ -203,17 +203,17 @@ cleaner and costs nothing at runtime.
 - Head/tail padding: same 128-byte `PaddedLong` as `SpscRingBuffer<T>`.
 
 ### When to use which tree
-| Use typed `DispatchPipe<T>` when... | Use `BytePipe` when... |
+| Use typed `DispatchSink<T>` when... | Use `ByteSink` when... |
 |---|---|
 | Payload is a fixed-size unmanaged struct, multiple of 64B | Payload length varies per record |
 | Zero-copy fixed-layout matters (Struct-of-arrays, SIMD) | Payload is already a serialized/encoded byte blob |
-| `PipeConstraints.AssertCacheLineAligned<T>()` applies | You need a byte-oriented backend (text log, framed protocol) |
+| `SinkConstraints.AssertCacheLineAligned<T>()` applies | You need a byte-oriented backend (text log, framed protocol) |
 
 ### Status (current)
 - SPSC-only. No MPSC variant — add if multi-producer contention is demonstrated by BDN.
 - No `PropagateAfterAccept` / tee variant — deferred until a consumer requires it.
 - No dedicated builder (`ByteChain` / `ByteChainBuilder`) — chains are wired manually via
-  `BytePipe.Next` (internal setter). Builder will be added once 2+ consumers need one.
+  `ByteSink.Next` (internal setter). Builder will be added once 2+ consumers need one.
 
 ## `SpscRingBuffer<T>` contract
 - SPSC: one producer thread, one consumer thread. Violating this is undefined behaviour.
@@ -221,25 +221,25 @@ cleaner and costs nothing at runtime.
 - `TryPublish` uses `Volatile.Write` on tail (mfence on x64, ~15c). `TryConsume` uses `Volatile.Write` on head.
 - Batched-write API (`TryReserveTail` / `WriteSlot` / `CommitTail`) enables a single mfence for N writes; use with `Thread.MemoryBarrier()` between write and commit.
 
-## `SpscQueuePipe<T>` lifecycle
+## `SpscQueueSink<T>` lifecycle
 - `Start()` must be called before `Enqueue` — spawns consumer thread and pre-faults the ring.
 - `Stop(drainTimeoutMs)` signals stop and joins with drain window. `Dispose()` calls `Stop()` — always dispose via `using` or explicit `Stop`.
 - `IsConsuming` is false only after the consumer thread exits due to an unhandled exception.
 - `ConsumerException` is set in the catch block; read only on cold path (diagnostic).
 
-# Concrete Pipes
+# Concrete Sinks
 
-| Pipe | Backend | Failure trigger | Recovery |
+| Sink | Backend | Failure trigger | Recovery |
 |---|---|---|---|
-| `FileStreamPipe<T>` | `FileStream`, POH write buffer | `IOException` in `FlushBuffer` | Reopen stream, backoff 1s → 60s |
-| `TcpPipe<T>` | `TcpClient` + `NetworkStream`, POH send buffer | `Exception` in `FlushBuffer` | Reconnect, backoff 1s → 30s |
-| `MmfPipe<T>` | `MemoryMappedViewAccessor` | Capacity exhaustion (`_position + sizeof(T) > maxBytes`) | None — capacity only |
-| `RamPipe<T>` | `NativeMemory.AllocZeroed`, unsafe circular ring | Ring full | None — `DrainTo(target)` on recovery. **Must free in `Dispose`.** |
+| `FileStreamSink<T>` | `FileStream`, POH write buffer | `IOException` in `FlushBuffer` | Reopen stream, backoff 1s → 60s |
+| `TcpSink<T>` | `TcpClient` + `NetworkStream`, POH send buffer | `Exception` in `FlushBuffer` | Reconnect, backoff 1s → 30s |
+| `MmfSink<T>` | `MemoryMappedViewAccessor` | Capacity exhaustion (`_position + sizeof(T) > maxBytes`) | None — capacity only |
+| `RamSink<T>` | `NativeMemory.AllocZeroed`, unsafe circular ring | Ring full | None — `DrainTo(target)` on recovery. **Must free in `Dispose`.** |
 
 # Testing
 - `dotnet test tests/Relay.Tests` must pass (0 failures) before any commit.
-- Test file per concern: `DispatchPipeChainTests`, `SpscQueuePipeTests`, `MultiPipeTests`, `ForkPipeTests`, `RecoveryDrainTests`.
-- Local test pipes extend `DispatchPipe<T>` or `SpscQueuePipe<T>` directly — no mocking frameworks.
+- Test file per concern: `DispatchSinkChainTests`, `SpscQueueSinkTests`, `MultiSinkTests`, `ForkSinkTests`, `RecoveryDrainTests`.
+- Local test pipes extend `DispatchSink<T>` or `SpscQueueSink<T>` directly — no mocking frameworks.
 - Tests that use `Thread.Sleep` for consumer timing must use short, deterministic windows. Prefer `Stop(drainTimeoutMs)` to signal completion rather than sleeping and asserting on side effects.
 
 # Code Style
