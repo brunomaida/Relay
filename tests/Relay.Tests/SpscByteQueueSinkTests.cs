@@ -223,7 +223,7 @@ public sealed class SpscByteQueueSinkTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class CountingByteSink : ByteSink
+    private sealed class CountingByteSink : PacketSink
     {
         private int _count;
         public int Accepted => _count;

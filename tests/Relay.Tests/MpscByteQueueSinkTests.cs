@@ -226,8 +226,8 @@ public sealed class MpscByteQueueSinkTests
         protected override void DisposeBackend()    { }
     }
 
-    /// <summary>Minimal <see cref="ByteSink"/> that counts accepted payloads without consuming.</summary>
-    private sealed class MpscCountingByteSink : ByteSink
+    /// <summary>Minimal <see cref="PacketSink"/> that counts accepted payloads without consuming.</summary>
+    private sealed class MpscCountingByteSink : PacketSink
     {
         private int _count;
         public int Accepted => _count;

@@ -23,7 +23,7 @@ src/
   Relay/
     Relay.csproj
     DispatchSink.cs          ← abstract base (typed), Enqueue hot path
-    ByteSink.cs              ← abstract base (byte payloads), parallel hierarchy
+    PacketSink.cs            ← abstract base (byte payloads), parallel hierarchy
     SpscQueueSink.cs         ← async delivery via SPSC ring + consumer thread
     SpscByteQueueSink.cs     ← byte-variant SPSC consumer
     MpscQueueSink.cs         ← async delivery via MPSC ring (multi-producer)
@@ -58,7 +58,7 @@ src/
 # Namespaces
 | Namespace | Content |
 |---|---|
-| `Relay` | `DispatchSink<T>`, `SpscQueueSink<T>`, `MpscQueueSink<T>`, `MultiSink<T>`, `Multi2Sink<T,TC1,TC2>`, `FilterSink<T>`, `NullSink<T>`, `ForkSink<T>`, `ByteSink`, `SpscByteQueueSink`, `MpscByteQueueSink`, `NullByteSink` |
+| `Relay` | `DispatchSink<T>`, `SpscQueueSink<T>`, `MpscQueueSink<T>`, `MultiSink<T>`, `Multi2Sink<T,TC1,TC2>`, `FilterSink<T>`, `NullSink<T>`, `ForkSink<T>`, `PacketSink`, `SpscByteQueueSink`, `MpscByteQueueSink`, `NullByteSink` |
 | `Relay.Buffers` | `SpscRingBuffer<T>`, `MpscRingBuffer<T>`, `SpscByteRingBuffer`, `MpscByteRingBuffer` (internal to lib) |
 | `Relay.Sinks` | Concrete backends: `FileStreamSink<T>`, `MmfSink<T>`, `TcpSink<T>`, `RamSink<T>` |
 | `Relay.Builder` | `RelayBuilder`, `SinkChain<T,THead>`, `MultiBuilder<T>`, `FilterBinding<T,THead>` |
@@ -174,7 +174,7 @@ layout:
 drain runs on the single consumer thread, with the same narrow-window caveat on concurrent
 resumed producers.
 
-## Byte-sink hierarchy
+## Packet-sink hierarchy
 
 Parallel tree to `DispatchSink<T>` for variable-length `ReadOnlySpan<byte>` payloads. The two
 hierarchies share no types — the unmanaged constraint on `DispatchSink<T>` is incompatible with
@@ -182,7 +182,7 @@ hierarchies share no types — the unmanaged constraint on `DispatchSink<T>` is 
 cleaner and costs nothing at runtime.
 
 ### Types
-- `ByteSink` — abstract base. `Enqueue(ReadOnlySpan<byte>)` short-circuits on `IsHealthy`, then
+- `PacketSink` — abstract base. `Enqueue(ReadOnlySpan<byte>)` short-circuits on `IsHealthy`, then
   `Accept`, falling through to `Next` on failure (or drops if `Next == null`). Same semantics as
   the typed tree.
 - `SpscByteQueueSink` — abstract SPSC consumer. Constructor takes `(int ringCapacity, int flushIntervalMs, string sinkName)`;
@@ -203,17 +203,19 @@ cleaner and costs nothing at runtime.
 - Head/tail padding: same 128-byte `PaddedLong` as `SpscRingBuffer<T>`.
 
 ### When to use which tree
-| Use typed `DispatchSink<T>` when... | Use `ByteSink` when... |
+| Use typed `DispatchSink<T>` when... | Use `PacketSink` when... |
 |---|---|
 | Payload is a fixed-size unmanaged struct, multiple of 64B | Payload length varies per record |
 | Zero-copy fixed-layout matters (Struct-of-arrays, SIMD) | Payload is already a serialized/encoded byte blob |
 | `SinkConstraints.AssertCacheLineAligned<T>()` applies | You need a byte-oriented backend (text log, framed protocol) |
 
 ### Status (current)
-- SPSC-only. No MPSC variant — add if multi-producer contention is demonstrated by BDN.
-- No `PropagateAfterAccept` / tee variant — deferred until a consumer requires it.
-- No dedicated builder (`ByteChain` / `ByteChainBuilder`) — chains are wired manually via
-  `ByteSink.Next` (internal setter). Builder will be added once 2+ consumers need one.
+- SPSC-only concrete sinks. `MpscByteQueueSink` abstract base exists; no concrete MPSC
+  backends yet — add if multi-producer contention is demonstrated by BDN.
+- `PacketSink.PropagateAfterAccept` is defined and documented — concrete tee/fork sinks
+  for the packet hierarchy land in Phase 1 (`ForkSink` non-generic).
+- No dedicated builder yet (`SinkChainBuilder` / `SinkChain<THead>` land in Phase 1).
+  Chains are wired manually via `PacketSink.Next` (internal setter) until the builder ships.
 
 ## `SpscRingBuffer<T>` contract
 - SPSC: one producer thread, one consumer thread. Violating this is undefined behaviour.

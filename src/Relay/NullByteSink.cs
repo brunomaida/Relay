@@ -7,7 +7,7 @@ namespace Relay;
 /// No-op sink: accepts every byte payload and discards it immediately.
 /// Useful as a terminal fallback, in tests, or to disable a pipe without restructuring the chain.
 /// </summary>
-public sealed class NullByteSink : ByteSink
+public sealed class NullByteSink : PacketSink
 {
     /// <summary>Shared singleton — allocation-free.</summary>
     public static readonly NullByteSink Instance = new();

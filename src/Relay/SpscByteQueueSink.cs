@@ -13,15 +13,15 @@ namespace Relay;
 /// via a dedicated consumer thread. Subclasses implement the backend (file, TCP, MMF, RAM).
 /// </summary>
 /// <remarks>
-/// Producer (caller) calls <see cref="ByteSink.Enqueue"/> — zero allocation, zero lock.
+/// Producer (caller) calls <see cref="PacketSink.Enqueue"/> — zero allocation, zero lock.
 /// Consumer thread runs <see cref="WriteToBackend"/>, <see cref="FlushBackend"/>,
 /// <see cref="TryRecoverBackend"/>, and <see cref="TryDrainToPrev"/> on a flush-interval cadence.
 /// <para>
-/// Recovery drain: on flush interval, if <see cref="ByteSink.Next"/> (set via builder as
+/// Recovery drain: on flush interval, if <see cref="PacketSink.Next"/> (set via builder as
 /// <see cref="Prev"/>) has recovered, byte payloads buffered during failure are drained back upstream.
 /// </para>
 /// </remarks>
-public abstract class SpscByteQueueSink : ByteSink
+public abstract class SpscByteQueueSink : PacketSink
 {
     private const int SpinIter  = 10;
     private const int YieldIter = 5;
@@ -46,7 +46,7 @@ public abstract class SpscByteQueueSink : ByteSink
 
     /// <summary>Predecessor in the chain. Wired by byte-pipe test harness today; a dedicated
     /// builder will set this once multiple consumers require one.</summary>
-    internal ByteSink? Prev { get; set; }
+    internal PacketSink? Prev { get; set; }
 
     /// <summary>False if the consumer thread terminated with an unhandled exception.</summary>
     public bool IsConsuming => _running && _consumerException is null;

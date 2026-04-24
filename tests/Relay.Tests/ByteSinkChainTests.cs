@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Relay.Tests;
 
-/// <summary>Chain routing and fallback semantics for <see cref="ByteSink"/>.</summary>
+/// <summary>Chain routing and fallback semantics for <see cref="PacketSink"/>.</summary>
 public sealed class ByteSinkChainTests
 {
     // ─────────────────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ public sealed class ByteSinkChainTests
     // Private test pipes
     // ─────────────────────────────────────────────────────────────────────────
 
-    private sealed class CountingByteSink : ByteSink
+    private sealed class CountingByteSink : PacketSink
     {
         private readonly int _maxAccept;
         private int          _count;
@@ -127,7 +127,7 @@ public sealed class ByteSinkChainTests
         public override void Dispose() { }
     }
 
-    private sealed class DeadByteSink : ByteSink
+    private sealed class DeadByteSink : PacketSink
     {
         public override bool IsHealthy                          => false;
         protected override bool Accept(ReadOnlySpan<byte> payload) => true;
@@ -135,7 +135,7 @@ public sealed class ByteSinkChainTests
         public override void Dispose() { }
     }
 
-    private sealed class RejectByteSink : ByteSink
+    private sealed class RejectByteSink : PacketSink
     {
         public override bool IsHealthy                          => true;
         protected override bool Accept(ReadOnlySpan<byte> payload) => false;
@@ -144,7 +144,7 @@ public sealed class ByteSinkChainTests
     }
 
     /// <summary>Captures the last received payload for inspection.</summary>
-    private sealed class CaptureByteSink : ByteSink
+    private sealed class CaptureByteSink : PacketSink
     {
         private readonly List<byte[]> _received = new();
 
