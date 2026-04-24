@@ -63,10 +63,13 @@ public sealed class MmfPipe<T> : SpscQueuePipe<T> where T : unmanaged
 
     protected override unsafe void WriteToBackend(in T item)
     {
-#if DEBUG
+        // Hard guard: producer's IsHealthy check races the ring — items already queued may
+        // arrive here after capacity was exhausted. Drop and flip unhealthy so Next drains.
         if (_position + EntrySize > _maxBytes)
-            throw new InvalidOperationException("MmfPipe: write past capacity.");
-#endif
+        {
+            _healthy = false;
+            return;
+        }
         Unsafe.CopyBlockUnaligned(
             _basePtr + _position,
             (byte*)Unsafe.AsPointer(ref Unsafe.AsRef(in item)),

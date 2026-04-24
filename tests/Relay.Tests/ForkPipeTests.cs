@@ -6,86 +6,86 @@ using Xunit;
 namespace Relay.Tests;
 
 /// <summary>
-/// Verifies <see cref="TeePipe{T}"/> semantics: every item is forwarded to the primary pipe
+/// Verifies <see cref="ForkPipe{T}"/> semantics: every item is forwarded to the primary pipe
 /// AND to <see cref="DispatchPipe{T}.Next"/> (when set), regardless of the primary's internal
 /// accept outcome. Lifecycle calls delegate exclusively to the primary.
 /// </summary>
-public sealed class TeePipeTests
+public sealed class ForkPipeTests
 {
     [Fact]
     public void Constructor_NullPrimary_Throws()
     {
-        var act = () => new TeePipe<Entry64>(null!);
+        var act = () => new ForkPipe<Entry64>(null!);
         act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
-    public void Tee_DeliversToPrimaryAndNext_WhenPrimaryHealthy()
+    public void Fork_DeliversToPrimaryAndNext_WhenPrimaryHealthy()
     {
-        // Tee delivers to primary via Accept, then propagates to Next (PropagateAfterAccept=true).
+        // Fork delivers to primary via Accept, then propagates to Next (PropagateAfterAccept=true).
         var primary   = new CountingPipe();
         var auditNext = new CountingPipe();
-        var tee       = new TeePipe<Entry64>(primary);
-        tee.Next      = auditNext;
+        var fork      = new ForkPipe<Entry64>(primary);
+        fork.Next     = auditNext;
 
-        tee.Enqueue(new Entry64 { A = 1 });
+        fork.Enqueue(new Entry64 { A = 1 });
 
         primary.Accepted.Should().Be(1);
         auditNext.Accepted.Should().Be(1);
     }
 
     [Fact]
-    public void Tee_IsHealthyMirrorsPrimary()
+    public void Fork_IsHealthyMirrorsPrimary()
     {
-        // IsHealthy delegates to primary. When primary is dead, Tee is unhealthy — Accept is not
+        // IsHealthy delegates to primary. When primary is dead, Fork is unhealthy — Accept is not
         // called. Item falls through to Next via standard fallback.
         var primary   = new DeadPipe();
         var auditNext = new CountingPipe();
-        var tee       = new TeePipe<Entry64>(primary);
-        tee.Next      = auditNext;
+        var fork      = new ForkPipe<Entry64>(primary);
+        fork.Next     = auditNext;
 
-        tee.IsHealthy.Should().BeFalse();
-        tee.Enqueue(new Entry64 { A = 1 });
+        fork.IsHealthy.Should().BeFalse();
+        fork.Enqueue(new Entry64 { A = 1 });
 
-        auditNext.Accepted.Should().Be(1, "fallback path routes to Next when Tee is unhealthy");
+        auditNext.Accepted.Should().Be(1, "fallback path routes to Next when Fork is unhealthy");
     }
 
     [Fact]
-    public void Tee_Flush_DelegatesToPrimary()
+    public void Fork_Flush_DelegatesToPrimary()
     {
         var primary = new FlushTrackingPipe();
-        var tee     = new TeePipe<Entry64>(primary);
+        var fork    = new ForkPipe<Entry64>(primary);
 
-        tee.Flush();
+        fork.Flush();
 
         primary.Flushes.Should().Be(1);
     }
 
     [Fact]
-    public void Tee_Dispose_DelegatesToPrimary()
+    public void Fork_Dispose_DelegatesToPrimary()
     {
         var primary = new DisposeTrackingPipe();
-        var tee     = new TeePipe<Entry64>(primary);
+        var fork    = new ForkPipe<Entry64>(primary);
 
-        tee.Dispose();
+        fork.Dispose();
 
         primary.Disposed.Should().BeTrue();
     }
 
     [Fact]
-    public void Tee_InChain_NextAlwaysReceives_EvenWhenPrimaryInternallyDrops()
+    public void Fork_InChain_NextAlwaysReceives_EvenWhenPrimaryInternallyDrops()
     {
         // Primary is healthy (IsHealthy=true) but its Enqueue internally drops every item
-        // (Accept=false, no Next). Tee.Accept is still called — it calls _primary.Enqueue and
+        // (Accept=false, no Next). Fork.Accept is still called — it calls _primary.Enqueue and
         // returns true unconditionally. PropagateAfterAccept=true ensures Next always fires.
         var primary   = new InternalRejectPipe();
         var auditNext = new CountingPipe();
-        var tee       = new TeePipe<Entry64>(primary);
-        tee.Next      = auditNext;
+        var fork      = new ForkPipe<Entry64>(primary);
+        fork.Next     = auditNext;
 
-        tee.Enqueue(new Entry64 { A = 1 });
+        fork.Enqueue(new Entry64 { A = 1 });
 
-        // Tee accepted (returned true) → auditNext receives the item.
+        // Fork accepted (returned true) → auditNext receives the item.
         auditNext.Accepted.Should().Be(1, "Next always called regardless of primary's internal outcome");
     }
 
@@ -110,8 +110,8 @@ public sealed class TeePipeTests
 
     /// <summary>
     /// IsHealthy=true but Accept returns false — simulates a primary that is "up" but
-    /// silently rejects (e.g., ring full). Tee.Accept calls _primary.Enqueue, which drops
-    /// internally; Tee still returns true so Next is always called.
+    /// silently rejects (e.g., ring full). Fork.Accept calls _primary.Enqueue, which drops
+    /// internally; Fork still returns true so Next is always called.
     /// </summary>
     private sealed class InternalRejectPipe : DispatchPipe<Entry64>
     {

@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Relay.Memory;
 
@@ -21,16 +22,20 @@ namespace Relay.Buffers;
 ///   <item>Producers consult a local <c>_headCache</c> before issuing a volatile read of
 ///         <c>_head</c>; the cross-core read happens only when the ring appears full. Under
 ///         contention this eliminates the dominant cache-line bounce on every <see cref="TryPublish"/>.</item>
+///   <item>Backing memory: <see cref="NativeMemory.AlignedAlloc(nuint, nuint)"/> with 64-byte
+///         alignment — the first slot sits on a cache line boundary, eliminating the straddle
+///         caused by the ~16-byte object-header offset on POH-pinned arrays.</item>
 /// </list>
 /// <para>Contract: N producer threads, 1 consumer thread. Multi-consumer is undefined behaviour.</para>
 /// </remarks>
-internal sealed class MpscRingBuffer<T> where T : unmanaged
+internal sealed unsafe class MpscRingBuffer<T> : IDisposable where T : unmanaged
 {
     /// <summary>
     /// Per-slot storage: <c>Published</c> is producer-commit / consumer-recycle flag;
     /// <c>Value</c> carries the payload. Kept as a plain (unpadded) struct — T is guaranteed
-    /// to be a positive multiple of 64 bytes (Relay invariant), so adjacent slot
-    /// <c>Published</c> fields land on different cache lines and don't false-share.
+    /// to be a positive multiple of 64 bytes (Relay invariant). Slot size is
+    /// <c>sizeof(T) + padding</c>; adjacent slots may still straddle cache lines depending on
+    /// <c>sizeof(T)</c> — see item #4 in performance audit; revisit under BDN contention data.
     /// </summary>
     private struct Slot
     {
@@ -38,19 +43,22 @@ internal sealed class MpscRingBuffer<T> where T : unmanaged
         public T   Value;
     }
 
-    private readonly Slot[] _slots;
-    private readonly int    _mask;
+    private readonly Slot* _slots;
+    private readonly int   _mask;
+    private readonly int   _bytesAllocated;
 
     private PaddedLong _claimedTail;
     private PaddedLong _headCache;
     private PaddedLong _head;
 
+    private bool _disposed;
+
     /// <summary>Slot count (power of two).</summary>
     public int Capacity { get; }
 
-    /// <summary>Pre-faults every page of the backing slot array and attempts a best-effort
+    /// <summary>Pre-faults every page of the backing slot buffer and attempts a best-effort
     /// <c>VirtualLock</c> on Windows. Called once from the consumer pipe's <c>Start()</c>.</summary>
-    internal void PreFaultAndLock() => RelayMemory.PreFaultAndLock(_slots);
+    internal void PreFaultAndLock() => RelayMemory.PreFaultAndLock((byte*)_slots, (nuint)_bytesAllocated);
 
     /// <summary>True when no published records are available. Consumer thread only.</summary>
     public bool IsEmpty
@@ -77,9 +85,11 @@ internal sealed class MpscRingBuffer<T> where T : unmanaged
         if (capacity <= 0 || (capacity & (capacity - 1)) != 0)
             throw new ArgumentException("Capacity must be a positive power of two.", nameof(capacity));
 
-        Capacity = capacity;
-        _mask    = capacity - 1;
-        _slots   = GC.AllocateArray<Slot>(capacity, pinned: true);
+        Capacity        = capacity;
+        _mask           = capacity - 1;
+        _bytesAllocated = capacity * sizeof(Slot);
+        _slots          = (Slot*)NativeMemory.AlignedAlloc((nuint)_bytesAllocated, 64);
+        NativeMemory.Clear(_slots, (nuint)_bytesAllocated);
     }
 
     /// <summary>
@@ -128,7 +138,7 @@ internal sealed class MpscRingBuffer<T> where T : unmanaged
 
         if (Volatile.Read(ref slot.Published) == 0)
         {
-            item = default;
+            Unsafe.SkipInit(out item);
             return false;
         }
 
@@ -138,16 +148,48 @@ internal sealed class MpscRingBuffer<T> where T : unmanaged
         return true;
     }
 
+    /// <summary>
+    /// Attempts to dequeue up to <paramref name="dest"/>.Length items. Each slot carries an
+    /// independent <c>Published</c> flag, so the batch path still issues one
+    /// <see cref="Volatile.Read(ref int)"/> + one <see cref="Volatile.Write(ref int, int)"/> per slot;
+    /// gain is a single <see cref="Volatile.Write(ref long, long)"/> of the head at the end
+    /// instead of per-item. Consumer thread only.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int TryConsumeBatch(Span<T> dest)
+    {
+        long pos = _head.Value;
+        int  n   = 0;
+
+        while (n < dest.Length)
+        {
+            ref Slot slot = ref _slots[(pos + n) & _mask];
+            if (Volatile.Read(ref slot.Published) == 0) break;
+            dest[n] = slot.Value;
+            Volatile.Write(ref slot.Published, 0);
+            n++;
+        }
+
+        if (n > 0)
+            Volatile.Write(ref _head.Value, pos + n);
+
+        return n;
+    }
+
     /// <summary>Resets counters and slot flags. Not thread-safe — call only when idle.</summary>
     public void Reset()
     {
         _claimedTail.Value = 0;
         _headCache.Value   = 0;
         _head.Value        = 0;
-        for (int i = 0; i < _slots.Length; i++)
-        {
-            _slots[i].Published = 0;
-            _slots[i].Value     = default;
-        }
+        NativeMemory.Clear(_slots, (nuint)_bytesAllocated);
+    }
+
+    /// <summary>Frees the native ring. Idempotent.</summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        NativeMemory.AlignedFree(_slots);
     }
 }

@@ -27,8 +27,9 @@
        │       ├── MmfPipe<T>          (sealed)  ← MemoryMappedViewAccessor
        │       └── RamPipe<T>  ──────────────────── (NOT SpscQueuePipe — see below)
        │
-       ├── FanOutPipe<T>   (sealed)     ← broadcast to DispatchPipe<T>[] children
-       ├── FanOut2Pipe<T, TC1, TC2>  (sealed)  ← CRTP 2-child, JIT devirtualizes
+       ├── MultiPipe<T>    (sealed)     ← broadcast to DispatchPipe<T>[] children
+       ├── Multi2Pipe<T, TC1, TC2>  (sealed)  ← CRTP 2-child, JIT devirtualizes
+       ├── ForkPipe<T>     (sealed)    ← primary + Next propagation (propagate-after-accept)
        ├── FilterPipe<T>   (sealed)    ← conditional gate + downstream pipe
        └── NullPipe<T>     (sealed)    ← singleton no-op sink
 
@@ -45,8 +46,9 @@
 ================================================================================
 
   Relay.csproj
-  ├── namespace Relay          DispatchPipe, SpscQueuePipe, FanOutPipe,
-  │                            FanOut2Pipe, FilterPipe, NullPipe
+  ├── namespace Relay          DispatchPipe, SpscQueuePipe, MpscQueuePipe,
+  │                            MultiPipe, Multi2Pipe, ForkPipe,
+  │                            FilterPipe, NullPipe
   ├── namespace Relay.Buffers  SpscRingBuffer<T>            [internal]
   ├── namespace Relay.Pipes    FileStreamPipe, TcpPipe, MmfPipe, RamPipe
   ├── namespace Relay.Builder  RelayBuilder, PipeChain<T,THead>
@@ -112,16 +114,16 @@
   ───────────────────
   caller ──▶ [FileStreamPipe] ──▶ [TcpPipe] ──▶ [RamPipe]
 
-  T4 — FanOut to 2 children
-  ──────────────────────────
-  caller ──▶ [FanOutPipe] ──▶ c1 [FileStreamPipe]
-                          └──▶ c2 [TcpPipe]
+  T4 — Multi broadcast to 2 children
+  ──────────────────────────────────
+  caller ──▶ [MultiPipe] ──▶ c1 [FileStreamPipe]
+                         └──▶ c2 [TcpPipe]
              all-fail? ──▶ (Next / drop)
 
-  T5 — FanOut + serial fallback
-  ──────────────────────────────
-  caller ──▶ [FanOutPipe] ──▶ c1 [FileStreamPipe]
-             │              └──▶ c2 [TcpPipe]
+  T5 — Multi + serial fallback
+  ────────────────────────────
+  caller ──▶ [MultiPipe] ──▶ c1 [FileStreamPipe]
+             │             └──▶ c2 [TcpPipe]
              └──(Next)──▶ [RamPipe]         ← only when all children unhealthy
 
   T6 — Filter gate
@@ -129,23 +131,28 @@
   caller ──▶ [FilterPipe] ──(predicate true)──▶ [FileStreamPipe]
                            ──(predicate false)─▶ (consumed, no fallback)
 
-  T7 — FanOut2 CRTP variant (sealed TC1, TC2 → JIT devirtualizes)
-  ────────────────────────────────────────────────────────────────
-  caller ──▶ [FanOut2Pipe<Entry, FileStreamPipe<Entry>, TcpPipe<Entry>>]
+  T7 — Multi2 CRTP variant (sealed TC1, TC2 → JIT devirtualizes)
+  ───────────────────────────────────────────────────────────────
+  caller ──▶ [Multi2Pipe<Entry, FileStreamPipe<Entry>, TcpPipe<Entry>>]
                           ├── _c1.Enqueue(item)   [inlined by JIT]
                           └── _c2.Enqueue(item)   [inlined by JIT]
 
+  T8 — Fork (propagate-after-accept)
+  ──────────────────────────────────
+  caller ──▶ [ForkPipe(primary=Audit)] ──▶ Audit.Enqueue   [local]
+                                       └──(Next)──▶ [MainPipe]
+
 
 ================================================================================
-                         FANOUT ROUTING RULES
+                         MULTI ROUTING RULES
 ================================================================================
 
-  FanOutPipe<T>.IsHealthy:
+  MultiPipe<T>.IsHealthy:
     short-circuit OR over children:
       for each child: if child.IsHealthy → return true
       (all fail) → return false → triggers Next?.Enqueue
 
-  FanOutPipe<T>.Accept(item):
+  MultiPipe<T>.Accept(item):
     for each child: child.Enqueue(item)   ← always, regardless of health
     return true                            ← never triggers fallback via Accept
 
@@ -224,24 +231,39 @@
     p2 = RamPipe (fallback, accumulated items during p1 outage)
     On p1 recovery → p2 drains back to p1 → normal path resumes
 
-  Only SpscQueuePipe nodes get Prev. DispatchPipe subclasses without
-  a consumer thread (FanOut, Filter, Null, Ram) do not participate.
+  Only SpscQueuePipe / MpscQueuePipe nodes get Prev. DispatchPipe subclasses
+  without a consumer thread (Multi, Fork, Filter, Null, Ram) do not participate.
 
 
 ================================================================================
                          BUILDER ASSEMBLY
 ================================================================================
 
-  RelayBuilder.Start<T, THead>(head)
+  RelayBuilder.Start<T, THead>(head)          ← generic entry
+  RelayBuilder.StartSpsc<T, THead>(head)      ← THead : SpscQueuePipe<T>
+  RelayBuilder.StartMpsc<T, THead>(head)      ← THead : MpscQueuePipe<T>
        │
        └─▶ PipeChain<T, THead> { _head = head, _tail = head }
 
-  chain.To(next):
-       if next is SpscQueuePipe<T>:
+  Operators on PipeChain<T, THead>:
+
+  .To(next):
+       if next is SpscQueuePipe<T> / MpscQueuePipe<T>:
            next.Prev = _tail          ← recovery drain link
        _tail.Next = next              ← fallback routing link
        _tail = next
-       return this
+
+  .Fork(primary):
+       fork = new ForkPipe<T>(primary)
+       _tail.Next = fork ; _tail = fork
+
+  .When(pred).To(downstream):
+       filter = new FilterPipe<T>(pred, downstream)
+       _tail.Next = filter            ← filter.Next never fires (Accept=true always)
+       _tail = downstream             ← subsequent .To extends downstream's chain
+
+  .Multi(cfg)      (cfg builds a MultiBuilder<T> → MultiPipe<T>)
+  .Multi<TC1,TC2>(c1, c2)    ← sealed CRTP variant (Multi2Pipe)
 
   chain.Build():
        return _head                   ← typed head, ready to Enqueue
@@ -299,7 +321,7 @@
     _tail.Value - Volatile.Read(_head.Value) >= Capacity
     (read by producer as part of IsHealthy check; no cache used here — cold path)
 
-  Batched-write API (for FanOut2 with shared mfence):
+  Batched-write API (for Multi2 with shared mfence):
     TryReserveTail(out tail) → reserve slot without write (uses _cachedHead)
     WriteSlot(tail, in item) → Unsafe.Add write, no fence
     Thread.MemoryBarrier()   → single mfence for N writes
@@ -360,7 +382,7 @@
   relay-{name}       BelowNormal    SpscQueuePipe subclass Custom backend
 
   RamPipe has NO dedicated thread. Writes happen synchronously on the producer thread.
-  FanOutPipe, FilterPipe, NullPipe have NO threads. Pure hot-path dispatch.
+  MultiPipe, ForkPipe, FilterPipe, NullPipe have NO threads. Pure hot-path dispatch.
 
   Synchronization:
   ┌────────────────────────┬──────────────────────────────────────────────────┐
@@ -374,7 +396,7 @@
   │                        │ Read:    producer thread (IsHealthy check)       │
   │ volatile bool _running │ Written: Start/Stop (caller thread)              │
   │                        │ Read:    consumer thread (ConsumeLoop condition) │
-  │ Thread.MemoryBarrier() │ FanOut2 batched-write (shared mfence for N pubs) │
+  │ Thread.MemoryBarrier() │ Multi2 batched-write (shared mfence for N pubs)  │
   └────────────────────────┴──────────────────────────────────────────────────┘
 
   No lock / Monitor anywhere in the hot path.
@@ -454,9 +476,9 @@
   │ T2: Enqueue depth-2 (success, p1 healthy)           │   ~32c   │   ~9 ns  │
   │ T2: Enqueue depth-2 (fallback, p1 unhealthy→p2)     │   ~12c   │   ~3 ns  │
   │ T3: Enqueue depth-3 (p1+p2 unhealthy→p3 RamPipe)    │   ~16c   │   ~5 ns  │
-  │ T4: FanOut 2 children (both healthy, array-based)   │   ~74c   │  ~21 ns  │
-  │ T4: FanOut 2 children (CRTP FanOut2Pipe, sealed)    │   ~68c   │  ~19 ns  │
-  │ T5: FanOut all-fail → Next (RamPipe)                │   ~19c   │   ~5 ns  │
+  │ T4: Multi 2 children (both healthy, array-based)    │   ~74c   │  ~21 ns  │
+  │ T4: Multi 2 children (CRTP Multi2Pipe, sealed)      │   ~68c   │  ~19 ns  │
+  │ T5: Multi all-fail → Next (RamPipe)                 │   ~19c   │   ~5 ns  │
   │ Drop (Next == null, depth 1)                        │    ~2c   │  <1 ns   │
   │ Drop (Next == null, depth 3)                        │   ~14c   │   ~4 ns  │
   └─────────────────────────────────────────────────────┴──────────┴──────────┘
@@ -466,7 +488,7 @@
     - RamPipe has no mfence (vs ~15c in SpscQueuePipe.TryPublish)
     - Hot path degradation is lighter than normal hot path
 
-  FanOut scales linearly: Total ≈ N × 35c + 6c for N healthy SpscQueuePipe children.
+  Multi scales linearly: Total ≈ N × 35c + 6c for N healthy SpscQueuePipe children.
 
   Default ring capacities vs memory footprint (T = 64B):
   ┌────────────────────┬────────────────┬──────────────────┐
@@ -492,7 +514,7 @@
     ~32c success │ ~36c fallback-to-tcp │ ~16c fallback-to-ram
 
   IPC dispatch to multiple destinations:
-    FanOut2Pipe<T, FileStreamPipe<T>, TcpPipe<T>>  →  RamPipe<T>
+    Multi2Pipe<T, FileStreamPipe<T>, TcpPipe<T>>  →  RamPipe<T>
     ~68c success │ ~19c all-fail-to-ram
 
   Symbol-filtered recording:
@@ -501,7 +523,7 @@
 
   Rules of thumb:
     - Each additional serial hop costs 0c on the success path, +4c per unhealthy hop.
-    - Fan-out multiplies by N. Keep N ≤ 4.
-    - RamPipe as last resort adds ~0c on success path, ~6c on full-fanout-fail path.
-    - FanOut2Pipe (CRTP) saves ~6c over FanOutPipe when children are sealed types.
+    - Multi broadcast multiplies by N. Keep N ≤ 4.
+    - RamPipe as last resort adds ~0c on success path, ~6c on all-children-fail path.
+    - Multi2Pipe (CRTP) saves ~6c over MultiPipe when children are sealed types.
 ```

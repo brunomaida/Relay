@@ -13,7 +13,7 @@ namespace Relay;
 /// <para>
 /// Lifecycle is delegated: <see cref="Flush"/> and <see cref="Dispose"/> forward to the primary.
 /// If the chain has a distinct owner for Next, the primary-only delegation keeps responsibility
-/// local to the tee.
+/// local to the fork.
 /// </para>
 /// <para>
 /// JIT note: <see cref="PropagateAfterAccept"/> is a sealed constant true, so the base
@@ -21,12 +21,12 @@ namespace Relay;
 /// <c>Next?.Enqueue</c> is issued unconditionally after local acceptance.
 /// </para>
 /// </remarks>
-public sealed class TeePipe<T> : DispatchPipe<T> where T : unmanaged
+public sealed class ForkPipe<T> : DispatchPipe<T> where T : unmanaged
 {
     private readonly DispatchPipe<T> _primary;
 
     /// <param name="primary">The pipe to forward every item to. Must not be null.</param>
-    public TeePipe(DispatchPipe<T> primary) =>
+    public ForkPipe(DispatchPipe<T> primary) =>
         _primary = primary ?? throw new ArgumentNullException(nameof(primary));
 
     /// <inheritdoc/>
