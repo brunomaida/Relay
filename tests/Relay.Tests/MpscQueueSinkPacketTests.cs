@@ -8,8 +8,8 @@ using Xunit;
 namespace Relay.Tests;
 
 /// <summary>Lifecycle, multi-producer delivery, fallback, and crash semantics for
-/// <see cref="MpscByteQueueSink"/>.</summary>
-public sealed class MpscByteQueueSinkTests
+/// <see cref="MpscQueueSink"/>.</summary>
+public sealed class MpscQueueSinkPacketTests
 {
     // ── lifecycle ─────────────────────────────────────────────────────────────
 
@@ -178,7 +178,7 @@ public sealed class MpscByteQueueSinkTests
 
     // ── private test pipes ────────────────────────────────────────────────────
 
-    private sealed class InMemoryMpscByteSink : MpscByteQueueSink
+    private sealed class InMemoryMpscByteSink : MpscQueueSink
     {
         private readonly List<byte[]> _received = new();
         private readonly object       _lock     = new();
@@ -199,7 +199,7 @@ public sealed class MpscByteQueueSinkTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class CrashingMpscByteSink : MpscByteQueueSink
+    private sealed class CrashingMpscByteSink : MpscQueueSink
     {
         public CrashingMpscByteSink() : base(64, 50, "crash") { }
 
@@ -211,7 +211,7 @@ public sealed class MpscByteQueueSinkTests
         protected override void DisposeBackend()    { }
     }
 
-    private sealed class UnhealthyMpscByteSink : MpscByteQueueSink
+    private sealed class UnhealthyMpscByteSink : MpscQueueSink
     {
         private readonly bool _healthyFlag;
         public int Consumed { get; private set; }

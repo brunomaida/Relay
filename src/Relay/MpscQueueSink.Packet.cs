@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -8,8 +8,8 @@ using Relay.Internal;
 namespace Relay;
 
 /// <summary>
-/// Abstract base for a pipe that buffers byte payloads in a lock-free MPSC ring and delivers them
-/// via a dedicated consumer thread. Subclasses implement the backend (file, TCP, MMF, RAM).
+/// Abstract base for a <see cref="PacketSink"/> that buffers byte payloads in a lock-free MPSC
+/// ring and delivers them via a dedicated consumer thread. Subclasses implement the backend.
 /// </summary>
 /// <remarks>
 /// Any number of producer threads may call <see cref="PacketSink.Enqueue"/> concurrently —
@@ -21,7 +21,7 @@ namespace Relay;
 /// <see cref="Prev"/>) has recovered, byte payloads buffered during failure are drained back upstream.
 /// </para>
 /// </remarks>
-public abstract class MpscByteQueueSink : PacketSink
+public abstract class MpscQueueSink : PacketSink
 {
     private const int SpinIter  = 10;
     private const int YieldIter = 5;
@@ -34,6 +34,7 @@ public abstract class MpscByteQueueSink : PacketSink
 
     private Thread?       _thread;
     private volatile bool _running;
+    private int           _flushRequested;     // Volatile-signalled by Flush(); read by consumer.
     private Exception?    _consumerException;
     private long          _drainDeadlineTicks;
 
@@ -44,8 +45,7 @@ public abstract class MpscByteQueueSink : PacketSink
     /// </summary>
     protected volatile bool _healthy = true;
 
-    /// <summary>Predecessor in the chain. Wired by byte-pipe test harness today; a dedicated
-    /// builder will set this once multiple consumers require one.</summary>
+    /// <summary>Predecessor in the chain. Wired by the sink-chain builder.</summary>
     internal PacketSink? Prev { get; set; }
 
     /// <summary>False if the consumer thread terminated with an unhandled exception.</summary>
@@ -64,7 +64,7 @@ public abstract class MpscByteQueueSink : PacketSink
     /// <param name="ringCapacity">MPSC ring capacity in bytes. Must be a positive power of two.</param>
     /// <param name="flushIntervalMs">Max time between forced flushes in milliseconds.</param>
     /// <param name="pipeName">Optional name used as thread suffix for debugger/profiler visibility.</param>
-    protected MpscByteQueueSink(int ringCapacity, int flushIntervalMs, string pipeName = "")
+    protected MpscQueueSink(int ringCapacity, int flushIntervalMs, string pipeName = "")
     {
         _ring               = new MpscByteRingBuffer(ringCapacity);
         _flushIntervalTicks = (long)flushIntervalMs * (Stopwatch.Frequency / 1_000);
@@ -79,7 +79,7 @@ public abstract class MpscByteQueueSink : PacketSink
         _ring.PreFaultAndLock();
         _thread = new Thread(ConsumeLoop)
         {
-            Name         = string.IsNullOrEmpty(_pipeName) ? "relay-mpsc-byte" : $"relay-mpsc-byte-{_pipeName}",
+            Name         = string.IsNullOrEmpty(_pipeName) ? "relay-packet-mpsc" : $"relay-packet-mpsc-{_pipeName}",
             IsBackground = true,
             Priority     = ThreadPriority.BelowNormal
         };
@@ -103,7 +103,7 @@ public abstract class MpscByteQueueSink : PacketSink
     /// <summary>Writes a single byte payload to the backend. Called exclusively on the consumer thread.</summary>
     protected abstract void WriteToBackend(ReadOnlySpan<byte> payload);
 
-    /// <summary>Flushes any pending writes to the backend. Called on the flush interval.</summary>
+    /// <summary>Flushes any pending writes to the backend. Called on the consumer thread.</summary>
     protected abstract void FlushBackend();
 
     /// <summary>
@@ -115,8 +115,11 @@ public abstract class MpscByteQueueSink : PacketSink
     /// <summary>Closes the backend and releases its resources. Called in the consumer finally block.</summary>
     protected abstract void DisposeBackend();
 
-    /// <inheritdoc/>
-    public override void Flush()   => FlushBackend();
+    /// <summary>
+    /// Signals the consumer thread to flush. Never calls <see cref="FlushBackend"/> directly —
+    /// that method is consumer-thread-only.
+    /// </summary>
+    public override void Flush() => Volatile.Write(ref _flushRequested, 1);
 
     /// <inheritdoc/>
     public override void Dispose() => Stop();
@@ -174,8 +177,13 @@ public abstract class MpscByteQueueSink : PacketSink
                     checkDeadline = true;
                 }
 
-                if (checkDeadline && HfClock.NowTicks >= flushDeadline)
+                bool flushDue = Volatile.Read(ref _flushRequested) == 1
+                             || HfClock.NowTicks >= flushDeadline;
+                if (checkDeadline && flushDue)
                 {
+                    // Clear BEFORE calling FlushBackend — avoids missing a concurrent Flush()
+                    // signal that arrives between the clear and the actual flush operation.
+                    Volatile.Write(ref _flushRequested, 0);
                     FlushBackend();
                     TryRecoverBackend();
                     TryDrainToPrev();

@@ -27,12 +27,12 @@ src/
     SpscQueueSink.cs         ← async delivery via SPSC ring + consumer thread
     SpscQueueSink.Packet.cs  ← byte-payload SPSC consumer (non-generic)
     MpscQueueSink.cs         ← async delivery via MPSC ring (multi-producer)
-    MpscByteQueueSink.cs     ← byte-variant MPSC consumer
+    MpscQueueSink.Packet.cs  ← byte-payload MPSC consumer (non-generic)
     ForkSink.cs              ← primary + Next propagation (audit/bypass pattern)
     MultiSink.cs             ← broadcast (array-based + Multi2Sink CRTP variant)
     FilterSink.cs            ← conditional gate
     NullSink.cs              ← no-op sink / terminal fallback
-    NullByteSink.cs          ← byte-variant no-op sink
+    NullSink.Packet.cs       ← byte-payload no-op sink (non-generic)
     Buffers/
       SpscRingBuffer.cs      ← lock-free SPSC ring, 128B padded head/tail
       SpscByteRingBuffer.cs  ← byte-variant length-prefixed ring
@@ -58,7 +58,7 @@ src/
 # Namespaces
 | Namespace | Content |
 |---|---|
-| `Relay` | `DispatchSink<T>`, `SpscQueueSink<T>`, `MpscQueueSink<T>`, `MultiSink<T>`, `Multi2Sink<T,TC1,TC2>`, `FilterSink<T>`, `NullSink<T>`, `ForkSink<T>`, `PacketSink`, `SpscQueueSink`, `MpscByteQueueSink`, `NullByteSink` |
+| `Relay` | `DispatchSink<T>`, `SpscQueueSink<T>`, `MpscQueueSink<T>`, `MultiSink<T>`, `Multi2Sink<T,TC1,TC2>`, `FilterSink<T>`, `NullSink<T>`, `ForkSink<T>`, `PacketSink`, `SpscQueueSink`, `MpscQueueSink`, `NullSink` |
 | `Relay.Buffers` | `SpscRingBuffer<T>`, `MpscRingBuffer<T>`, `SpscByteRingBuffer`, `MpscByteRingBuffer` (internal to lib) |
 | `Relay.Sinks` | Concrete backends: `FileStreamSink<T>`, `MmfSink<T>`, `TcpSink<T>`, `RamSink<T>` |
 | `Relay.Builder` | `RelayBuilder`, `SinkChain<T,THead>`, `MultiBuilder<T>`, `FilterBinding<T,THead>` |
@@ -188,7 +188,8 @@ cleaner and costs nothing at runtime.
 - `SpscQueueSink` — abstract SPSC consumer (non-generic). Constructor takes `(int ringCapacity, int flushIntervalMs, string sinkName)`;
   subclasses implement `WriteToBackend(ReadOnlySpan<byte>)` / `FlushBackend` / `TryRecoverBackend` / `DisposeBackend`.
   `Flush()` signals via `_flushRequested` — never calls `FlushBackend()` from the producer thread.
-- `NullByteSink` — singleton no-op (`NullByteSink.Instance`).
+- `MpscQueueSink` — abstract MPSC consumer (non-generic). Same abstract API as `SpscQueueSink`; `Flush()` signals via `_flushRequested` — clear-before-run ordering.
+- `NullSink` — singleton no-op (`NullSink.Instance`).
 - `SpscByteRingBuffer` (internal) — lock-free length-prefixed SPSC ring.
 
 ### `SpscByteRingBuffer` invariants
@@ -211,7 +212,7 @@ cleaner and costs nothing at runtime.
 | `SinkConstraints.AssertCacheLineAligned<T>()` applies | You need a byte-oriented backend (text log, framed protocol) |
 
 ### Status (current)
-- SPSC-only concrete sinks. `MpscByteQueueSink` abstract base exists; no concrete MPSC
+- SPSC-only concrete sinks. `MpscQueueSink` abstract base exists; no concrete MPSC
   backends yet — add if multi-producer contention is demonstrated by BDN.
 - `PacketSink.PropagateAfterAccept` is defined and documented — concrete tee/fork sinks
   for the packet hierarchy land in Phase 1 (`ForkSink` non-generic).
