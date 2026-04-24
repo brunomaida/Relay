@@ -25,13 +25,24 @@ public abstract class DispatchPipe<T> : IDisposable where T : unmanaged
     public abstract bool IsHealthy { get; }
 
     /// <summary>
-    /// Routes <paramref name="item"/>: delivers locally when healthy, otherwise delegates to
-    /// <see cref="Next"/> (or drops if <c>Next == null</c>).
+    /// When true, <see cref="Enqueue"/> continues to <see cref="Next"/> even after a successful
+    /// local <see cref="Accept"/>. Default <c>false</c> = write-and-stop (current semantics).
+    /// Override and seal to enable bypass/tee behavior — JIT constant-folds the branch in both
+    /// directions when the override returns a compile-time constant.
+    /// </summary>
+    protected virtual bool PropagateAfterAccept => false;
+
+    /// <summary>
+    /// Routes <paramref name="item"/>: delivers locally when healthy, then either stops or
+    /// propagates to <see cref="Next"/> based on <see cref="PropagateAfterAccept"/>. On any
+    /// local failure (unhealthy or Accept=false), delegates to <see cref="Next"/> (or drops
+    /// if <c>Next == null</c>).
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Enqueue(in T item)
     {
-        if (IsHealthy && Accept(in item)) return;
+        bool accepted = IsHealthy && Accept(in item);
+        if (accepted && !PropagateAfterAccept) return;
         Next?.Enqueue(in item);
     }
 
