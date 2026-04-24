@@ -112,7 +112,7 @@ src/
 
 Parallel tree to `DispatchPipe<T>` for variable-length `ReadOnlySpan<byte>` payloads. The two
 hierarchies share no types — the unmanaged constraint on `DispatchPipe<T>` is incompatible with
-`ReadOnlySpan<byte>`, and a unifying generic would force `ref struct` on `T`. Paralelism is
+`ReadOnlySpan<byte>`, and a unifying generic would force `ref struct` on `T`. Parallelism is
 cleaner and costs nothing at runtime.
 
 ### Types
