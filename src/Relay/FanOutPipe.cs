@@ -31,6 +31,9 @@ public sealed class FanOutPipe<T> : DispatchPipe<T> where T : unmanaged
         }
     }
 
+    /// <inheritdoc/>
+    protected override bool PropagateAfterAccept => false;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected override bool Accept(in T item)
     {
@@ -63,6 +66,9 @@ public sealed class FanOut2Pipe<T, TC1, TC2> : DispatchPipe<T>
     }
 
     public override bool IsHealthy => _c1.IsHealthy || _c2.IsHealthy;
+
+    /// <inheritdoc/>
+    protected override bool PropagateAfterAccept => false;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected override bool Accept(in T item)
