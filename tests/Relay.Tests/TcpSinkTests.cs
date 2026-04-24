@@ -47,28 +47,27 @@ public sealed class TcpSinkTests
     }
 
     [Fact]
-    public void TcpSink_ConnectFailure_FallsBackAndRetries()
+    public void TcpSink_ConnectFailure_MarksUnhealthyAndFallsBack()
     {
-        // Nothing is listening on this port — constructor connect fails.
+        // Nothing is listening on this port — constructor connect fails silently.
+        // The pipe marks itself unhealthy and schedules a retry via TryRecoverBackend;
+        // items enqueued while unhealthy route to Next (fallback).
         int deadPort = GetFreePort();
-
         var fallback = new CountingPipe();
 
-        Action ctor = () =>
-        {
-            using var pipe = new TcpSink<Entry64>("127.0.0.1", deadPort,
-                ringCapacity: 16, flushInterval: 50);
-            RelayBuilder.Start<Entry64, TcpSink<Entry64>>(pipe).To(fallback).Build();
-            pipe.Start();
+        using var pipe = new TcpSink<Entry64>("127.0.0.1", deadPort,
+            ringCapacity: 16, flushInterval: 50);
+        RelayBuilder.Start<Entry64, TcpSink<Entry64>>(pipe).To(fallback).Build();
 
-            pipe.Enqueue(new Entry64 { A = 1 });
-            pipe.Enqueue(new Entry64 { A = 2 });
+        pipe.IsHealthy.Should().BeFalse("connect failed — backend is not reachable");
+        pipe.Start();
 
-            pipe.Stop(drainTimeoutMs: 500);
-        };
+        pipe.Enqueue(new Entry64 { A = 1 });
+        pipe.Enqueue(new Entry64 { A = 2 });
 
-        // Constructor surfaces the connect failure synchronously.
-        ctor.Should().Throw<SocketException>();
+        pipe.Stop(drainTimeoutMs: 500);
+
+        fallback.Accepted.Should().Be(2, "both items must route to fallback when primary is unreachable");
     }
 
     [Fact]

@@ -42,7 +42,7 @@ public sealed class UdpSink : SpscQueueSink
     {
         if (_socket is null || payload.Length > _maxPayload)
         {
-            _healthy = false;
+            MarkUnhealthy();
             return;
         }
         try
@@ -52,8 +52,14 @@ public sealed class UdpSink : SpscQueueSink
         }
         catch
         {
-            _healthy = false;
+            MarkUnhealthy();
         }
+    }
+
+    private void MarkUnhealthy()
+    {
+        _healthy        = false;
+        _nextRetryTicks = HfClock.NowTicks + (long)_backoffMs * (Stopwatch.Frequency / 1_000);
     }
 
     // UDP is fire-and-forget per datagram; no buffer to flush.
