@@ -1,0 +1,19 @@
+# Build outputs
+bin/
+obj/
+
+# IDE
+.vs/
+*.user
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# BenchmarkDotNet
+BenchmarkDotNet.Artifacts/
+
+# BDN run artifacts — only committed JSON snapshots under benchmarks/baselines/ are tracked
+benchmarks/baselines/results/
+benchmarks/baselines/BenchmarkRun-*.log

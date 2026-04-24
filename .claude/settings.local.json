@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(git config *)",
+      "Bash(git checkout *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(dotnet test *)",
+      "Bash(dotnet sln *)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet run *)",
+      "Bash(git commit *)",
+      "Bash(gh pr *)",
+      "Bash(git pull *)",
+      "Bash(git merge *)",
+      "Bash(git branch *)",
+      "Bash(grep -E \"\\\\.cs$\")",
+      "Bash(xargs wc *)",
+      "Bash(xargs ls *)",
+      "Bash(xargs grep *)",
+      "Bash(git -C \"C:/Development/Libs/Relay\" status)",
+      "Bash(git -C \"C:/Development/Libs/Relay\" log --oneline -5)",
+      "Bash(git *)"
+    ]
+  }
+}
