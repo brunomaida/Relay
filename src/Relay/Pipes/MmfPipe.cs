@@ -29,6 +29,9 @@ public sealed class MmfPipe<T> : SpscQueuePipe<T> where T : unmanaged
     /// <summary>True while the file has remaining capacity.</summary>
     public override bool IsHealthy => _healthy && Volatile.Read(ref _position) + EntrySize <= _maxBytes;
 
+    /// <inheritdoc/>
+    protected override bool PropagateAfterAccept => false;
+
     public MmfPipe(
         string path,
         long   maxBytes,
