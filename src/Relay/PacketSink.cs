@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Relay;
 
@@ -29,10 +30,19 @@ public abstract class PacketSink : IDisposable
     /// </summary>
     public virtual bool PropagateAfterAccept => false;
 
+    private long _dropCount;
+
+    /// <summary>
+    /// Cumulative count of payloads dropped at this terminal sink — observed when Next is null
+    /// and either IsHealthy is false or Accept returned false. Read on cold path only;
+    /// Volatile.Read for atomic 8-byte read on x64/arm64.
+    /// </summary>
+    public long DropCount => Volatile.Read(ref _dropCount);
+
     /// <summary>
     /// Routes <paramref name="payload"/>: delivers locally when healthy, then propagates to
     /// <see cref="Next"/> if <see cref="PropagateAfterAccept"/> is true. Falls through to
-    /// <see cref="Next"/> on failure, or drops silently when <c>Next == null</c>.
+    /// <see cref="Next"/> on failure, or counts as a drop if <c>Next == null</c>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Enqueue(ReadOnlySpan<byte> payload)
@@ -42,7 +52,15 @@ public abstract class PacketSink : IDisposable
             if (PropagateAfterAccept) Next?.Enqueue(payload);
             return;
         }
-        Next?.Enqueue(payload);
+
+        if (Next is { } next)
+        {
+            next.Enqueue(payload);
+            return;
+        }
+
+        // Terminal drop — Next is null and either IsHealthy is false or Accept returned false.
+        Interlocked.Increment(ref _dropCount);
     }
 
     /// <summary>
