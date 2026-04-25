@@ -1,4 +1,4 @@
-using BenchmarkDotNet.Attributes;
+﻿using BenchmarkDotNet.Attributes;
 using Relay;
 using Relay.Builder;
 
@@ -12,10 +12,10 @@ namespace Relay.Benchmarks;
 [DisassemblyDiagnoser(maxDepth: 3)]
 public class EnqueueBenchmarks
 {
-    private DispatchPipe<Entry64> _depth1Healthy = null!;
-    private DispatchPipe<Entry64> _depth2AcceptReject = null!;
-    private DispatchPipe<Entry64> _depth2HeadUnhealthy = null!;
-    private DispatchPipe<Entry64> _depth3AllUnhealthy = null!;
+    private DispatchSink<Entry64> _depth1Healthy = null!;
+    private DispatchSink<Entry64> _depth2AcceptReject = null!;
+    private DispatchSink<Entry64> _depth2HeadUnhealthy = null!;
+    private DispatchSink<Entry64> _depth3AllUnhealthy = null!;
 
     private Entry64 _item;
 

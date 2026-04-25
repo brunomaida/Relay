@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.Threading;
 using FluentAssertions;
 using Relay;
 using Relay.Builder;
-using Relay.Pipes;
+using Relay.Sinks;
 using Xunit;
 
 namespace Relay.Tests;
@@ -12,18 +12,18 @@ namespace Relay.Tests;
 public sealed class RecoveryDrainTests
 {
     [Fact]
-    public void RamPipe_Dispose_IsIdempotent()
+    public void RamSink_Dispose_IsIdempotent()
     {
-        var ram = new RamPipe<Entry64>(capacity: 64);
+        var ram = new RamSink<Entry64>(capacity: 64);
         ram.Dispose();
         var act = () => ram.Dispose();
         act.Should().NotThrow();
     }
 
     [Fact]
-    public void RamPipe_DrainTo_TransfersAllItems()
+    public void RamSink_DrainTo_TransfersAllItems()
     {
-        using var ram = new RamPipe<Entry64>(capacity: 64);
+        using var ram = new RamSink<Entry64>(capacity: 64);
         var       dst = new CountingPipe();
 
         ram.Enqueue(new Entry64 { A = 1 });
@@ -36,9 +36,9 @@ public sealed class RecoveryDrainTests
     }
 
     [Fact]
-    public void RamPipe_DrainTo_StopsWhenDestinationUnhealthy()
+    public void RamSink_DrainTo_StopsWhenDestinationUnhealthy()
     {
-        using var ram = new RamPipe<Entry64>(capacity: 64);
+        using var ram = new RamSink<Entry64>(capacity: 64);
         var       dst = new CountingPipe(maxAccept: 1);
 
         for (int i = 0; i < 5; i++)
@@ -52,8 +52,8 @@ public sealed class RecoveryDrainTests
     [Fact]
     public void Builder_WiresPrevForRecoveryDrain()
     {
-        // Verify that PipeChain wires Prev on SpscQueuePipe children.
-        using var ram  = new RamPipe<Entry64>(capacity: 64);
+        // Verify that SinkChain wires Prev on SpscQueueSink children.
+        using var ram  = new RamSink<Entry64>(capacity: 64);
         using var file = new TestSpscPipe();
 
         RelayBuilder
@@ -61,8 +61,8 @@ public sealed class RecoveryDrainTests
             .To(ram)
             .Build();
 
-        // Prev on RamPipe is DispatchPipe<T>, not SpscQueuePipe<T>,
-        // so Prev wiring only applies to SpscQueuePipe fallback nodes.
+        // Prev on RamSink is DispatchSink<T>, not SpscQueueSink<T>,
+        // so Prev wiring only applies to SpscQueueSink fallback nodes.
         // This test just verifies the chain does not throw during assembly.
         file.Next.Should().BeSameAs(ram);
     }
@@ -91,7 +91,7 @@ public sealed class RecoveryDrainTests
         primary.Stop(500);
     }
 
-    private sealed class CountingPipe : DispatchPipe<Entry64>
+    private sealed class CountingPipe : DispatchSink<Entry64>
     {
         private readonly int _maxAccept;
         private int          _count;
@@ -113,7 +113,7 @@ public sealed class RecoveryDrainTests
         public override void Dispose() { }
     }
 
-    private sealed class TestSpscPipe : SpscQueuePipe<Entry64>
+    private sealed class TestSpscPipe : SpscQueueSink<Entry64>
     {
         private readonly bool _pipeHealthy;
         private int           _consumed;

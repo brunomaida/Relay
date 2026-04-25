@@ -1,11 +1,11 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Relay;
 using Xunit;
 
 namespace Relay.Tests;
 
 /// <summary>
-/// Verifies the <see cref="DispatchPipe{T}.PropagateAfterAccept"/> virtual property semantics:
+/// Verifies the <see cref="DispatchSink{T}.PropagateAfterAccept"/> virtual property semantics:
 /// default (false) stops after successful accept; override (true) continues to Next even after
 /// a successful accept. Fallback to Next on unhealthy or Accept=false is unchanged.
 /// </summary>
@@ -105,7 +105,7 @@ public sealed class PropagateAfterAcceptTests
 
     // ── Private test helpers ──────────────────────────────────────────────────
 
-    private sealed class CountingPipe : DispatchPipe<Entry64>
+    private sealed class CountingPipe : DispatchSink<Entry64>
     {
         public int Accepted;
         public override bool IsHealthy => true;
@@ -114,7 +114,7 @@ public sealed class PropagateAfterAcceptTests
         public override void Dispose() { }
     }
 
-    private sealed class PropagateCountingPipe : DispatchPipe<Entry64>
+    private sealed class PropagateCountingPipe : DispatchSink<Entry64>
     {
         public int Accepted;
         public override bool IsHealthy => true;
@@ -124,7 +124,7 @@ public sealed class PropagateAfterAcceptTests
         public override void Dispose() { }
     }
 
-    private sealed class PropagateButUnhealthyPipe : DispatchPipe<Entry64>
+    private sealed class PropagateButUnhealthyPipe : DispatchSink<Entry64>
     {
         public int AttemptedAccept;
         public override bool IsHealthy => false;
@@ -134,7 +134,7 @@ public sealed class PropagateAfterAcceptTests
         public override void Dispose() { }
     }
 
-    private sealed class PropagateRejecterPipe : DispatchPipe<Entry64>
+    private sealed class PropagateRejecterPipe : DispatchSink<Entry64>
     {
         public int AttemptedAccept;
         public override bool IsHealthy => true;
