@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Relay;
@@ -16,7 +16,7 @@ public struct Entry64
 }
 
 /// <summary>Healthy no-op pipe — zero overhead sink for baseline chains.</summary>
-internal sealed class SinkPipe : DispatchPipe<Entry64>
+internal sealed class SinkPipe : DispatchSink<Entry64>
 {
     public override bool IsHealthy => true;
 
@@ -28,7 +28,7 @@ internal sealed class SinkPipe : DispatchPipe<Entry64>
 }
 
 /// <summary>Always-unhealthy pipe — forces every Enqueue to fall through to Next.</summary>
-internal sealed class DeadPipe : DispatchPipe<Entry64>
+internal sealed class DeadPipe : DispatchSink<Entry64>
 {
     public override bool IsHealthy => false;
 
@@ -40,7 +40,7 @@ internal sealed class DeadPipe : DispatchPipe<Entry64>
 }
 
 /// <summary>Healthy pipe that rejects every item — forces fallback via Accept returning false.</summary>
-internal sealed class RejectPipe : DispatchPipe<Entry64>
+internal sealed class RejectPipe : DispatchSink<Entry64>
 {
     public override bool IsHealthy => true;
 
@@ -55,7 +55,7 @@ internal sealed class RejectPipe : DispatchPipe<Entry64>
 /// Healthy pipe with an observable side-effect — prevents JIT dead-code elimination.
 /// Accept writes item.A via Volatile.Write, making the call visible to the optimizer.
 /// </summary>
-internal sealed class CounterPipe : DispatchPipe<Entry64>
+internal sealed class CounterPipe : DispatchSink<Entry64>
 {
     public long LastValue;
 

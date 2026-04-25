@@ -1,4 +1,4 @@
-using BenchmarkDotNet.Attributes;
+﻿using BenchmarkDotNet.Attributes;
 using Relay.Buffers;
 
 namespace Relay.Benchmarks;
@@ -6,7 +6,7 @@ namespace Relay.Benchmarks;
 /// <summary>
 /// Measures MpscRingBuffer primitives on a single thread against the SpscRingBuffer baseline.
 /// No consumer thread — isolates atomic CAS / flag-read cost from thread coordination.
-/// Multi-thread contention correctness is validated by MpscQueuePipeTests stress tests.
+/// Multi-thread contention correctness is validated by MpscQueueSinkTests stress tests.
 /// </summary>
 [MemoryDiagnoser]
 [DisassemblyDiagnoser(maxDepth: 3)]

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -139,7 +139,7 @@ internal sealed unsafe class SpscRingBuffer<T> : IDisposable where T : unmanaged
         return n;
     }
 
-    // --- Batched-write API for Multi2Pipe and producer batch ---
+    // --- Batched-write API for Multi2Sink and producer batch ---
 
     /// <summary>Reserves a tail slot without writing. Returns false when full.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

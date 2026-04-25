@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using FluentAssertions;
 using Relay;
@@ -7,8 +7,8 @@ using Xunit;
 namespace Relay.Tests.Examples;
 
 /// <summary>
-/// End-to-end smoke example: 4 producer threads fan in through a <see cref="ForkPipe{T}"/> that
-/// routes every item to both an audit sink (side channel) and a main <see cref="MpscQueuePipe{T}"/>
+/// End-to-end smoke example: 4 producer threads fan in through a <see cref="ForkSink{T}"/> that
+/// routes every item to both an audit sink (side channel) and a main <see cref="MpscQueueSink{T}"/>
 /// (primary delivery). Demonstrates that the typed MPSC + fork pattern is safe under multi-producer
 /// load and that the audit and main paths see identical item counts.
 /// </summary>
@@ -19,7 +19,7 @@ namespace Relay.Tests.Examples;
 ///              │
 ///              ▼
 ///   ┌─────────────────────────┐
-///   │  ForkPipe(audit=counter)│   PropagateAfterAccept = true
+///   │  ForkSink(audit=counter)│   PropagateAfterAccept = true
 ///   └─────────────────────────┘
 ///       │                  │
 ///       │ local accept     │ always propagate
@@ -28,7 +28,7 @@ namespace Relay.Tests.Examples;
 ///   (Interlocked)      (counts via WriteToBackend)
 /// </code>
 /// <para>
-/// Audit counter uses <see cref="Interlocked.Increment(ref long)"/> because <see cref="DispatchPipe{T}.Accept"/>
+/// Audit counter uses <see cref="Interlocked.Increment(ref long)"/> because <see cref="DispatchSink{T}.Accept"/>
 /// is called from N producer threads concurrently. Main pipe's counter is incremented on the
 /// single consumer thread and uses a plain write.
 /// </para>
@@ -44,7 +44,7 @@ public sealed class ForkAuditMpscSmoke
 
         using var main    = new MainCounterMpscPipe(ringCapacity: 1 << 20, flushIntervalMs: 25);
         var       audit   = new AuditCounterPipe();
-        using var fork    = new ForkPipe<Entry64>(audit);
+        using var fork    = new ForkSink<Entry64>(audit);
         fork.Next         = main;
 
         main.Start();
@@ -76,7 +76,7 @@ public sealed class ForkAuditMpscSmoke
     }
 
     /// <summary>Thread-safe synchronous counter used as a fork audit sink.</summary>
-    private sealed class AuditCounterPipe : DispatchPipe<Entry64>
+    private sealed class AuditCounterPipe : DispatchSink<Entry64>
     {
         private long _count;
         public long Accepted => Volatile.Read(ref _count);
@@ -96,7 +96,7 @@ public sealed class ForkAuditMpscSmoke
     }
 
     /// <summary>MPSC-backed counter; increment runs on the single consumer thread.</summary>
-    private sealed class MainCounterMpscPipe : MpscQueuePipe<Entry64>
+    private sealed class MainCounterMpscPipe : MpscQueueSink<Entry64>
     {
         private long _consumed;
         public long Consumed => Volatile.Read(ref _consumed);

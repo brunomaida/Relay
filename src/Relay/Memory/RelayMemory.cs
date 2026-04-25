@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -12,7 +12,7 @@ internal static unsafe class RelayMemory
     /// <summary>
     /// Touches every 4KB page of <paramref name="array"/> to bring it into RAM, then attempts
     /// VirtualLock on Windows (best-effort; requires SeLockMemoryPrivilege).
-    /// Call once from <c>SpscQueuePipe.Start()</c>.
+    /// Call once from <c>SpscQueueSink.Start()</c>.
     /// </summary>
     public static void PreFaultAndLock<T>(T[] array) where T : unmanaged
     {
