@@ -9,13 +9,13 @@ using Xunit;
 namespace Relay.Tests.Sinks;
 
 /// <summary>
-/// Tests for <see cref="SharedMemoryByteSink"/>.
+/// Tests for <see cref="SharedMemorySink"/>.
 /// Verifies byte-exact compatibility with Log2 SharedMemorySink protocol:
 ///   Magic = 0x4C473200 ("LG2\0"), int WriteIndex at offset 8, int ReadIndex at offset 64,
 ///   records = 4-byte BE length prefix + payload, ring-wrapped modular index.
 /// </summary>
 [SupportedOSPlatform("windows")]
-public sealed class SharedMemoryByteSinkTests
+public sealed class SharedMemorySinkTests
 {
     // Protocol constants — must match Log2 SharedMemorySink exactly
     private const uint Magic            = 0x4C473200u; // "LG2\0", NOT "LOG2"
@@ -29,7 +29,7 @@ public sealed class SharedMemoryByteSinkTests
         string name = "Local\\relay-shm-" + Guid.NewGuid().ToString("N");
         int    cap  = 4 * 1024;
 
-        using var sink = new SharedMemoryByteSink(name, cap);
+        using var sink = new SharedMemorySink(name, cap);
         byte[] payload = [10, 20, 30];
         sink.Enqueue(payload);
 
@@ -72,7 +72,7 @@ public sealed class SharedMemoryByteSinkTests
         int    dataArea = 64;
         int    total    = HeaderSize + dataArea;
 
-        using var sink = new SharedMemoryByteSink(name, total);
+        using var sink = new SharedMemorySink(name, total);
 
         // A payload that by itself (4 + payload) exceeds dataArea forces Accept to return false.
         byte[] tooBig = new byte[dataArea]; // frameLen = 4 + 64 = 68 > 64 → Accept returns false
@@ -90,7 +90,7 @@ public sealed class SharedMemoryByteSinkTests
         int    dataArea = 32;
         int    total    = HeaderSize + dataArea;
 
-        using var sink = new SharedMemoryByteSink(name, total);
+        using var sink = new SharedMemorySink(name, total);
 
         // First record: 4 + 10 = 14 bytes → WriteIndex = 14
         sink.Enqueue(new byte[10]);
@@ -129,7 +129,7 @@ public sealed class SharedMemoryByteSinkTests
     public void Dispose_IsIdempotent()
     {
         string name = "Local\\relay-shm-disp-" + Guid.NewGuid().ToString("N");
-        var sink = new SharedMemoryByteSink(name, 1024);
+        var sink = new SharedMemorySink(name, 1024);
         sink.Dispose();
         var act = () => sink.Dispose();
         act.Should().NotThrow();
