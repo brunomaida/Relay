@@ -28,7 +28,7 @@ namespace Relay.Sinks;
 /// </para>
 /// </remarks>
 [SupportedOSPlatform("windows")]
-public sealed unsafe class SharedMemoryByteSink : PacketSink
+public sealed unsafe class SharedMemorySink : PacketSink
 {
     // Must match Log2 SharedMemorySink exactly — "LG2\0" = 0x4C473200
     private const uint SHM_MAGIC     = 0x4C473200u;
@@ -48,7 +48,7 @@ public sealed unsafe class SharedMemoryByteSink : PacketSink
     /// <param name="name">Named MMF identifier (e.g. "Local\\my-shm"). Must match the Log2 producer.</param>
     /// <param name="totalCapacity">Total MMF size in bytes, including the 128-byte header.
     /// Must exceed 128. Ignored when opening an existing mapping.</param>
-    public SharedMemoryByteSink(string name, int totalCapacity = 4 * 1024 * 1024)
+    public SharedMemorySink(string name, int totalCapacity = 4 * 1024 * 1024)
     {
         if (totalCapacity <= HEADER_SIZE)
             throw new ArgumentException("totalCapacity must exceed 128B header.", nameof(totalCapacity));

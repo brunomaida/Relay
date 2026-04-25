@@ -1,39 +1,41 @@
 using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
-using System.IO.Pipes;
+using System.Net.Sockets;
+using System.Runtime.Versioning;
 using Relay.Internal;
 
 namespace Relay.Sinks;
 
 /// <summary>
-/// SpscQueueSink that delivers payloads to a NamedPipe server with 4-byte BE length prefix.
-/// Compatible with Input2Log NamedPipe receiver. Acts as the client side; expects an existing
-/// server (e.g., Input2Log NamedPipeInput) to be listening.
+/// SpscQueueSink that delivers payloads to a Unix domain socket with 4-byte BE length prefix.
+/// Acts as client; expects an existing server (e.g., Input2Log UnixSocketInput).
 /// </summary>
-public sealed class NamedPipeByteSink : SpscQueueSink
+[SupportedOSPlatform("linux")]
+[SupportedOSPlatform("macos")]
+public sealed class UnixSocketSink : SpscQueueSink
 {
     private const int MinBackoffMs = 1_000;
     private const int MaxBackoffMs = 30_000;
 
-    private readonly string _pipeName;
+    private readonly string _path;
     private readonly byte[] _sendBuffer;
 
-    private NamedPipeClientStream? _client;
-    private int                    _filled;
-    private int                    _backoffMs      = MinBackoffMs;
-    private long                   _nextRetryTicks;
+    private Socket? _socket;
+    private int     _filled;
+    private int     _backoffMs      = MinBackoffMs;
+    private long    _nextRetryTicks;
 
-    public NamedPipeByteSink(
-        string pipeName,
+    public UnixSocketSink(
+        string path,
         int    sendBufferCapacity = 65_536,
         int    ringCapacity       = 65_536,
         int    flushIntervalMs    = 100)
-        : base(ringCapacity, flushIntervalMs, $"pipe-{pipeName}")
+        : base(ringCapacity, flushIntervalMs, $"unix-{System.IO.Path.GetFileName(path)}")
     {
-        _pipeName   = pipeName;
+        _path       = path;
         _sendBuffer = GC.AllocateArray<byte>(sendBufferCapacity, pinned: true);
-        ConnectClient();
+        Connect();
     }
 
     protected override void WriteToBackend(ReadOnlySpan<byte> payload)
@@ -49,10 +51,10 @@ public sealed class NamedPipeByteSink : SpscQueueSink
 
     protected override void FlushBackend()
     {
-        if (_filled == 0 || _client is null || !_client.IsConnected) return;
+        if (_filled == 0 || _socket is null) return;
         try
         {
-            _client.Write(_sendBuffer.AsSpan(0, _filled));
+            _socket.Send(_sendBuffer.AsSpan(0, _filled));
             _filled    = 0;
             _backoffMs = MinBackoffMs;
         }
@@ -67,29 +69,30 @@ public sealed class NamedPipeByteSink : SpscQueueSink
     {
         if (_healthy) return;
         if (HfClock.NowTicks < _nextRetryTicks) return;
-        ConnectClient();
+        Connect();
     }
 
     protected override void DisposeBackend()
     {
-        try { _client?.Dispose(); } catch { }
-        _client = null;
+        try { _socket?.Shutdown(SocketShutdown.Both); } catch { }
+        _socket?.Dispose();
+        _socket = null;
     }
 
-    private void ConnectClient()
+    private void Connect()
     {
         try
         {
-            _client?.Dispose();
-            _client = new NamedPipeClientStream(".", _pipeName, PipeDirection.Out);
-            _client.Connect(timeout: 100);
+            _socket?.Dispose();
+            _socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+            _socket.Connect(new UnixDomainSocketEndPoint(_path));
             _healthy   = true;
             _backoffMs = MinBackoffMs;
         }
         catch
         {
-            _client?.Dispose();
-            _client         = null;
+            _socket?.Dispose();
+            _socket         = null;
             _healthy        = false;
             _backoffMs      = Math.Min(_backoffMs * 2, MaxBackoffMs);
             _nextRetryTicks = HfClock.NowTicks + (long)_backoffMs * (Stopwatch.Frequency / 1_000);

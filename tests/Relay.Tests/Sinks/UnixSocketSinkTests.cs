@@ -12,7 +12,7 @@ namespace Relay.Tests.Sinks;
 
 [SupportedOSPlatform("linux")]
 [SupportedOSPlatform("macos")]
-public sealed class UnixSocketByteSinkTests
+public sealed class UnixSocketSinkTests
 {
     [Fact(Skip = "linux/macos only — runs in CI on those platforms")]
     public async Task Enqueue_PayloadDeliveredWith4ByteBELengthPrefix()
@@ -38,7 +38,7 @@ public sealed class UnixSocketByteSinkTests
 
         await Task.Delay(100);
 
-        using var sink = new UnixSocketByteSink(sockPath, flushIntervalMs: 50);
+        using var sink = new UnixSocketSink(sockPath, flushIntervalMs: 50);
         sink.Start();
         sink.Enqueue([5, 6, 7]);
         sink.Stop(drainTimeoutMs: 2_000);

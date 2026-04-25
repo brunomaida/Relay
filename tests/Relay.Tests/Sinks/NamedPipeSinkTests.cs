@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Relay.Tests.Sinks;
 
-public sealed class NamedPipeByteSinkTests
+public sealed class NamedPipeSinkTests
 {
     [Fact]
     public async Task Enqueue_PayloadDeliveredWith4ByteBELengthPrefix()
@@ -34,7 +34,7 @@ public sealed class NamedPipeByteSinkTests
 
         await Task.Delay(100);
 
-        using var sink = new NamedPipeByteSink(name, flushIntervalMs: 50);
+        using var sink = new NamedPipeSink(name, flushIntervalMs: 50);
         sink.Start();
         sink.Enqueue([10, 20, 30]);
         sink.Stop(drainTimeoutMs: 2_000);
@@ -47,7 +47,7 @@ public sealed class NamedPipeByteSinkTests
     [Fact]
     public void Dispose_IsIdempotent()
     {
-        var sink = new NamedPipeByteSink("relay-disp-" + Guid.NewGuid().ToString("N"));
+        var sink = new NamedPipeSink("relay-disp-" + Guid.NewGuid().ToString("N"));
         sink.Start();
         sink.Dispose();
         var act = () => sink.Dispose();
