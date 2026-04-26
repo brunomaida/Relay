@@ -42,9 +42,6 @@ public sealed class FileStreamSink<T> : SpscQueueSink<T> where T : unmanaged
         OpenStream();
     }
 
-    /// <inheritdoc/>
-    protected override bool PropagateAfterAccept => false;
-
     protected override unsafe void WriteToBackend(in T item)
     {
         if (_bufferPos + EntrySize > _writeBuffer.Length)

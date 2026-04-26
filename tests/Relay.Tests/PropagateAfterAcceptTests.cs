@@ -116,9 +116,9 @@ public sealed class PropagateAfterAcceptTests
 
     private sealed class PropagateCountingPipe : DispatchSink<Entry64>
     {
+        public PropagateCountingPipe() : base(propagateAfterAccept: true) { }
         public int Accepted;
         public override bool IsHealthy => true;
-        protected override bool PropagateAfterAccept => true;
         protected override bool Accept(in Entry64 item) { Accepted++; return true; }
         public override void Flush() { }
         public override void Dispose() { }
@@ -126,9 +126,9 @@ public sealed class PropagateAfterAcceptTests
 
     private sealed class PropagateButUnhealthyPipe : DispatchSink<Entry64>
     {
+        public PropagateButUnhealthyPipe() : base(propagateAfterAccept: true) { }
         public int AttemptedAccept;
         public override bool IsHealthy => false;
-        protected override bool PropagateAfterAccept => true;
         protected override bool Accept(in Entry64 item) { AttemptedAccept++; return true; }
         public override void Flush() { }
         public override void Dispose() { }
@@ -136,9 +136,9 @@ public sealed class PropagateAfterAcceptTests
 
     private sealed class PropagateRejecterPipe : DispatchSink<Entry64>
     {
+        public PropagateRejecterPipe() : base(propagateAfterAccept: true) { }
         public int AttemptedAccept;
         public override bool IsHealthy => true;
-        protected override bool PropagateAfterAccept => true;
         protected override bool Accept(in Entry64 item) { AttemptedAccept++; return false; }
         public override void Flush() { }
         public override void Dispose() { }

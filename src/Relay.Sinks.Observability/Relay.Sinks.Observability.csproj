@@ -2,17 +2,17 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <LangVersion>13</LangVersion>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <Optimize>true</Optimize>
-    <RootNamespace>Relay</RootNamespace>
-    <AssemblyName>Relay</AssemblyName>
+    <RootNamespace>Relay.Sinks.Observability</RootNamespace>
+    <AssemblyName>Relay.Sinks.Observability</AssemblyName>
     <ImplicitUsings>disable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Relay.Tests" />
-    <InternalsVisibleTo Include="Relay.Benchmarks" />
-    <InternalsVisibleTo Include="Relay.Sinks.Http" />
-    <InternalsVisibleTo Include="Relay.Sinks.Observability" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Relay\Relay.csproj" />
+    <ProjectReference Include="..\Relay.Sinks.Http\Relay.Sinks.Http.csproj" />
   </ItemGroup>
 </Project>

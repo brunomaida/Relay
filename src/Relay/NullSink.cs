@@ -13,9 +13,6 @@ public sealed class NullSink<T> : DispatchSink<T> where T : unmanaged
 
     public override bool IsHealthy => true;
 
-    /// <inheritdoc/>
-    protected override bool PropagateAfterAccept => false;
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected override bool Accept(in T item) => true;
 

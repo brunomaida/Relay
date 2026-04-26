@@ -26,14 +26,11 @@ public sealed class ForkSink<T> : DispatchSink<T> where T : unmanaged
     private readonly DispatchSink<T> _primary;
 
     /// <param name="primary">The pipe to forward every item to. Must not be null.</param>
-    public ForkSink(DispatchSink<T> primary) =>
+    public ForkSink(DispatchSink<T> primary) : base(propagateAfterAccept: true) =>
         _primary = primary ?? throw new ArgumentNullException(nameof(primary));
 
     /// <inheritdoc/>
     public override bool IsHealthy => _primary.IsHealthy;
-
-    /// <inheritdoc/>
-    protected override bool PropagateAfterAccept => true;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected override bool Accept(in T item)
