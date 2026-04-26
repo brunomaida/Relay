@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>13</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <Optimize>true</Optimize>
+    <RootNamespace>Relay.Sinks.Http</RootNamespace>
+    <AssemblyName>Relay.Sinks.Http</AssemblyName>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Relay.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Relay\Relay.csproj" />
+  </ItemGroup>
+</Project>
