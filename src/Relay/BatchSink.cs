@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Relay;
 
@@ -12,11 +13,16 @@ namespace Relay;
 /// Lock-free: only the consumer thread mutates <c>_scratch</c> / <c>_offset</c> from
 /// <see cref="WriteToBackend"/> and <see cref="FlushBackend"/>. Producer enqueue path is the
 /// inherited SPSC ring publish.
+/// <br/><br/>
+/// Payloads larger than <c>BatchCapacity</c> are dropped on the consumer thread and counted via
+/// <see cref="OversizedDropCount"/>. Size <c>batchCapacity</c> to accommodate the largest expected
+/// payload.
 /// </remarks>
 public abstract class BatchSink : SpscQueueSink
 {
     private readonly byte[] _scratch;
     private          int    _offset;
+    private          long   _oversizedDropCount;
 
     /// <param name="ringCapacity">SPSC ring capacity in bytes. Power of two ≥ 16.</param>
     /// <param name="batchCapacity">Scratch buffer capacity in bytes. Pinned (POH).</param>
@@ -31,11 +37,17 @@ public abstract class BatchSink : SpscQueueSink
     /// <summary>Capacity of the scratch buffer in bytes.</summary>
     protected int BatchCapacity => _scratch.Length;
 
+    /// <summary>Number of payloads dropped because their length exceeded <see cref="BatchCapacity"/>.</summary>
+    public long OversizedDropCount => Volatile.Read(ref _oversizedDropCount);
+
     /// <inheritdoc/>
     protected sealed override void WriteToBackend(ReadOnlySpan<byte> payload)
     {
         if (payload.Length > _scratch.Length)
-            return;  // oversized — silently drop (caller responsibility to size scratch).
+        {
+            Interlocked.Increment(ref _oversizedDropCount);
+            return;  // oversized — drop (caller responsibility to size scratch; monitor via OversizedDropCount).
+        }
 
         if (_offset + payload.Length > _scratch.Length)
             FlushScratch();
