@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Relay\Relay.csproj" />
     <ProjectReference Include="..\..\src\Relay.Sinks.Http\Relay.Sinks.Http.csproj" />
+    <ProjectReference Include="..\..\src\Relay.Sinks.Observability\Relay.Sinks.Observability.csproj" />
   </ItemGroup>
 
   <ItemGroup>
