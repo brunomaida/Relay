@@ -35,9 +35,6 @@ public sealed unsafe class RamSink<T> : DispatchSink<T> where T : unmanaged
     /// <summary>True when the ring has at least one free slot.</summary>
     public override bool IsHealthy => _tail - _head < _capacity;
 
-    /// <inheritdoc/>
-    protected override bool PropagateAfterAccept => false;
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected override bool Accept(in T item)
     {

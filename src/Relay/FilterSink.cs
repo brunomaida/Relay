@@ -27,9 +27,6 @@ public sealed class FilterSink<T> : DispatchSink<T> where T : unmanaged
     /// <summary>Always true — the filter itself never fails; only the downstream can.</summary>
     public override bool IsHealthy => true;
 
-    /// <inheritdoc/>
-    protected override bool PropagateAfterAccept => false;
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected override bool Accept(in T item)
     {

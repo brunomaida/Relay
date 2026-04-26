@@ -87,11 +87,11 @@ public class PropagateBenchmarks
 /// </summary>
 internal sealed class PropagateCounterPipe : DispatchSink<Entry64>
 {
+    public PropagateCounterPipe() : base(propagateAfterAccept: true) { }
+
     public long LastValue;
 
     public override bool IsHealthy => true;
-
-    protected override bool PropagateAfterAccept => true;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected override bool Accept(in Entry64 item)

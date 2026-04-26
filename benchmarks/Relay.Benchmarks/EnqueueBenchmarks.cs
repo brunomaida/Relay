@@ -12,10 +12,15 @@ namespace Relay.Benchmarks;
 [DisassemblyDiagnoser(maxDepth: 3)]
 public class EnqueueBenchmarks
 {
-    private DispatchSink<Entry64> _depth1Healthy = null!;
-    private DispatchSink<Entry64> _depth2AcceptReject = null!;
-    private DispatchSink<Entry64> _depth2HeadUnhealthy = null!;
-    private DispatchSink<Entry64> _depth3AllUnhealthy = null!;
+    // Each field is typed as the concrete head pipe so the JIT statically devirtualizes the
+    // virtual calls to IsHealthy / Accept on the head — no PGO dependency, no guarded
+    // devirtualization race across benchmarks that share the abstract DispatchSink<T>.Enqueue
+    // method body. (Depth1=CounterPipe; Depth2_AcceptReject=RejectPipe; Depth2_HeadUnhealthy
+    // and Depth3_AllUnhealthy=DeadPipe.)
+    private CounterPipe _depth1Healthy = null!;
+    private RejectPipe  _depth2AcceptReject = null!;
+    private DeadPipe    _depth2HeadUnhealthy = null!;
+    private DeadPipe    _depth3AllUnhealthy = null!;
 
     private Entry64 _item;
 

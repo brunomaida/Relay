@@ -25,10 +25,14 @@ public abstract class PacketSink : IDisposable
 
     /// <summary>
     /// When true, <see cref="Enqueue"/> continues to <see cref="Next"/> after a successful
-    /// local <see cref="Accept"/> — enabling fork/audit patterns.
-    /// JIT eliminates the branch in sealed subclasses returning a compile-time constant.
+    /// local <see cref="Accept"/> — enabling fork/audit patterns. Set via base ctor
+    /// (<see cref="ForkSink"/> passes <c>true</c>). Field, not virtual property — eliminates
+    /// one vtable slot from the hot Enqueue path and removes a PGO-dependent indirect call.
     /// </summary>
-    public virtual bool PropagateAfterAccept => false;
+    public readonly bool PropagateAfterAccept;
+
+    /// <param name="propagateAfterAccept">When true, Enqueue propagates to Next after a successful Accept.</param>
+    protected PacketSink(bool propagateAfterAccept = false) => PropagateAfterAccept = propagateAfterAccept;
 
     private long _dropCount;
 
