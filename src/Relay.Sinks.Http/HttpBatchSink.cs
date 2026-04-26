@@ -17,6 +17,12 @@ namespace Relay.Sinks.Http;
 /// After <c>cbFailures</c> consecutive failures, the breaker opens for <c>cbOpenDurationMs</c> —
 /// flushes during open are dropped without an outgoing request. First flush after the duration
 /// passes is the half-open probe; success closes the breaker.
+/// <para>
+/// Breaker state (<c>_failures</c>, <c>_breakerOpenUntilTicks</c>) is mutated exclusively on the
+/// consumer thread inside <c>OnFlush</c>. The <c>Interlocked</c>/<c>Volatile</c> operations are
+/// kept to allow safe future read-only observers (e.g., diagnostic counters) without revisiting
+/// the threading model.
+/// </para>
 /// </remarks>
 public abstract class HttpBatchSink : BatchSink
 {
@@ -27,6 +33,19 @@ public abstract class HttpBatchSink : BatchSink
 
     private int  _failures;
     private long _breakerOpenUntilTicks;
+
+    private long _httpFailureCount;
+    private long _breakerOpenCount;
+    private long _droppedBatchCount;
+
+    /// <summary>Cumulative count of HTTP request failures (4xx, 5xx, exceptions). Read on cold path.</summary>
+    public long HttpFailureCount => Volatile.Read(ref _httpFailureCount);
+
+    /// <summary>Cumulative count of times the breaker transitioned closed→open. Read on cold path.</summary>
+    public long BreakerOpenCount => Volatile.Read(ref _breakerOpenCount);
+
+    /// <summary>Cumulative count of batches dropped due to breaker-open state. Read on cold path.</summary>
+    public long DroppedBatchCount => Volatile.Read(ref _droppedBatchCount);
 
     /// <param name="http">Shared HttpClient. Caller owns disposal.</param>
     /// <param name="endpoint">Absolute target URI for POST.</param>
@@ -63,7 +82,11 @@ public abstract class HttpBatchSink : BatchSink
     protected sealed override void OnFlush(ReadOnlySpan<byte> batch)
     {
         if (HfClock.NowTicks < Volatile.Read(ref _breakerOpenUntilTicks))
-            return;  // breaker open — drop counted at base PacketSink layer if Next is null.
+        {
+            // breaker open — batch silently dropped; scratch buffer was already reset by BatchSink.FlushScratch.
+            Interlocked.Increment(ref _droppedBatchCount);
+            return;
+        }
 
         // ByteArrayContent requires a heap byte[]; HttpClient sync API doesn't accept Span.
         // 1 alloc per flush; acceptable in low-frequency batched IO. Zero-alloc HTTP path is Phase 4.
@@ -94,7 +117,13 @@ public abstract class HttpBatchSink : BatchSink
 
     private void IncrementFailureAndMaybeOpenBreaker()
     {
+        Interlocked.Increment(ref _httpFailureCount);
         if (Interlocked.Increment(ref _failures) >= _cbFailures)
-            Volatile.Write(ref _breakerOpenUntilTicks, HfClock.NowTicks + _cbOpenDurationTicks);
+        {
+            long now = HfClock.NowTicks;
+            if (Volatile.Read(ref _breakerOpenUntilTicks) <= now)
+                Interlocked.Increment(ref _breakerOpenCount);
+            Volatile.Write(ref _breakerOpenUntilTicks, now + _cbOpenDurationTicks);
+        }
     }
 }
