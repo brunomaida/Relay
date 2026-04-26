@@ -30,8 +30,9 @@ public sealed class BatchSinkTests
         sink.Flush();
         Thread.Sleep(50);
 
-        sink.Flushes.Should().HaveCountGreaterThanOrEqualTo(1);
+        sink.Flushes.Should().HaveCount(2);
         sink.Flushes[0].Should().Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 });
+        sink.Flushes[1].Should().Equal(new byte[] { 17, 18 });
     }
 
     [Fact]
@@ -60,5 +61,20 @@ public sealed class BatchSinkTests
 
         sink.Flushes.Should().HaveCount(1);
         sink.Flushes[0].Should().Equal(new byte[] { 0xCC });
+    }
+
+    [Fact]
+    public void Oversized_payload_is_dropped_and_counted()
+    {
+        using var sink = new CaptureBatchSink(batchCapacity: 8, flushIntervalMs: 10_000);
+        sink.Start();
+
+        sink.Enqueue(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });  // 10 bytes > 8 capacity
+
+        sink.Flush();
+        Thread.Sleep(100);
+
+        sink.Flushes.Should().BeEmpty();
+        sink.OversizedDropCount.Should().Be(1);
     }
 }
