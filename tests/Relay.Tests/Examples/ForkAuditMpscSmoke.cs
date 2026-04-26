@@ -83,8 +83,6 @@ public sealed class ForkAuditMpscSmoke
 
         public override bool IsHealthy => true;
 
-        protected override bool PropagateAfterAccept => false;
-
         protected override bool Accept(in Entry64 item)
         {
             Interlocked.Increment(ref _count);

@@ -12,10 +12,7 @@ public sealed class ForkSink : PacketSink
     private readonly PacketSink _primary;
 
     /// <param name="primary">Sink that receives a copy of every payload.</param>
-    public ForkSink(PacketSink primary) => _primary = primary;
-
-    /// <inheritdoc/>
-    public override bool PropagateAfterAccept => true;
+    public ForkSink(PacketSink primary) : base(propagateAfterAccept: true) => _primary = primary;
 
     /// <inheritdoc/>
     public override bool IsHealthy => _primary.IsHealthy;

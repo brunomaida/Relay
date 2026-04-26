@@ -7,6 +7,10 @@ namespace Relay.Tests.TestSinks;
 /// <summary>Collects accepted payloads. IsHealthy is configurable.</summary>
 internal class CollectingSink : PacketSink
 {
+    protected CollectingSink(bool propagateAfterAccept = false) : base(propagateAfterAccept) { }
+
+    public CollectingSink() : this(propagateAfterAccept: false) { }
+
     private readonly List<byte[]> _received = new();
     private bool _healthy = true;
 

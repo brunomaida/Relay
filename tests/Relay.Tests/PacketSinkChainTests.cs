@@ -90,6 +90,6 @@ public sealed class PacketSinkChainTests
     // Sealed subclass with PropagateAfterAccept = true for testing the propagate path.
     private sealed class PropagatingCollectingSink : CollectingSink
     {
-        public override bool PropagateAfterAccept => true;
+        public PropagatingCollectingSink() : base(propagateAfterAccept: true) { }
     }
 }
