@@ -39,6 +39,7 @@ public abstract class MpscQueueSink<T> : DispatchSink<T> where T : unmanaged
     private volatile bool _running;
     private Exception?    _consumerException;
     private long          _drainDeadlineTicks;
+    private int           _flushRequested;
 
     /// <summary>
     /// Backend health flag. Set to false by the consumer thread on IOException.
@@ -118,8 +119,13 @@ public abstract class MpscQueueSink<T> : DispatchSink<T> where T : unmanaged
     /// <summary>Closes the backend and releases its resources. Called in the consumer finally block.</summary>
     protected abstract void DisposeBackend();
 
-    /// <inheritdoc/>
-    public override void Flush()   => FlushBackend();
+    /// <summary>
+    /// Signals the consumer thread to flush the backend on its next loop iteration.
+    /// Non-blocking. FlushBackend is never called from the producer thread — eliminates
+    /// the race between producer-initiated flush and the consumer's periodic flush
+    /// (and against concurrent producers under MPSC).
+    /// </summary>
+    public override void Flush() => Volatile.Write(ref _flushRequested, 1);
 
     /// <inheritdoc/>
     public override void Dispose()
@@ -175,11 +181,21 @@ public abstract class MpscQueueSink<T> : DispatchSink<T> where T : unmanaged
                     checkDeadline = true;
                 }
 
-                if (checkDeadline && HfClock.NowTicks >= flushDeadline)
+                bool flushNow    = Volatile.Read(ref _flushRequested) == 1;
+                bool deadlineHit = checkDeadline && HfClock.NowTicks >= flushDeadline;
+
+                if (flushNow || deadlineHit)
                 {
+                    // Clear BEFORE FlushBackend so a racing Flush() that flips the flag back
+                    // to 1 during backend work is picked up on the next iteration — not
+                    // silently overwritten to 0 after the fact.
+                    if (flushNow) Volatile.Write(ref _flushRequested, 0);
                     FlushBackend();
-                    TryRecoverBackend();
-                    TryDrainToPrev();
+                    if (deadlineHit)
+                    {
+                        TryRecoverBackend();
+                        TryDrainToPrev();
+                    }
                     flushDeadline = HfClock.NowTicks + _flushIntervalTicks;
                 }
             }
