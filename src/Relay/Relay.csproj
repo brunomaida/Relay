@@ -12,5 +12,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Relay.Tests" />
     <InternalsVisibleTo Include="Relay.Benchmarks" />
+    <InternalsVisibleTo Include="Relay.Sinks.Http" />
+    <InternalsVisibleTo Include="Relay.Sinks.Observability" />
   </ItemGroup>
 </Project>
