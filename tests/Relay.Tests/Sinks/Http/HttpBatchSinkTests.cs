@@ -17,6 +17,11 @@ using Xunit;
 
 namespace Relay.Tests.Sinks.Http;
 
+/// <remarks>
+/// Tests use Microsoft.AspNetCore.TestHost (in-memory pipeline). Real-world breaker tuning
+/// (cbFailures, cbOpenDurationMs, flushIntervalMs) should be validated against a real socket
+/// fixture in a future endurance test phase.
+/// </remarks>
 public sealed class HttpBatchSinkTests
 {
     private sealed class TestHttpBatchSink : HttpBatchSink
@@ -47,6 +52,17 @@ public sealed class HttpBatchSinkTests
         return (host.GetTestServer(), received);
     }
 
+    private static void WaitFor(Func<bool> predicate, int timeoutMs = 1_000, int pollMs = 10)
+    {
+        var deadline = Environment.TickCount64 + timeoutMs;
+        while (Environment.TickCount64 < deadline)
+        {
+            if (predicate()) return;
+            Thread.Sleep(pollMs);
+        }
+        if (!predicate()) throw new TimeoutException($"Predicate did not become true within {timeoutMs}ms");
+    }
+
     [Fact]
     public void Posts_accumulated_batch_to_endpoint()
     {
@@ -57,7 +73,8 @@ public sealed class HttpBatchSinkTests
 
         sink.Enqueue(new byte[] { 0x01, 0x02 });
         sink.Enqueue(new byte[] { 0x03 });
-        Thread.Sleep(150);  // exceed flushIntervalMs
+        sink.Flush();
+        WaitFor(() => received.Count >= 1, timeoutMs: 1_000);
 
         received.Should().ContainSingle();
         received[0].Should().Equal(new byte[] { 0x01, 0x02, 0x03 });
@@ -71,21 +88,25 @@ public sealed class HttpBatchSinkTests
         using var sink = new TestHttpBatchSink(client, new Uri("http://localhost/ingest"));
         sink.Start();
 
+        // Drive failures one at a time, waiting for each to be processed before the next.
         for (int i = 0; i < 3; i++)
         {
+            long before = sink.HttpFailureCount;
             sink.Enqueue(new byte[] { (byte)i });
             sink.Flush();
-            Thread.Sleep(80);
+            WaitFor(() => sink.HttpFailureCount > before, timeoutMs: 1_000);
         }
 
         var requestsBefore = received.Count;
+        var droppedBefore = sink.DroppedBatchCount;
 
-        // Breaker is open — next enqueue+flush should NOT hit the server.
+        // Breaker open — next enqueue + flush should NOT hit the server.
         sink.Enqueue(new byte[] { 0xFF });
         sink.Flush();
-        Thread.Sleep(80);
+        WaitFor(() => sink.DroppedBatchCount > droppedBefore, timeoutMs: 1_000);
 
-        received.Count.Should().Be(requestsBefore, "breaker should be open and suppress the request");
+        received.Count.Should().Be(requestsBefore, "breaker open suppresses the request");
+        sink.BreakerOpenCount.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -111,12 +132,29 @@ public sealed class HttpBatchSinkTests
         using var sink = new TestHttpBatchSink(server.CreateClient(), new Uri("http://localhost/ingest"));
         sink.Start();
 
-        for (int i = 0; i < 3; i++) { sink.Enqueue(new byte[] { 1 }); sink.Flush(); Thread.Sleep(80); }
-        Thread.Sleep(150);  // exceed cbOpenDurationMs (100ms)
-        sink.Enqueue(new byte[] { 2 }); sink.Flush(); Thread.Sleep(80);
+        // Drive 3 failures to open breaker, one at a time.
+        for (int i = 0; i < 3; i++)
+        {
+            long before = sink.HttpFailureCount;
+            sink.Enqueue(new byte[] { 1 });
+            sink.Flush();
+            WaitFor(() => sink.HttpFailureCount > before, timeoutMs: 1_000);
+        }
+        sink.BreakerOpenCount.Should().Be(1);
+
+        // Sleep past breaker open duration (100ms).
+        Thread.Sleep(150);
+
+        // First flush after window = half-open probe; succeeds (200), closes breaker.
+        sink.Enqueue(new byte[] { 2 }); sink.Flush();
+        WaitFor(() => callCount >= 4, timeoutMs: 1_000);
         int afterProbe = callCount;
 
-        sink.Enqueue(new byte[] { 3 }); sink.Flush(); Thread.Sleep(80);
-        callCount.Should().BeGreaterThan(afterProbe, "breaker should be closed and forward subsequent requests");
+        // Subsequent flush should pass through (breaker closed).
+        sink.Enqueue(new byte[] { 3 }); sink.Flush();
+        WaitFor(() => callCount > afterProbe, timeoutMs: 1_000);
+
+        callCount.Should().BeGreaterThan(afterProbe, "breaker closed on probe success; subsequent requests flow");
+        sink.BreakerOpenCount.Should().Be(1, "breaker only opened once across the test");
     }
 }
