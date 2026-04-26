@@ -26,11 +26,14 @@ public abstract class DispatchSink<T> : IDisposable where T : unmanaged
 
     /// <summary>
     /// When true, <see cref="Enqueue"/> continues to <see cref="Next"/> even after a successful
-    /// local <see cref="Accept"/>. Default <c>false</c> = write-and-stop (current semantics).
-    /// Override and seal to enable bypass/tee behavior — JIT constant-folds the branch in both
-    /// directions when the override returns a compile-time constant.
+    /// local <see cref="Accept"/>. Default <c>false</c> = write-and-stop. Set via base ctor
+    /// (<see cref="ForkSink{T}"/> passes <c>true</c>). Field, not virtual property — eliminates
+    /// one vtable slot from the hot Enqueue path and removes a PGO-dependent indirect call.
     /// </summary>
-    protected virtual bool PropagateAfterAccept => false;
+    protected readonly bool PropagateAfterAccept;
+
+    /// <param name="propagateAfterAccept">When true, Enqueue propagates to Next after a successful Accept.</param>
+    protected DispatchSink(bool propagateAfterAccept = false) => PropagateAfterAccept = propagateAfterAccept;
 
     /// <summary>
     /// Routes <paramref name="item"/>: delivers locally when healthy, then either stops or

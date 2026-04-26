@@ -34,9 +34,6 @@ public sealed class MultiSink<T> : DispatchSink<T> where T : unmanaged
         }
     }
 
-    /// <inheritdoc/>
-    protected override bool PropagateAfterAccept => false;
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected override bool Accept(in T item)
     {
@@ -69,9 +66,6 @@ public sealed class Multi2Sink<T, TC1, TC2> : DispatchSink<T>
     }
 
     public override bool IsHealthy => _c1.IsHealthy || _c2.IsHealthy;
-
-    /// <inheritdoc/>
-    protected override bool PropagateAfterAccept => false;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected override bool Accept(in T item)

@@ -61,9 +61,6 @@ public sealed class TcpSink<T> : SpscQueueSink<T> where T : unmanaged
         }
     }
 
-    /// <inheritdoc/>
-    protected override bool PropagateAfterAccept => false;
-
     protected override unsafe void WriteToBackend(in T item)
     {
         if (_bufferPos + EntrySize > _sendBuffer.Length)
