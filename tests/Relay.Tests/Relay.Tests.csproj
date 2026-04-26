@@ -16,10 +16,12 @@
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Relay\Relay.csproj" />
+    <ProjectReference Include="..\..\src\Relay.Sinks.Http\Relay.Sinks.Http.csproj" />
   </ItemGroup>
 
   <ItemGroup>
