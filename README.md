@@ -1,19 +1,27 @@
 # Relay
 
-<!-- auto:header -->
 **Composable fallback dispatch pipeline for `unmanaged` structs — .NET 9 / C# 13**
 
 Zero allocation on the hot path. No locks. No LINQ. No `async`. Each item is delivered to the first healthy backend in the chain; on failure, it falls through to the next pipe automatically.
-<!-- /auto:header -->
+
+- **Automatic fallback chain** — `DispatchSink<T>` delivers to the first healthy backend; on any failure it forwards to `Next` automatically, no producer involvement
+- **Zero allocation steady state** — POH buffers allocated once at construction; `Enqueue` costs ~32 cycles, no heap allocation on the hot path
+- **No locks, no `async`** — `Volatile` + `Interlocked` only; consumer threads run synchronous loops; `async`/`await` never enters dispatch or consume
+- **Recovery drain** — when a failed sink recovers, items accumulated in the fallback drain back upstream automatically via the `Prev` pointer
+- **Typed + packet hierarchies** — `DispatchSink<T>` for `T : unmanaged` fixed structs; `PacketSink` for variable-length `ReadOnlySpan<byte>` payloads; `SerializeSink<T>` bridges both zero-copy
+- **Lock-free SPSC and MPSC rings** — 128-byte padded counters; `HeadCache` eliminates cross-core volatile reads under producer contention
+- **Fluent builder** — `RelayBuilder` / `SinkChainBuilder` wire `Next` + `Prev`, broadcast branches (`MultiSink`), conditional gates (`FilterSink`), and fork/audit patterns (`ForkSink`)
+- **Zero production dependencies** — `src/Relay` has no NuGet references
 
 ---
 
-<!-- auto:overview -->
 ## Overview
 
-Relay is an infrastructure library for building composable, resilient dispatch pipelines over blittable (`T : unmanaged`) data. The core abstraction is `DispatchPipe<T>`: a node that tries to deliver an item to its local backend, and on any failure — including transient I/O errors, connection drops, or capacity limits — forwards the item to the next pipe in the chain.
+Relay is an infrastructure library for building composable, resilient dispatch pipelines over blittable (`T : unmanaged`) data. The core abstraction is `DispatchSink<T>`: a node that tries to deliver an item to its local backend, and on any failure — including transient I/O errors, connection drops, or capacity limits — forwards the item to the next sink in the chain.
 
-Pipelines are assembled with a fluent builder and require no external orchestrator. Each pipe manages its own health, recovery, and backpressure. The producer calls a single method (`Enqueue`) at whatever rate it needs; the library handles the rest.
+A parallel hierarchy, `PacketSink`, handles variable-length `ReadOnlySpan<byte>` payloads with the same fallback semantics. `SerializeSink<T>` bridges the two trees zero-copy via `MemoryMarshal.AsBytes`.
+
+Pipelines are assembled with a fluent builder (`RelayBuilder` for typed chains, `SinkChainBuilder` for packet chains) and require no external orchestrator. Each sink manages its own health, recovery, and backpressure. The producer calls a single method (`Enqueue`) at whatever rate it needs; the library handles the rest.
 
 **Intended use cases:**
 
@@ -22,68 +30,86 @@ Pipelines are assembled with a fluent builder and require no external orchestrat
 - Tiered persistence: fast local storage → remote TCP receiver → RAM buffer → drop
 - Fan-out broadcast to multiple independent consumers (file + network simultaneously)
 - Conditional routing / filtering before delivery
-<!-- /auto:overview -->
+- HTTP batch delivery to observability backends (Seq, custom CLEF endpoints)
 
 ---
 
-<!-- auto:architecture -->
 ## How It Works
 
 ```
 Producer
    │
    ▼
-[Pipe 1 — IsHealthy? → Accept(item)]
+[Sink 1 — IsHealthy? → Accept(item)]
    │ failure (IsHealthy=false OR Accept=false)
    ▼
-[Pipe 2 — IsHealthy? → Accept(item)]
+[Sink 2 — IsHealthy? → Accept(item)]
    │ failure
    ▼
-[Pipe N — last resort, e.g. RamPipe]
+[Sink N — last resort, e.g. RamSink]
    │ failure (ring full)
    ▼
  silent drop
 ```
 
-**`Enqueue` is the only public entry point.** It is always synchronous from the producer's perspective. `SpscQueuePipe<T>` subclasses buffer items in a lock-free SPSC ring and drain them on a dedicated consumer thread — the producer never blocks waiting for I/O.
+**`Enqueue` is the only public entry point.** It is always synchronous from the producer's perspective. `SpscQueueSink<T>` subclasses buffer items in a lock-free SPSC ring and drain them on a dedicated consumer thread — the producer never blocks waiting for I/O.
 
-**Recovery drain:** when a failed pipe recovers, items accumulated in the downstream fallback pipe are drained back upstream automatically on the next flush interval.
-<!-- /auto:architecture -->
+**Recovery drain:** when a failed sink recovers, items accumulated in the downstream fallback sink are drained back upstream automatically on the next flush interval.
+
+Full type hierarchy, ring-buffer internals, builder operators, and recommended topologies: [`docs/topology.md`](docs/topology.md).
 
 ---
 
-<!-- auto:project-structure -->
 ## Project Structure
 
 | Project | Layer | Description |
 |---|---|---|
-| `src/Relay` | Library | Core pipeline: pipes, builder, ring buffer, native memory |
-| `tests/Relay.Tests` | Tests | xUnit tests per concern (chain, SPSC, multi-broadcast, recovery drain) |
+| `src/Relay` | Library | Core pipeline: typed + packet sinks, builders, ring buffers, native memory |
+| `src/Relay.Sinks.Http` | Library | `HttpBatchSink` — HTTP POST with circuit breaker, built on `BatchSink` |
+| `src/Relay.Sinks.Observability` | Library | `SeqSink` — CLEF-over-HTTP to Seq, built on `HttpBatchSink` |
+| `tests/Relay.Tests` | Tests | xUnit tests per concern (chain, SPSC, MPSC, multi-broadcast, recovery drain, HTTP batch) |
+| `benchmarks/Relay.Benchmarks` | Benchmarks | BenchmarkDotNet micro-benchmarks; run with `--inProcess` |
 
 **Source layout inside `src/Relay`:**
 
 | File / Folder | Role |
 |---|---|
-| `DispatchPipe<T>` | Abstract base — `Enqueue` hot path, `IsHealthy` / `Accept` contract |
-| `SpscQueuePipe<T>` | Abstract async base — SPSC ring + consumer thread + recovery |
-| `MultiPipe<T>` / `Multi2Pipe<T,TC1,TC2>` | Broadcast to N children |
-| `ForkPipe<T>` | Propagate-after-accept: primary + continuation to `Next` |
-| `FilterPipe<T>` | Conditional gate — silently consumes non-matching items |
-| `NullPipe<T>` | No-op terminal sink |
-| `Pipes/FileStreamPipe<T>` | Binary append to `FileStream`, POH buffer, backoff recovery |
-| `Pipes/TcpPipe<T>` | TCP send, POH buffer, reconnect with exponential backoff |
-| `Pipes/MmfPipe<T>` | Memory-mapped file write, capacity-only failure mode |
-| `Pipes/RamPipe<T>` | Native memory circular ring, last-resort sink, `DrainTo` on recovery |
+| `DispatchSink<T>` | Abstract typed base — `Enqueue` hot path, `IsHealthy` / `Accept` contract |
+| `SpscQueueSink<T>` | Abstract SPSC async base — ring + consumer thread + recovery drain |
+| `MpscQueueSink<T>` | Abstract MPSC async base — multi-producer ring + consumer thread |
+| `MultiSink<T>` / `Multi2Sink<T,TC1,TC2>` | Broadcast to N typed children |
+| `ForkSink<T>` | Propagate-after-accept: primary + continuation to `Next` |
+| `FilterSink<T>` | Conditional gate — silently consumes non-matching items |
+| `NullSink<T>` | No-op terminal typed sink |
+| `SerializeSink<T>` | Bridge: typed `T` → `PacketSink` via `MemoryMarshal.AsBytes` |
+| `PacketSink` | Abstract byte-payload base — same fallback semantics as typed tree |
+| `SpscQueueSink` | Abstract non-generic SPSC base for byte payloads |
+| `MpscQueueSink` | Abstract non-generic MPSC base for byte payloads |
+| `ForkSink` / `MultiSink` / `FilterSink` / `NullSink` | Packet-hierarchy counterparts |
+| `BatchSink` | POH scratch accumulator; flushes on fill or interval; `OnFlush` hook |
+| `Sinks/FileStreamSink<T>` | Binary append to `FileStream`, POH buffer, backoff recovery |
+| `Sinks/TcpSink<T>` | TCP send, POH buffer, reconnect with exponential backoff |
+| `Sinks/MmfSink<T>` | Memory-mapped file write, capacity-only failure mode |
+| `Sinks/RamSink<T>` | Native memory ring, last-resort typed sink, `DrainTo` on recovery |
+| `Sinks/FileSink` | Byte append to `FileStream`, optional file header, backoff recovery |
+| `Sinks/RotatingFileSink` | Like `FileSink` with size + date rotation and file-count cleanup |
+| `Sinks/NamedPipeSink` | Length-prefixed named-pipe client (Input2Log compatible) |
+| `Sinks/UdpSink` | UDP datagrams, one datagram per enqueued payload |
+| `Sinks/TcpSink` | Length-framed TCP (packet hierarchy) |
+| `Sinks/RamSink` | Native memory linear buffer, last-resort packet sink |
+| `Sinks/SharedMemorySink` | Synchronous MMF ring (Log2 wire protocol) |
 | `Buffers/SpscRingBuffer<T>` | Lock-free SPSC ring with 128-byte padded head/tail |
-| `Builder/RelayBuilder` + `PipeChain<T,THead>` | Fluent chain assembly |
+| `Buffers/MpscRingBuffer<T>` | Lock-free MPSC ring (Log2 FIX #18 layout) |
+| `Buffers/SpscByteRingBuffer` | Length-prefixed SPSC byte ring |
+| `Buffers/MpscByteRingBuffer` | Length-prefixed MPSC byte ring with publish-bit header |
+| `Builder/RelayBuilder` + `SinkChain<T,THead>` | Fluent typed chain assembly |
+| `Builder/SinkChainBuilder` + `SinkChain<THead>` | Fluent packet chain assembly |
 | `Memory/RelayMemory` | `PreFault` + `VirtualLock` on ring buffer pages |
 | `Internal/HfClock` | `Stopwatch.GetTimestamp()` wrapper — never `DateTime.UtcNow` |
-| `Internal/PipeConstraints` | DEBUG assertion: `T` must be cache-line-aligned |
-<!-- /auto:project-structure -->
+| `Internal/SinkConstraints` | DEBUG assertion: `T` must be cache-line-aligned |
 
 ---
 
-<!-- auto:getting-started -->
 ## Getting Started
 
 **Prerequisites:** .NET 9 SDK.
@@ -95,7 +121,7 @@ dotnet build
 dotnet test tests/Relay.Tests
 ```
 
-**Struct requirements:** `T` must be `unmanaged` and a positive multiple of 64 bytes (64, 128, 192, 256, …). In DEBUG builds, `PipeConstraints.AssertCacheLineAligned<T>()` enforces this at construction time.
+**Struct requirements (typed tree):** `T` must be `unmanaged` and a positive multiple of 64 bytes (64, 128, 192, 256, …). In DEBUG builds, `SinkConstraints.AssertCacheLineAligned<T>()` enforces this at construction time.
 
 ```csharp
 [StructLayout(LayoutKind.Explicit, Size = 64)]
@@ -107,26 +133,24 @@ public struct LogEntry
     [FieldOffset(16)] public fixed char Message[24]; // 24 chars = 48 bytes
 }
 ```
-<!-- /auto:getting-started -->
 
 ---
 
-<!-- auto:use-cases -->
 ## Use Cases & Examples
 
 ### 1 — Structured Log Sink (File with RAM fallback)
 
-Binary log records written to a local file. If the file system fails, records accumulate in RAM. When the file recovers, the RAM pipe drains back upstream automatically via the `Prev` pointer wired by the builder.
+Binary log records written to a local file. If the file system fails, records accumulate in RAM. When the file recovers, the RAM sink drains back upstream automatically via the `Prev` pointer wired by the builder.
 
 ```csharp
 using Relay;
 using Relay.Builder;
-using Relay.Pipes;
+using Relay.Sinks;
 
 var head = RelayBuilder
-    .Start<LogEntry, FileStreamPipe<LogEntry>>(
-        new FileStreamPipe<LogEntry>("/var/log/app.bin"))
-    .To(new RamPipe<LogEntry>())          // last-resort ring while file is down
+    .Start<LogEntry, FileStreamSink<LogEntry>>(
+        new FileStreamSink<LogEntry>("/var/log/app.bin"))
+    .To(new RamSink<LogEntry>())          // last-resort ring while file is down
     .Build();
 
 head.Start();                             // spawns consumer thread
@@ -152,76 +176,63 @@ Three-tier fallback: fast append log, then a fixed-size memory-mapped snapshot, 
 
 ```csharp
 var head = RelayBuilder
-    .Start<MarketTick, FileStreamPipe<MarketTick>>(
-        new FileStreamPipe<MarketTick>("/data/ticks.bin"))
-    .To(new MmfPipe<MarketTick>("/data/ticks.mmf", maxBytes: 512 * 1024 * 1024))
-    .To(new RamPipe<MarketTick>())
+    .Start<MarketTick, FileStreamSink<MarketTick>>(
+        new FileStreamSink<MarketTick>("/data/ticks.bin"))
+    .To(new MmfSink<MarketTick>("/data/ticks.mmf", maxBytes: 512 * 1024 * 1024))
+    .To(new RamSink<MarketTick>())
     .Build();
 
 head.Start();
 head.Enqueue(in tick);
 ```
 
-`MmfPipe` never throws `IOException` — its failure mode is capacity exhaustion, at which point items fall to the RAM ring.
+`MmfSink` never throws `IOException` — its failure mode is capacity exhaustion, at which point items fall to the RAM ring.
 
 ---
 
-### 3 — Remote TCP Dispatcher (Internal → Remote fallback)
+### 3 — Remote TCP Dispatcher (Primary → Backup → RAM)
 
-Items delivered to a local TCP receiver first. On disconnect, the SPSC ring absorbs the burst while reconnection retries with exponential backoff (1 s → 30 s). On recovery, items accumulated downstream drain back upstream.
+Items delivered to a primary TCP receiver first. On disconnect, the SPSC ring absorbs the burst while reconnection retries with exponential backoff (1 s → 30 s). On recovery, items accumulated downstream drain back upstream.
 
 ```csharp
 var head = RelayBuilder
-    .Start<TradeEvent, TcpPipe<TradeEvent>>(
-        new TcpPipe<TradeEvent>("risk-engine.internal", port: 9090))
-    .To(new TcpPipe<TradeEvent>("backup-engine.internal", port: 9090))
-    .To(new RamPipe<TradeEvent>())
+    .Start<TradeEvent, TcpSink<TradeEvent>>(
+        new TcpSink<TradeEvent>("risk-engine.internal", port: 9090))
+    .To(new TcpSink<TradeEvent>("backup-engine.internal", port: 9090))
+    .To(new RamSink<TradeEvent>())
     .Build();
 
 head.Start();
 head.Enqueue(in tradeEvent);
 ```
 
-Each `TcpPipe` runs its own consumer thread. The producer is never blocked by a reconnect attempt.
+Each `TcpSink<T>` runs its own consumer thread. The producer is never blocked by a reconnect attempt.
 
 ---
 
 ### 4 — Multi Broadcast (File + TCP simultaneously)
 
-Every item is delivered to **all children**, regardless of individual child health. `MultiPipe` is broadcast, not redundancy — a child that is unhealthy silently misses items.
+Every item is delivered to **all children**, regardless of individual child health. `MultiSink` is broadcast, not redundancy — a child that is unhealthy silently misses items.
 
 ```csharp
 var head = RelayBuilder
-    .Start<SensorReading, MultiPipe<SensorReading>>(
-        new MultiPipe<SensorReading>(
-            new FileStreamPipe<SensorReading>("/data/sensors.bin"),
-            new TcpPipe<SensorReading>("dashboard.local", 9200)))
-    .To(new RamPipe<SensorReading>())     // fallback when ALL children are unhealthy
+    .Start<SensorReading, MultiSink<SensorReading>>(
+        new MultiSink<SensorReading>(
+            new FileStreamSink<SensorReading>("/data/sensors.bin"),
+            new TcpSink<SensorReading>("dashboard.local", 9200)))
+    .To(new RamSink<SensorReading>())     // fallback when ALL children are unhealthy
     .Build();
 
 head.Start();
 head.Enqueue(in reading);
 ```
 
-Equivalent assembly using the fluent `.Multi` operator:
+**Performance-critical variant:** when both children are `sealed` types, prefer `Multi2Sink<T,TC1,TC2>` — the JIT devirtualizes both `Enqueue` calls, saving ~6 cycles.
 
 ```csharp
-var head = RelayBuilder
-    .StartSpsc<SensorReading, FileStreamPipe<SensorReading>>(
-        new FileStreamPipe<SensorReading>("/data/primary.bin"))
-    .Multi(m => m
-        .Branch(new TcpPipe<SensorReading>("dashboard.local", 9200))
-        .Branch(new FileStreamPipe<SensorReading>("/data/audit.bin")))
-    .To(new RamPipe<SensorReading>())
-    .Build();
-```
-
-**Performance-critical variant:** when both children are `sealed` types, prefer `Multi2Pipe<T,TC1,TC2>` — the JIT devirtualizes both `Enqueue` calls, saving ~6 cycles.
-
-```csharp
-var multi = new Multi2Pipe<SensorReading, FileStreamPipe<SensorReading>, TcpPipe<SensorReading>>(
-    new FileStreamPipe<SensorReading>("/data/sensors.bin"),
-    new TcpPipe<SensorReading>("dashboard.local", 9200));
+var multi = new Multi2Sink<SensorReading, FileStreamSink<SensorReading>, TcpSink<SensorReading>>(
+    new FileStreamSink<SensorReading>("/data/sensors.bin"),
+    new TcpSink<SensorReading>("dashboard.local", 9200));
 ```
 
 ---
@@ -232,11 +243,11 @@ Only route items matching a predicate. Items that do not match are silently cons
 
 ```csharp
 // Only persist ERROR-level entries to the slow file sink
-var errorSink = new FileStreamPipe<LogEntry>("/var/log/errors.bin");
+var errorSink = new FileStreamSink<LogEntry>("/var/log/errors.bin");
 
 var head = RelayBuilder
-    .Start<LogEntry, FilterPipe<LogEntry>>(
-        new FilterPipe<LogEntry>(e => e.Level >= 3, errorSink))
+    .Start<LogEntry, FilterSink<LogEntry>>(
+        new FilterSink<LogEntry>(e => e.Level >= 3, errorSink))
     .Build();
 
 errorSink.Start();
@@ -245,90 +256,120 @@ head.Enqueue(in entry);   // INFO entries are discarded; ERROR entries go to fil
 
 ---
 
-### 6 — Custom Backend (extend `SpscQueuePipe<T>`)
+### 6 — Custom Backend (extend `SpscQueueSink<T>`)
 
-Implement your own backend — a database writer, a message queue producer, a UDP broadcaster — by subclassing `SpscQueuePipe<T>` and overriding four methods.
+Implement your own backend — a database writer, a message queue producer, a WebSocket dispatcher — by subclassing `SpscQueueSink<T>` and overriding four methods.
 
 ```csharp
 using Relay;
-using Relay.Pipes;
+using Relay.Sinks;
 
-public sealed class UdpPipe<T> : SpscQueuePipe<T> where T : unmanaged
+public sealed class CustomSink<T> : SpscQueueSink<T> where T : unmanaged
 {
-    private readonly UdpClient _udp;
-    private readonly IPEndPoint _endpoint;
-    private readonly byte[] _sendBuffer;
-    private static readonly int EntrySize = Unsafe.SizeOf<T>();
+    public CustomSink()
+        : base(ringCapacity: 8_192, flushIntervalMs: 100, sinkName: "custom") { }
 
-    public UdpPipe(string host, int port)
-        : base(ringCapacity: 8_192, flushIntervalMs: 100, pipeName: "udp")
-    {
-        _endpoint   = new IPEndPoint(IPAddress.Parse(host), port);
-        _udp        = new UdpClient();
-        _sendBuffer = GC.AllocateArray<byte>(EntrySize, pinned: true);
-    }
-
-    protected override unsafe void WriteToBackend(in T item)
-    {
-        Unsafe.CopyBlockUnaligned(
-            ref _sendBuffer[0],
-            ref Unsafe.As<T, byte>(ref Unsafe.AsRef(in item)),
-            (uint)EntrySize);
-        _udp.Send(_sendBuffer, EntrySize, _endpoint);
-    }
-
-    protected override void FlushBackend()         { /* UDP is datagram — no buffer */ }
-    protected override void TryRecoverBackend()    { _healthy = true; }  // UDP is connectionless
-    protected override void DisposeBackend()       => _udp.Dispose();
+    protected override unsafe void WriteToBackend(in T item) { /* write item */ }
+    protected override void FlushBackend()                   { /* flush */      }
+    protected override void TryRecoverBackend()              { _healthy = true; }
+    protected override void DisposeBackend()                 { /* cleanup */    }
 }
 ```
 
-Wire it into a chain like any other pipe:
+Wire it into a chain like any other sink:
 
 ```csharp
 var head = RelayBuilder
-    .Start<MetricSample, UdpPipe<MetricSample>>(
-        new UdpPipe<MetricSample>("metrics.local", 9125))
-    .To(new FileStreamPipe<MetricSample>("/data/metrics-fallback.bin"))
+    .Start<MetricSample, CustomSink<MetricSample>>(new CustomSink<MetricSample>())
+    .To(new FileStreamSink<MetricSample>("/data/metrics-fallback.bin"))
     .Build();
 ```
 
 ---
 
-### 7 — NullPipe Terminal
+### 7 — NullSink Terminal
 
-Use `NullPipe<T>` as a guaranteed-healthy terminal to prevent silent drops in chains where you want explicit no-op behaviour rather than a missing `Next`.
+Use `NullSink<T>` as a guaranteed-healthy terminal to prevent silent drops in chains where you want explicit no-op behaviour rather than a missing `Next`.
 
 ```csharp
 var head = RelayBuilder
-    .Start<TradeEvent, FileStreamPipe<TradeEvent>>(
-        new FileStreamPipe<TradeEvent>("/data/trades.bin"))
-    .To(NullPipe<TradeEvent>.Instance)    // singleton, zero allocation
+    .Start<TradeEvent, FileStreamSink<TradeEvent>>(
+        new FileStreamSink<TradeEvent>("/data/trades.bin"))
+    .To(NullSink<TradeEvent>.Instance)    // singleton, zero allocation
     .Build();
 ```
-<!-- /auto:use-cases -->
 
 ---
 
-<!-- auto:key-concepts -->
+### 8 — HTTP Observability Sink (Seq via CLEF)
+
+Byte payloads (CLEF-encoded JSON lines, produced externally) batched and POSTed to a Seq server. The circuit breaker prevents cascade failures on Seq outage.
+
+```csharp
+using Relay.Builder;
+using Relay.Sinks;
+using Relay.Sinks.Observability.Seq;
+
+var http = new HttpClient();
+var seq  = new SeqSink(http, serverUrl: "http://seq:5341", apiKey: "my-key");
+
+var chain = SinkChainBuilder
+    .StartSpsc(seq)
+    .To(RamSink.Instance)              // buffer during breaker-open window
+    .Head;
+
+seq.Start();
+seq.Enqueue(clefLine);                 // ReadOnlySpan<byte>, zero alloc publish
+```
+
+---
+
 ## Key Concepts
 
 | Concept | Detail |
 |---|---|
-| **`T : unmanaged`** | Every pipeline is typed to a blittable struct. No boxing, no GC pressure. |
+| **`T : unmanaged`** | Every typed pipeline is bound to a blittable struct. No boxing, no GC pressure. |
 | **`IsHealthy` gate** | Checked on every `Enqueue` call (~7 c when healthy). If false, `Accept` is skipped and `Next` is called directly. `_healthy` is written only by the consumer thread. |
+| **`PropagateAfterAccept`** | `protected readonly bool` field (default `false`). When `true`, `Enqueue` continues to `Next` after a successful local `Accept` — fork/audit pattern. `ForkSink<T>` sets it to `true`; all others leave it `false`. |
 | **SPSC ring** | Lock-free single-producer / single-consumer ring. Head and tail are 128-byte padded (`PaddedLong`) to prevent false sharing. `TryPublish` costs ~25 c. |
-| **Consumer thread** | Each `SpscQueuePipe<T>` subclass spawns one background thread (`relay-<name>`). The thread spins → yields → sleeps on idle, and flushes on a configurable interval. |
-| **Recovery drain** | On each flush interval, if `Prev.IsHealthy` is true, the fallback pipe drains its accumulated items back upstream via `TryDrainToPrev`. |
-| **POH send buffer** | `GC.AllocateArray<byte>(size, pinned: true)` — allocated once in the constructor, never moved by the GC, safe to pin for native I/O. |
+| **MPSC ring** | Lock-free multi-producer ring (Log2 FIX #18). Three isolated `PaddedLong` counters (`_claimedTail`, `_headCache`, `_head`) eliminate false sharing under producer contention. |
+| **Consumer thread** | Each `SpscQueueSink<T>` / `SpscQueueSink` subclass spawns one background thread (`relay-<name>`). The thread spins → yields → sleeps on idle and flushes on a configurable interval. |
+| **Recovery drain** | On each flush interval, if `Prev.IsHealthy` is true, the fallback sink drains its accumulated items back upstream via `TryDrainToPrev`. |
+| **BatchSink** | POH-pinned scratch buffer that accumulates byte payloads from the SPSC ring and calls `OnFlush` when full or on the flush interval. Base for `HttpBatchSink`. |
+| **Circuit breaker** | `HttpBatchSink` opens the breaker after `cbFailures` consecutive HTTP failures, dropping batches for `cbOpenDurationMs` before probing again. |
+| **POH buffer** | `GC.AllocateArray<byte>(size, pinned: true)` — allocated once, never moved by the GC, safe for native I/O. |
 | **`HfClock`** | All timestamps use `Stopwatch.GetTimestamp()`. `DateTime.UtcNow` is never used on any hot path. |
-| **Cache-line alignment** | `sizeof(T)` must be a positive multiple of 64B so adjacent ring slots never share a cache line. Enforced in DEBUG by `PipeConstraints.AssertCacheLineAligned<T>()`. |
-| **Zero external dependencies** | `src/Relay` has no NuGet references. Tests use xUnit 2.9.2 and FluentAssertions 6.12.1 via central package management. |
-<!-- /auto:key-concepts -->
+| **Cache-line alignment** | `sizeof(T)` must be a positive multiple of 64B so adjacent ring slots never share a cache line. Enforced in DEBUG by `SinkConstraints.AssertCacheLineAligned<T>()`. |
+| **Zero production dependencies** | `src/Relay` has no NuGet references. `Relay.Sinks.Http` / `Relay.Sinks.Observability` use `System.Net.Http` only (inbox). Tests use xUnit 2.9.2 and FluentAssertions 6.12.1. |
 
 ---
 
-<!-- auto:development -->
+## Performance
+
+All measurements: Intel i9-12900K, hot caches, Release build.
+
+### Cycle budget
+
+| Operation | Cycles |
+|---|---|
+| `IsHealthy` check (SPSC sink, healthy) | ~7c |
+| `TryPublish` (SPSC ring, not full) | ~25c |
+| Successful `Enqueue` (chain depth 1) | ~32c |
+| Fallback hop to SPSC `Next` (unhealthy) | +4c per hop |
+| `Volatile.Write` (mfence, x64) | ~15c |
+| Virtual call (predicted, branch target buffer) | ~3c |
+
+### Steady-state guarantees
+
+| Metric | Value |
+|---|---|
+| Heap allocations (hot path) | 0 — all buffers POH-pinned at construction |
+| GC roots in ring slots | 0 — `T : unmanaged` only |
+| Locks on hot path | 0 — `Volatile` + `Interlocked.CompareExchange` only |
+| `async`/`await` on hot path | 0 — consumer threads are synchronous |
+
+---
+
 ## Development
 
 **Build & test:**
@@ -353,23 +394,28 @@ Base all branches off `develop`. Merge back to `develop` when stable.
 **Model routing:**
 - Sonnet — implementation, refactor, tests
 - Opus — architectural decisions, new concrete pipes, performance analysis
-<!-- /auto:development -->
 
 ---
 
-<!-- auto:resumo-ptbr -->
 ## Resumo (PT-BR)
 
-**Relay** é uma biblioteca de infraestrutura para construir pipelines de despacho com fallback automático sobre structs blittáveis (`T : unmanaged`) em .NET 9.
+**Relay** é uma biblioteca de infraestrutura para construir pipelines de despacho com fallback automático em .NET 9. Duas hierarquias paralelas cobrem os casos de uso principais:
 
-O produtor chama um único método — `Enqueue(in item)` — e a biblioteca cuida do roteamento: entrega ao primeiro backend saudável da cadeia, e em caso de falha (I/O, desconexão, capacidade esgotada), encaminha automaticamente ao próximo pipe. Quando o backend se recupera, os itens acumulados no fallback são drenados de volta upstream.
+- **`DispatchSink<T>`** — payloads tipados (`T : unmanaged`). Zero alocação no estado estável. `Enqueue(in item)` custa ~32 ciclos em um i9-12900K com caches quentes.
+- **`PacketSink`** — payloads de comprimento variável (`ReadOnlySpan<byte>`). Mesma semântica de fallback. `SerializeSink<T>` faz a ponte entre as duas árvores via `MemoryMarshal.AsBytes` sem cópia.
+
+O produtor chama um único método — `Enqueue` — e a biblioteca cuida do roteamento: entrega ao primeiro backend saudável da cadeia, e em caso de falha (I/O, desconexão, capacidade esgotada), encaminha automaticamente ao próximo sink. Quando o backend se recupera, os itens acumulados no fallback são drenados de volta upstream (mecanismo `Prev` drain).
+
+**Sinks concretos (tipados):** `FileStreamSink<T>`, `TcpSink<T>`, `MmfSink<T>`, `RamSink<T>`
+
+**Sinks concretos (packet):** `FileSink`, `RotatingFileSink`, `NamedPipeSink`, `UdpSink`, `TcpSink`, `RamSink`, `SharedMemorySink`, `SeqSink` (CLEF/HTTP via `BatchSink` → `HttpBatchSink`)
 
 **Casos de uso principais:**
 - Gravação de eventos de alta frequência em arquivo binário com fallback em RAM
 - Sink de log estruturado resiliente a falhas de disco ou rede
 - Dispatcher TCP primário + secundário + ring nativo como última camada
-- Fan-out broadcast para múltiplos consumidores simultâneos
-- Filtro condicional antes da entrega
+- Fan-out broadcast para múltiplos consumidores simultâneos (`MultiSink`, `Multi2Sink`)
+- Filtro condicional antes da entrega (`FilterSink`)
+- Envio batch de eventos CLEF para Seq com circuit breaker (`SeqSink`)
 
-**Garantias de desempenho:** zero alocação em steady state, sem `lock`/`Monitor`, sem `async`/`await` no caminho quente. `Enqueue` custa ~32 ciclos em condições normais em um i9-12900K com caches quentes.
-<!-- /auto:resumo-ptbr -->
+**Garantias de desempenho:** zero alocação em steady state, sem `lock`/`Monitor`, sem `async`/`await` no caminho quente.
