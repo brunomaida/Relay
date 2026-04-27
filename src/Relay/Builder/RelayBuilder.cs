@@ -46,4 +46,13 @@ public static class RelayBuilder
         where T    : unmanaged
         where THead : MpscQueueSink<T>
         => new(head);
+
+    /// <summary>
+    /// Begins a byte-packet chain with <paramref name="head"/> as the first sink.
+    /// Use when the payload is a variable-length <see cref="ReadOnlySpan{Byte}"/> — i.e., the
+    /// producer does not wrap data in a fixed-size <c>T : unmanaged</c> envelope.
+    /// </summary>
+    public static SinkChain<THead> StartPacket<THead>(THead head)
+        where THead : PacketSink
+        => new(head);
 }
