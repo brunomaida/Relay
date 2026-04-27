@@ -44,6 +44,16 @@ public abstract class PacketSink : IDisposable
     public long DropCount => Volatile.Read(ref _dropCount);
 
     /// <summary>
+    /// Delivers <paramref name="payload"/> to this sink only — does not fall through to
+    /// <see cref="Next"/>. Returns true on success, false when the local buffer is full or
+    /// the backend is unhealthy.
+    /// Use when the caller must distinguish "accepted" from "overflow" without silent-drop
+    /// semantics (e.g. never-drop response queues that throw on overflow instead).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryEnqueue(ReadOnlySpan<byte> payload) => IsHealthy && Accept(payload);
+
+    /// <summary>
     /// Routes <paramref name="payload"/>: delivers locally when healthy, then propagates to
     /// <see cref="Next"/> if <see cref="PropagateAfterAccept"/> is true. Falls through to
     /// <see cref="Next"/> on failure, or counts as a drop if <c>Next == null</c>.
