@@ -165,4 +165,12 @@ public sealed class RotatingFileSink : SpscQueueSink
         }
         catch { /* best-effort */ }
     }
+
+    /// <summary>
+    /// Benchmark-only accessor: invokes <see cref="WriteToBackend"/> directly so BDN can
+    /// isolate the per-record consumer-thread cost (the <c>ShouldRotate</c> predicate)
+    /// without ring publish + consumer-loop overhead. Visible to <c>Relay.Benchmarks</c>
+    /// via <c>InternalsVisibleTo</c>; never call from production code.
+    /// </summary>
+    internal void BenchInvokeWriteToBackend(ReadOnlySpan<byte> payload) => WriteToBackend(payload);
 }
