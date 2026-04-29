@@ -27,7 +27,12 @@
       "Bash(git -C \"C:/Development/Libs/Relay\" status)",
       "Bash(git -C \"C:/Development/Libs/Relay\" log --oneline -5)",
       "Bash(git *)",
-      "Bash(grep -E --line-buffered \"Benchmark|Mean|Median|Error|Failed|Done|Summary|Process|^//\")"
+      "Bash(grep -E --line-buffered \"Benchmark|Mean|Median|Error|Failed|Done|Summary|Process|^//\")",
+      "Bash(taskkill //F //IM testhost.exe)",
+      "Bash(taskkill //F //IM dotnet.exe)",
+      "PowerShell(Get-Process *)",
+      "Bash(tasklist //FI \"IMAGENAME eq dotnet.exe\")",
+      "Bash(tasklist //FI \"IMAGENAME eq testhost.exe\")"
     ]
   }
 }

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>Relay.Benchmarks.PacketSinks.QueueSinkPacketThroughputBenchmarks-20260429-185228</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.13.12, Windows 11 (10.0.26200.8246)
+12th Gen Intel Core i7-12700, 1 CPU, 20 logical and 12 physical cores
+.NET SDK 9.0.312
+  [Host]   : .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+  ShortRun : .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+</code></pre>
+<pre><code>Job=ShortRun  IterationCount=3  LaunchCount=1  
+WarmupCount=3  
+</code></pre>
+
+<table>
+<thead><tr><th>Method           </th><th>ItemCount</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Push_Single</td><td>100000</td><td>6.088 ms</td><td>3.454 ms</td><td>0.1894 ms</td><td>1.00</td><td>0.00</td><td>19.5313</td><td>19.5313</td><td>19.5313</td><td>64.94 KB</td><td>1.00</td>
+</tr><tr><td>Push_Single_SlowBackend</td><td>100000</td><td>4.960 ms</td><td>7.406 ms</td><td>0.4060 ms</td><td>0.81</td><td>0.05</td><td>19.5313</td><td>19.5313</td><td>19.5313</td><td>64.94 KB</td><td>1.00</td>
+</tr><tr><td>Push_Single</td><td>1000000</td><td>21.080 ms</td><td>17.841 ms</td><td>0.9779 ms</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>64.93 KB</td><td>1.00</td>
+</tr><tr><td>Push_Single_SlowBackend</td><td>1000000</td><td>12.701 ms</td><td>24.180 ms</td><td>1.3254 ms</td><td>0.60</td><td>0.06</td><td>15.6250</td><td>15.6250</td><td>15.6250</td><td>64.94 KB</td><td>1.00</td>
+</tr></tbody></table>
+</body>
+</html>
