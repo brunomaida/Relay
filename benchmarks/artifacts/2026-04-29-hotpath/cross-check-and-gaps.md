@@ -73,10 +73,10 @@ End-to-end consumer-loop BDNs (`QueuePipeThroughputBenchmarks`, `Baselines/Typed
 
 | # | Node | Predicted cycles | Suggested BDN class |
 |---|---|---|---|
-| H1 | `MpscByteRingBuffer.TryPublish` (uncontended) | ~50 | `MpscByteRingBufferBenchmarks` (parallel to `ByteRingBufferBenchmarks`) |
-| H2 | `MpscByteRingBuffer.TryPeek` / `Advance` | ~12 / ~5 | same class as H1 |
-| H3 | `MpscQueueSink<T>` end-to-end (single producer, sustained Push) | ~30c Accept + consumer | extend `QueuePipeThroughputBenchmarks` with `MpscPush_Single` / `MpscPush_Batch` variants |
-| H4 | `MpscQueueSink` (packet) end-to-end | ~50c Accept + consumer | new `MpscPacketQueueSinkThroughputBenchmarks` |
+| ~~H1~~ resolved | `MpscByteRingBuffer.TryPublish` (uncontended) | ~50 | Phase 3: BDN landed — see `benchmarks/artifacts/2026-04-29-phase3/`. Measured: ~20c uncontended (cost-map prediction was conservative). |
+| ~~H2~~ resolved | `MpscByteRingBuffer.TryPeek` / `Advance` | ~12 / ~5 | Phase 3: BDN landed (same class as H1). |
+| ~~H3~~ resolved | `MpscQueueSink<T>` end-to-end (single producer, sustained Push) | ~30c Accept + consumer | Phase 3: `MpscPush_Single` / `MpscPush_Single_SlowBackend` added to `QueuePipeThroughputBenchmarks`. |
+| ~~H4~~ resolved | `MpscQueueSink` (packet) end-to-end | ~50c Accept + consumer | Phase 3: `MpscPacketQueueSinkThroughputBenchmarks` landed — see `benchmarks/artifacts/2026-04-29-phase3/`. |
 | H5 | `SharedMemorySink.Accept` (CAS + modular WriteRing) | ~50 | new `SharedMemorySinkBenchmarks` (Windows-only `[SupportedOSPlatform]` gate) |
 | H6 | `RamSink.Accept` (packet) | ~20 | new `RamSinkPacketBenchmarks` |
 | H7 | `MmfSink<T>.WriteToBackend` (bypass-managed-bounds path) | ~30 | new `MmfSinkBenchmarks`. Cost-map called this "fastest durable backend"; claim is unvalidated. |
