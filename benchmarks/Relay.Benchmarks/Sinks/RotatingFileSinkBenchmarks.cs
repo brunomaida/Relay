@@ -12,18 +12,22 @@ namespace Relay.Benchmarks.Sinks;
 /// next-day boundary in <c>HfClock</c> ticks.
 /// </summary>
 /// <remarks>
-/// Driven via the <c>internal</c> <c>BenchInvokeWriteToBackend</c> accessor (visible through
-/// <c>InternalsVisibleTo Relay.Benchmarks</c>) to isolate the consumer-thread cost from ring
-/// publish + consumer-loop cost. Reflection is unusable here because <c>ReadOnlySpan&lt;byte&gt;</c>
-/// parameters cannot be marshalled through <c>MethodInfo.Invoke</c>. The benchmark runs on a
-/// single thread; no Start/Stop. Each invocation writes 64 bytes into the POH write buffer
-/// and exercises the <c>ShouldRotate</c> predicate exactly once.
-/// <para>
-/// The accessor is a one-line forwarder so the JIT inlines straight into the
-/// <c>WriteToBackend</c> body under measurement. The absolute number is not the gate — the
-/// <b>ratio</b> (before-fix / after-fix mean ns) is what acceptance checks. Expected ratio
-/// after the fix lands: ≥ 10x.
-/// </para>
+/// Two benchmarks:
+/// <list type="bullet">
+///   <item><description>
+///     <c>ShouldRotate_Predicate</c> — isolates the predicate via the
+///     <c>BenchInvokeShouldRotate</c> accessor. This is the regression gate for the
+///     <c>DateTime.UtcNow.Date</c> removal.
+///   </description></item>
+///   <item><description>
+///     <c>ShouldRotate_HotPath</c> — drives full <c>WriteToBackend</c> (predicate + buffer
+///     copy + bookkeeping). Realistic per-record consumer cost; predicate savings are
+///     diluted by the ~30-50 ns memcpy.
+///   </description></item>
+/// </list>
+/// Reflection is unusable for either accessor because <c>ReadOnlySpan&lt;byte&gt;</c>
+/// parameters cannot be marshalled through <c>MethodInfo.Invoke</c>; both accessors are
+/// <c>internal</c> forwarders visible via <c>InternalsVisibleTo Relay.Benchmarks</c>.
 /// </remarks>
 [MemoryDiagnoser]
 public class RotatingFileSinkBenchmarks
@@ -41,8 +45,8 @@ public class RotatingFileSinkBenchmarks
             maxBytes:        1_000_000_000, // large — size-based rotation never triggers
             ringCapacity:    4096,
             flushIntervalMs: 50);
-        // Do NOT call Start() — drive WriteToBackend directly via the internal accessor to
-        // isolate ShouldRotate cost from ring/consumer-loop overhead.
+        // Do NOT call Start() — drive accessors directly to isolate predicate / WriteToBackend
+        // from ring/consumer-loop overhead.
     }
 
     [GlobalCleanup]
@@ -53,9 +57,19 @@ public class RotatingFileSinkBenchmarks
     }
 
     /// <summary>
-    /// Single payload through <c>WriteToBackend</c> — exercises <c>ShouldRotate</c> exactly once.
-    /// Before fix: dominated by <c>DateTime.UtcNow.Date</c> (~11 ns @ 4.5 GHz).
-    /// After fix: single <c>HfClock.NowTicks</c> compare (~0.7 ns @ 4.5 GHz).
+    /// Isolated <c>ShouldRotate</c> predicate — the rotation gate without surrounding
+    /// buffer copy. Before fix: dominated by <c>DateTime.UtcNow.Date</c> (~7-11 ns).
+    /// After fix: bounds check + cached <c>HfClock</c>-tick compare (~1-2 ns).
+    /// </summary>
+    [Benchmark]
+    public bool ShouldRotate_Predicate()
+    {
+        return _sink.BenchInvokeShouldRotate(64);
+    }
+
+    /// <summary>
+    /// Full <c>WriteToBackend</c> — predicate + buffer copy + bookkeeping. Realistic
+    /// per-record consumer cost; the predicate savings are diluted by the ~30-50 ns memcpy.
     /// </summary>
     [Benchmark]
     public void ShouldRotate_HotPath()

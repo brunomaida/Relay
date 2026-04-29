@@ -12,5 +12,5 @@ WarmupCount=10
 ```
 | Method                 | Mean     | Error    | StdDev   | Allocated |
 |----------------------- |---------:|---------:|---------:|----------:|
-| ShouldRotate_Predicate | 21.84 ns | 0.151 ns | 0.222 ns |         - |
-| ShouldRotate_HotPath   | 69.23 ns | 5.115 ns | 7.498 ns |         - |
+| ShouldRotate_Predicate | 13.76 ns | 0.067 ns | 0.098 ns |         - |
+| ShouldRotate_HotPath   | 66.22 ns | 1.742 ns | 2.554 ns |         - |
