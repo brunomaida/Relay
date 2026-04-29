@@ -88,15 +88,15 @@ End-to-end consumer-loop BDNs (`QueuePipeThroughputBenchmarks`, `Baselines/Typed
 
 | # | Node | Predicted cycles | Suggested BDN |
 |---|---|---|---|
-| M1 | `ForkSink` (packet) | ~18 | extend `PropagateBenchmarks` w/ packet variant or new `PropagatePacketBenchmarks` |
-| M2 | `MultiSink` (packet, N=2) | 7+2×17 = 41 | new `MultiPacketEnqueueBenchmarks` |
+| ~~M1~~ resolved | `ForkSink` (packet) | ~18 | Phase 2: BDN landed — see `benchmarks/artifacts/2026-04-29-phase2/` |
+| ~~M2~~ resolved | `MultiSink` (packet, N=2) | 7+2×17 = 41 | Phase 2: BDN landed — see `benchmarks/artifacts/2026-04-29-phase2/` |
 | M3 | `Multi2Sink`-equivalent for packet | n/a — type does not exist | DESIGN GAP: should `Multi2PacketSink` exist? cost-map §9 didn't flag this. |
-| M4 | `FilterSink` (packet) | ~18 | new `FilterPacketSinkBenchmarks` |
+| ~~M4~~ resolved | `FilterSink` (packet) | ~18 | Phase 2: BDN landed — see `benchmarks/artifacts/2026-04-29-phase2/` |
 | M5 | `BatchSink.WriteToBackend` (consumer scratch fits) | ~10 | new `BatchSinkBenchmarks` (consumer-thread isolated) |
 | M6 | `NamedPipeSink.WriteToBackend` | ~18 | new — Windows-only |
 | M7 | `UnixSocketSink.WriteToBackend` | ~18 | new — Linux/macOS-only |
 | M8 | `RotatingFileSink.WriteToBackend` (excl. ShouldRotate) | ~10 | covered by C1 BDN setup |
-| M9 | `SpscQueueSink` (packet) end-to-end Push | ~35c Accept + consumer | extend `QueuePipeThroughputBenchmarks` with packet variant |
+| ~~M9~~ resolved | `SpscQueueSink` (packet) end-to-end Push | ~35c Accept + consumer | Phase 2: BDN landed — see `benchmarks/artifacts/2026-04-29-phase2/` |
 | M10 | `MpscRingBuffer<T>.TryPublish` **multi-thread contention** | ~30c± retry | new `MpscContentionBenchmarks` (2-4 producer threads, validates "blind subgraph" §8) |
 
 ### Low-priority (covered indirectly or low risk)
