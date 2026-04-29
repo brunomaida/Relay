@@ -7,6 +7,20 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+### fix: `RotatingFileSink.ShouldRotate` — remove `DateTime.UtcNow.Date` from consumer hot path
+
+`RotatingFileSink.ShouldRotate` no longer calls `DateTime.UtcNow.Date` per consumed payload;
+caches the next UTC-midnight boundary in `HfClock` ticks. Reduces consumer hot-path cost from
+~50c to ~3c per payload (BDN ratio gate ≥ 10x — see Phase 1 BDN under
+`benchmarks/artifacts/2026-04-29-phase1/`). Resolves regression flagged in
+`docs/reports/2026-04-29-resource-cost-map-relay.md` §5.
+
+**Files touched:** `src/Relay/Sinks/RotatingFileSink.cs`,
+`tests/Relay.Tests/Sinks/RotatingFileSinkTests.cs`,
+`benchmarks/Relay.Benchmarks/Sinks/RotatingFileSinkBenchmarks.cs`.
+
+---
+
 ### refactor!: renomeia `TeePipe`→`ForkPipe`, `FanOutPipe`→`MultiPipe`, `FanOut2Pipe`→`Multi2Pipe` + builder expandido
 
 **Breaking.** Renomeações públicas em `namespace Relay` e nova superfície fluente em
