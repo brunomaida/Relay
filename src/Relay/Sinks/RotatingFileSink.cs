@@ -27,6 +27,7 @@ public sealed class RotatingFileSink : SpscQueueSink
     private long        _currentFileBytes;
     private int         _seq;
     private DateTime    _currentDay;
+    private long        _nextDayBoundaryTicks;          // HfClock ticks at the next UTC midnight
     private int         _backoffMs      = MinBackoffMs;
     private long        _nextRetryTicks;
 
@@ -47,7 +48,8 @@ public sealed class RotatingFileSink : SpscQueueSink
         _maxFiles    = maxFiles;
         _writeBuffer = GC.AllocateArray<byte>(writeBufferCapacity, pinned: true);
         _header      = header ?? ReadOnlyMemory<byte>.Empty;
-        _currentDay  = DateTime.UtcNow.Date;
+        _currentDay           = DateTime.UtcNow.Date;
+        _nextDayBoundaryTicks = ComputeNextDayBoundaryTicks();
     }
 
     protected override void WriteToBackend(ReadOnlySpan<byte> payload)
@@ -82,7 +84,7 @@ public sealed class RotatingFileSink : SpscQueueSink
     private bool ShouldRotate(int incomingBytes)
     {
         if (_currentFileBytes + incomingBytes > _maxBytes) return true;
-        if (DateTime.UtcNow.Date > _currentDay) return true;
+        if (HfClock.NowTicks >= _nextDayBoundaryTicks) return true;
         return false;
     }
 
@@ -92,8 +94,9 @@ public sealed class RotatingFileSink : SpscQueueSink
         _stream?.Dispose();
         _stream = null;
         _seq++;
-        _currentDay       = DateTime.UtcNow.Date;
-        _currentFileBytes = 0;
+        _currentDay           = DateTime.UtcNow.Date;
+        _nextDayBoundaryTicks = ComputeNextDayBoundaryTicks();
+        _currentFileBytes     = 0;
         TryOpenStream();
         Cleanup();
     }
@@ -165,6 +168,21 @@ public sealed class RotatingFileSink : SpscQueueSink
         }
         catch { /* best-effort */ }
     }
+
+    private static long ComputeNextDayBoundaryTicks()
+    {
+        var  now          = DateTime.UtcNow;
+        var  nextMidnight = now.Date.AddDays(1);
+        long msUntil      = (long)(nextMidnight - now).TotalMilliseconds;
+        return HfClock.NowTicks + msUntil * (Stopwatch.Frequency / 1_000);
+    }
+
+    /// <summary>
+    /// Test-only hook: forces the next-day-boundary tick threshold. Visible to
+    /// <c>Relay.Tests</c> via <c>InternalsVisibleTo</c>. Production callers must use
+    /// <see cref="ComputeNextDayBoundaryTicks"/> (resampled inside <see cref="RotateNow"/>).
+    /// </summary>
+    internal void SetDayBoundaryForTest(long ticks) => _nextDayBoundaryTicks = ticks;
 
     /// <summary>
     /// Benchmark-only accessor: invokes <see cref="WriteToBackend"/> directly so BDN can
