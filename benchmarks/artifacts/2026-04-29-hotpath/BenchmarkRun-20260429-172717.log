@@ -1,0 +1,312 @@
+// Validating benchmarks:
+// ***** BenchmarkRunner: Start   *****
+// ***** Found 48 benchmark(s) in total *****
+// ***** Building 1 exe(s) in Parallel: Start   *****
+// start dotnet  restore /p:UseSharedCompilation=false /p:BuildInParallel=false /m:1 /p:Deterministic=true /p:Optimize=true in C:\Development\Libs\Relay\benchmarks\Relay.Benchmarks\bin\Release\net9.0\b81d7613-4bcb-4729-8b8e-2cbc08fc2fb2
+// command took 3.31 sec and exited with 0
+// start dotnet  build -c Release --no-restore /p:UseSharedCompilation=false /p:BuildInParallel=false /m:1 /p:Deterministic=true /p:Optimize=true in C:\Development\Libs\Relay\benchmarks\Relay.Benchmarks\bin\Release\net9.0\b81d7613-4bcb-4729-8b8e-2cbc08fc2fb2
+// command took 9.19 sec and exited with 0
+// ***** Done, took 00:00:13 (13.05 sec)   *****
+// Found 36 benchmarks:
+//   ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=8]
+//   ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=8]
+//   ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=8]
+//   ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=64]
+//   ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=64]
+//   ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=64]
+//   ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=256]
+//   ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=256]
+//   ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=256]
+//   ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=1024]
+//   ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=1024]
+//   ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=1024]
+//   ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=1024, PayloadSize=8]
+//   ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=1024, PayloadSize=8]
+//   ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=1024, PayloadSize=8]
+//   ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=1024, PayloadSize=64]
+//   ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=1024, PayloadSize=64]
+//   ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=1024, PayloadSize=64]
+//   ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=1024, PayloadSize=256]
+//   ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=1024, PayloadSize=256]
+//   ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=1024, PayloadSize=256]
+//   ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=1024, PayloadSize=1024]
+//   ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=1024, PayloadSize=1024]
+//   ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=1024, PayloadSize=1024]
+//   ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=65536, PayloadSize=8]
+//   ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=65536, PayloadSize=8]
+//   ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=65536, PayloadSize=8]
+//   ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=65536, PayloadSize=64]
+//   ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=65536, PayloadSize=64]
+//   ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=65536, PayloadSize=64]
+//   ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=65536, PayloadSize=256]
+//   ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=65536, PayloadSize=256]
+//   ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=65536, PayloadSize=256]
+//   ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=65536, PayloadSize=1024]
+//   ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=65536, PayloadSize=1024]
+//   ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=65536, PayloadSize=1024]
+
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: ByteRingBufferBenchmarks.TryPeek_Empty: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=8]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet b81d7613-4bcb-4729-8b8e-2cbc08fc2fb2.dll --anonymousPipes 100 96 --benchmarkName "Relay.Benchmarks.ByteRingBufferBenchmarks.TryPeek_Empty(Capacity: 64, PayloadSize: 8)" --job ShortRun --benchmarkId 0 in C:\Development\Libs\Relay\benchmarks\Relay.Benchmarks\bin\Release\net9.0\b81d7613-4bcb-4729-8b8e-2cbc08fc2fb2\bin\Release\net9.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.13.12
+// Runtime=.NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2,AES,BMI1,BMI2,FMA,LZCNT,PCLMUL,POPCNT,AvxVnni,SERIALIZE VectorSize=256
+// Job: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 194500.00 ns, 194.5000 us/op
+WorkloadJitting  1: 1 op, 291400.00 ns, 291.4000 us/op
+
+OverheadJitting  2: 16 op, 256400.00 ns, 16.0250 us/op
+WorkloadJitting  2: 16 op, 259200.00 ns, 16.2000 us/op
+
+WorkloadPilot    1: 16 op, 800.00 ns, 50.0000 ns/op
+WorkloadPilot    2: 32 op, 900.00 ns, 28.1250 ns/op
+WorkloadPilot    3: 64 op, 800.00 ns, 12.5000 ns/op
+WorkloadPilot    4: 128 op, 1100.00 ns, 8.5938 ns/op
+WorkloadPilot    5: 256 op, 1400.00 ns, 5.4688 ns/op
+WorkloadPilot    6: 512 op, 2400.00 ns, 4.6875 ns/op
+WorkloadPilot    7: 1024 op, 4300.00 ns, 4.1992 ns/op
+WorkloadPilot    8: 2048 op, 7500.00 ns, 3.6621 ns/op
+WorkloadPilot    9: 4096 op, 14400.00 ns, 3.5156 ns/op
+WorkloadPilot   10: 8192 op, 28100.00 ns, 3.4302 ns/op
+WorkloadPilot   11: 16384 op, 55800.00 ns, 3.4058 ns/op
+WorkloadPilot   12: 32768 op, 111000.00 ns, 3.3875 ns/op
+WorkloadPilot   13: 65536 op, 225000.00 ns, 3.4332 ns/op
+WorkloadPilot   14: 131072 op, 444900.00 ns, 3.3943 ns/op
+WorkloadPilot   15: 262144 op, 885400.00 ns, 3.3775 ns/op
+WorkloadPilot   16: 524288 op, 1783000.00 ns, 3.4008 ns/op
+WorkloadPilot   17: 1048576 op, 3586000.00 ns, 3.4199 ns/op
+WorkloadPilot   18: 2097152 op, 7149600.00 ns, 3.4092 ns/op
+WorkloadPilot   19: 4194304 op, 14983400.00 ns, 3.5723 ns/op
+WorkloadPilot   20: 8388608 op, 28926000.00 ns, 3.4482 ns/op
+WorkloadPilot   21: 16777216 op, 55942300.00 ns, 3.3344 ns/op
+WorkloadPilot   22: 33554432 op, 89745400.00 ns, 2.6746 ns/op
+WorkloadPilot   23: 67108864 op, 111530100.00 ns, 1.6619 ns/op
+WorkloadPilot   24: 134217728 op, 223539900.00 ns, 1.6655 ns/op
+WorkloadPilot   25: 268435456 op, 451769600.00 ns, 1.6830 ns/op
+WorkloadPilot   26: 536870912 op, 991903500.00 ns, 1.8476 ns/op
+
+OverheadWarmup   1: 536870912 op, 1218282200.00 ns, 2.2692 ns/op
+OverheadWarmup   2: 536870912 op, 1081958100.00 ns, 2.0153 ns/op
+OverheadWarmup   3: 536870912 op, 1136855500.00 ns, 2.1176 ns/op
+OverheadWarmup   4: 536870912 op, 1093387400.00 ns, 2.0366 ns/op
+OverheadWarmup   5: 536870912 op, 1109986200.00 ns, 2.0675 ns/op
+OverheadWarmup   6: 536870912 op, 1133186000.00 ns, 2.1107 ns/op
+OverheadWarmup   7: 536870912 op, 1131931100.00 ns, 2.1084 ns/op
+
+OverheadActual   1: 536870912 op, 1111963800.00 ns, 2.0712 ns/op
+OverheadActual   2: 536870912 op, 1124600600.00 ns, 2.0947 ns/op
+OverheadActual   3: 536870912 op, 1091121300.00 ns, 2.0324 ns/op
+OverheadActual   4: 536870912 op, 933709500.00 ns, 1.7392 ns/op
+OverheadActual   5: 536870912 op, 873946000.00 ns, 1.6279 ns/op
+OverheadActual   6: 536870912 op, 856548200.00 ns, 1.5954 ns/op
+OverheadActual   7: 536870912 op, 863887400.00 ns, 1.6091 ns/op
+OverheadActual   8: 536870912 op, 861576900.00 ns, 1.6048 ns/op
+OverheadActual   9: 536870912 op, 868932500.00 ns, 1.6185 ns/op
+OverheadActual  10: 536870912 op, 867401900.00 ns, 1.6157 ns/op
+OverheadActual  11: 536870912 op, 880023000.00 ns, 1.6392 ns/op
+OverheadActual  12: 536870912 op, 882873300.00 ns, 1.6445 ns/op
+OverheadActual  13: 536870912 op, 883779800.00 ns, 1.6462 ns/op
+OverheadActual  14: 536870912 op, 894380300.00 ns, 1.6659 ns/op
+OverheadActual  15: 536870912 op, 868239100.00 ns, 1.6172 ns/op
+
+WorkloadWarmup   1: 536870912 op, 890665000.00 ns, 1.6590 ns/op
+WorkloadWarmup   2: 536870912 op, 882520700.00 ns, 1.6438 ns/op
+WorkloadWarmup   3: 536870912 op, 895525300.00 ns, 1.6680 ns/op
+
+// BeforeActualRun
+WorkloadActual   1: 536870912 op, 917394400.00 ns, 1.7088 ns/op
+WorkloadActual   2: 536870912 op, 891443300.00 ns, 1.6604 ns/op
+WorkloadActual   3: 536870912 op, 883657400.00 ns, 1.6459 ns/op
+
+// AfterActualRun
+WorkloadResult   1: 536870912 op, 37371400.00 ns, 0.0696 ns/op
+WorkloadResult   2: 536870912 op, 11420300.00 ns, 0.0213 ns/op
+WorkloadResult   3: 536870912 op, 3634400.00 ns, 0.0068 ns/op
+// GC:  0 0 0 400 536870912
+// Threading:  0 0 536870912
+
+// AfterAll
+// Benchmark Process 7260 has exited with code 0.
+
+Mean = 0.033 ns, StdErr = 0.019 ns (58.36%), N = 3, StdDev = 0.033 ns
+Min = 0.007 ns, Q1 = 0.014 ns, Median = 0.021 ns, Q3 = 0.045 ns, Max = 0.070 ns
+IQR = 0.031 ns, LowerFence = -0.033 ns, UpperFence = 0.093 ns
+ConfidenceInterval = [-0.568 ns; 0.633 ns] (CI 99.9%), Margin = 0.600 ns (1844.15% of Mean)
+Skewness = 0.3, Kurtosis = 0.67, MValue = 2
+
+// ** Remained 47 (97,9%) benchmark(s) to run. Estimated finish 2026-04-29 17:53 (0h 25m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: ByteRingBufferBenchmarks.RoundTrip: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=8]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet b81d7613-4bcb-4729-8b8e-2cbc08fc2fb2.dll --anonymousPipes 2040 2384 --benchmarkName "Relay.Benchmarks.ByteRingBufferBenchmarks.RoundTrip(Capacity: 64, PayloadSize: 8)" --job ShortRun --benchmarkId 1 in C:\Development\Libs\Relay\benchmarks\Relay.Benchmarks\bin\Release\net9.0\b81d7613-4bcb-4729-8b8e-2cbc08fc2fb2\bin\Release\net9.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.13.12
+// Runtime=.NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2,AES,BMI1,BMI2,FMA,LZCNT,PCLMUL,POPCNT,AvxVnni,SERIALIZE VectorSize=256
+// Job: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 188200.00 ns, 188.2000 us/op
+WorkloadJitting  1: 1 op, 328600.00 ns, 328.6000 us/op
+
+OverheadJitting  2: 16 op, 242700.00 ns, 15.1687 us/op
+WorkloadJitting  2: 16 op, 241400.00 ns, 15.0875 us/op
+
+WorkloadPilot    1: 16 op, 1800.00 ns, 112.5000 ns/op
+WorkloadPilot    2: 32 op, 2200.00 ns, 68.7500 ns/op
+WorkloadPilot    3: 64 op, 2800.00 ns, 43.7500 ns/op
+WorkloadPilot    4: 128 op, 4300.00 ns, 33.5938 ns/op
+WorkloadPilot    5: 256 op, 7500.00 ns, 29.2969 ns/op
+WorkloadPilot    6: 512 op, 13300.00 ns, 25.9766 ns/op
+WorkloadPilot    7: 1024 op, 25200.00 ns, 24.6094 ns/op
+WorkloadPilot    8: 2048 op, 69800.00 ns, 34.0820 ns/op
+WorkloadPilot    9: 4096 op, 99800.00 ns, 24.3652 ns/op
+WorkloadPilot   10: 8192 op, 196600.00 ns, 23.9990 ns/op
+WorkloadPilot   11: 16384 op, 390000.00 ns, 23.8037 ns/op
+WorkloadPilot   12: 32768 op, 909200.00 ns, 27.7466 ns/op
+WorkloadPilot   13: 65536 op, 1609300.00 ns, 24.5560 ns/op
+WorkloadPilot   14: 131072 op, 3239600.00 ns, 24.7162 ns/op
+WorkloadPilot   15: 262144 op, 6578100.00 ns, 25.0935 ns/op
+WorkloadPilot   16: 524288 op, 12876500.00 ns, 24.5600 ns/op
+WorkloadPilot   17: 1048576 op, 26446900.00 ns, 25.2217 ns/op
+WorkloadPilot   18: 2097152 op, 52898300.00 ns, 25.2239 ns/op
+WorkloadPilot   19: 4194304 op, 41541600.00 ns, 9.9043 ns/op
+WorkloadPilot   20: 8388608 op, 42080000.00 ns, 5.0163 ns/op
+WorkloadPilot   21: 16777216 op, 85405100.00 ns, 5.0905 ns/op
+WorkloadPilot   22: 33554432 op, 168141100.00 ns, 5.0110 ns/op
+WorkloadPilot   23: 67108864 op, 335676200.00 ns, 5.0020 ns/op
+WorkloadPilot   24: 134217728 op, 665133000.00 ns, 4.9556 ns/op
+
+OverheadWarmup   1: 134217728 op, 266071800.00 ns, 1.9824 ns/op
+OverheadWarmup   2: 134217728 op, 217975500.00 ns, 1.6240 ns/op
+OverheadWarmup   3: 134217728 op, 219873400.00 ns, 1.6382 ns/op
+OverheadWarmup   4: 134217728 op, 224326500.00 ns, 1.6714 ns/op
+OverheadWarmup   5: 134217728 op, 221675500.00 ns, 1.6516 ns/op
+OverheadWarmup   6: 134217728 op, 228010400.00 ns, 1.6988 ns/op
+OverheadWarmup   7: 134217728 op, 225775000.00 ns, 1.6822 ns/op
+
+OverheadActual   1: 134217728 op, 225052800.00 ns, 1.6768 ns/op
+OverheadActual   2: 134217728 op, 224893200.00 ns, 1.6756 ns/op
+OverheadActual   3: 134217728 op, 225435800.00 ns, 1.6796 ns/op
+OverheadActual   4: 134217728 op, 230247600.00 ns, 1.7155 ns/op
+OverheadActual   5: 134217728 op, 223586300.00 ns, 1.6658 ns/op
+OverheadActual   6: 134217728 op, 224448900.00 ns, 1.6723 ns/op
+OverheadActual   7: 134217728 op, 226879500.00 ns, 1.6904 ns/op
+OverheadActual   8: 134217728 op, 223937900.00 ns, 1.6685 ns/op
+OverheadActual   9: 134217728 op, 225930700.00 ns, 1.6833 ns/op
+OverheadActual  10: 134217728 op, 230023500.00 ns, 1.7138 ns/op
+OverheadActual  11: 134217728 op, 224910100.00 ns, 1.6757 ns/op
+OverheadActual  12: 134217728 op, 224844400.00 ns, 1.6752 ns/op
+OverheadActual  13: 134217728 op, 221731600.00 ns, 1.6520 ns/op
+OverheadActual  14: 134217728 op, 228120200.00 ns, 1.6996 ns/op
+OverheadActual  15: 134217728 op, 219369700.00 ns, 1.6344 ns/op
+
+WorkloadWarmup   1: 134217728 op, 711003900.00 ns, 5.2974 ns/op
+WorkloadWarmup   2: 134217728 op, 700335800.00 ns, 5.2179 ns/op
+WorkloadWarmup   3: 134217728 op, 683715000.00 ns, 5.0941 ns/op
+
+// BeforeActualRun
+WorkloadActual   1: 134217728 op, 682136300.00 ns, 5.0823 ns/op
+WorkloadActual   2: 134217728 op, 676440800.00 ns, 5.0399 ns/op
+WorkloadActual   3: 134217728 op, 687370200.00 ns, 5.1213 ns/op
+
+// AfterActualRun
+WorkloadResult   1: 134217728 op, 457226200.00 ns, 3.4066 ns/op
+WorkloadResult   2: 134217728 op, 451530700.00 ns, 3.3642 ns/op
+WorkloadResult   3: 134217728 op, 462460100.00 ns, 3.4456 ns/op
+// GC:  0 0 0 112 134217728
+// Threading:  0 0 134217728
+
+// AfterAll
+// Benchmark Process 49408 has exited with code 0.
+
+Mean = 3.405 ns, StdErr = 0.024 ns (0.69%), N = 3, StdDev = 0.041 ns
+Min = 3.364 ns, Q1 = 3.385 ns, Median = 3.407 ns, Q3 = 3.426 ns, Max = 3.446 ns
+IQR = 0.041 ns, LowerFence = 3.324 ns, UpperFence = 3.487 ns
+ConfidenceInterval = [2.662 ns; 4.148 ns] (CI 99.9%), Margin = 0.743 ns (21.82% of Mean)
+Skewness = -0.03, Kurtosis = 0.67, MValue = 2
+
+// ** Remained 46 (95,8%) benchmark(s) to run. Estimated finish 2026-04-29 17:44 (0h 16m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: ByteRingBufferBenchmarks.TryPublish_Full: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3) [Capacity=64, PayloadSize=8]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet b81d7613-4bcb-4729-8b8e-2cbc08fc2fb2.dll --anonymousPipes 2332 2116 --benchmarkName "Relay.Benchmarks.ByteRingBufferBenchmarks.TryPublish_Full(Capacity: 64, PayloadSize: 8)" --job ShortRun --benchmarkId 2 in C:\Development\Libs\Relay\benchmarks\Relay.Benchmarks\bin\Release\net9.0\b81d7613-4bcb-4729-8b8e-2cbc08fc2fb2\bin\Release\net9.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.13.12
+// Runtime=.NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2,AES,BMI1,BMI2,FMA,LZCNT,PCLMUL,POPCNT,AvxVnni,SERIALIZE VectorSize=256
+// Job: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 1397200.00 ns, 1.3972 ms/op
+WorkloadJitting  1: 1 op, 204900.00 ns, 204.9000 us/op
+
+OverheadJitting  2: 16 op, 273300.00 ns, 17.0813 us/op
+WorkloadJitting  2: 16 op, 260800.00 ns, 16.3000 us/op
+
+WorkloadPilot    1: 16 op, 1300.00 ns, 81.2500 ns/op
+WorkloadPilot    2: 32 op, 1200.00 ns, 37.5000 ns/op
+WorkloadPilot    3: 64 op, 1300.00 ns, 20.3125 ns/op
+WorkloadPilot    4: 128 op, 1900.00 ns, 14.8438 ns/op
+WorkloadPilot    5: 256 op, 3700.00 ns, 14.4531 ns/op
+WorkloadPilot    6: 512 op, 6500.00 ns, 12.6953 ns/op
+WorkloadPilot    7: 1024 op, 12600.00 ns, 12.3047 ns/op
+WorkloadPilot    8: 2048 op, 24300.00 ns, 11.8652 ns/op
+WorkloadPilot    9: 4096 op, 48000.00 ns, 11.7188 ns/op
+WorkloadPilot   10: 8192 op, 95400.00 ns, 11.6455 ns/op
+WorkloadPilot   11: 16384 op, 190800.00 ns, 11.6455 ns/op
+WorkloadPilot   12: 32768 op, 388400.00 ns, 11.8530 ns/op
+WorkloadPilot   13: 65536 op, 766600.00 ns, 11.6974 ns/op
+WorkloadPilot   14: 131072 op, 1551100.00 ns, 11.8340 ns/op
+WorkloadPilot   15: 262144 op, 3081000.00 ns, 11.7531 ns/op
+WorkloadPilot   16: 524288 op, 6176400.00 ns, 11.7805 ns/op
+WorkloadPilot   17: 1048576 op, 12261700.00 ns, 11.6937 ns/op
+WorkloadPilot   18: 2097152 op, 24419900.00 ns, 11.6443 ns/op
+WorkloadPilot   19: 4194304 op, 48901700.00 ns, 11.6591 ns/op
+WorkloadPilot   20: 8388608 op, 34940300.00 ns, 4.1652 ns/op
+WorkloadPilot   21: 16777216 op, 40051800.00 ns, 2.3873 ns/op
+WorkloadPilot   22: 33554432 op, 78544200.00 ns, 2.3408 ns/op
+WorkloadPilot   23: 67108864 op, 157083400.00 ns, 2.3407 ns/op
+WorkloadPilot   24: 134217728 op, 315314900.00 ns, 2.3493 ns/op
+WorkloadPilot   25: 268435456 op, 628247800.00 ns, 2.3404 ns/op
+
+OverheadWarmup   1: 268435456 op, 510418600.00 ns, 1.9015 ns/op
+OverheadWarmup   2: 268435456 op, 487660100.00 ns, 1.8167 ns/op
+OverheadWarmup   3: 268435456 op, 451314700.00 ns, 1.6813 ns/op
+OverheadWarmup   4: 268435456 op, 451952000.00 ns, 1.6837 ns/op
+OverheadWarmup   5: 268435456 op, 458867400.00 ns, 1.7094 ns/op
+OverheadWarmup   6: 268435456 op, 448391100.00 ns, 1.6704 ns/op
+OverheadWarmup   7: 268435456 op, 440960500.00 ns, 1.6427 ns/op
+OverheadWarmup   8: 268435456 op, 452263700.00 ns, 1.6848 ns/op
+OverheadWarmup   9: 268435456 op, 451202100.00 ns, 1.6809 ns/op
+
+OverheadActual   1: 268435456 op, 450847800.00 ns, 1.6795 ns/op
+OverheadActual   2: 268435456 op, 450625000.00 ns, 1.6787 ns/op
+OverheadActual   3: 268435456 op, 449490200.00 ns, 1.6745 ns/op
+OverheadActual   4: 268435456 op, 443030900.00 ns, 1.6504 ns/op
+OverheadActual   5: 268435456 op, 445249500.00 ns, 1.6587 ns/op
+OverheadActual   6: 268435456 op, 441811700.00 ns, 1.6459 ns/op
+OverheadActual   7: 268435456 op, 448866500.00 ns, 1.6722 ns/op
+OverheadActual   8: 268435456 op, 446235700.00 ns, 1.6624 ns/op
+OverheadActual   9: 268435456 op, 447491700.00 ns, 1.6670 ns/op
+OverheadActual  10: 268435456 op, 444360500.00 ns, 1.6554 ns/op
+OverheadActual  11: 268435456 op, 445314300.00 ns, 1.6589 ns/op
+OverheadActual  12: 268435456 op, 4492139Successfully reverted power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// * Artifacts cleanup *
+Artifacts cleanup is finished

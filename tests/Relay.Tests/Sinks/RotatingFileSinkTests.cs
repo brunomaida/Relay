@@ -80,6 +80,25 @@ public sealed class RotatingFileSinkTests : IDisposable
     }
 
     [Fact]
+    public void Enqueue_DayBoundaryCrossed_RotatesToNextFile()
+    {
+        using var sink = new RotatingFileSink(_dir, "log", maxBytes: 1_000_000,
+                                              ringCapacity: 4096, flushIntervalMs: 50);
+        sink.Start();
+
+        sink.Enqueue(new byte[100]);
+        Thread.Sleep(120);                              // let the consumer drain into file 1
+
+        sink.SetDayBoundaryForTest(Relay.Internal.HfClock.NowTicks - 1); // simulate "yesterday ended"
+
+        sink.Enqueue(new byte[100]);
+        sink.Stop(drainTimeoutMs: 1_000);
+
+        var files = Directory.GetFiles(_dir, "log-*.log");
+        files.Should().HaveCountGreaterThan(1, "day boundary crossed -> rotated");
+    }
+
+    [Fact]
     public void Dispose_IsIdempotent()
     {
         var sink = new RotatingFileSink(_dir, "log", maxBytes: 1024);
