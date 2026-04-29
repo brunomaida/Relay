@@ -10,10 +10,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ### fix: `RotatingFileSink.ShouldRotate` — remove `DateTime.UtcNow.Date` from consumer hot path
 
 `RotatingFileSink.ShouldRotate` no longer calls `DateTime.UtcNow.Date` per consumed payload;
-caches the next UTC-midnight boundary in `HfClock` ticks. Reduces consumer hot-path cost from
-~50c to ~3c per payload (BDN ratio gate ≥ 10x — see Phase 1 BDN under
-`benchmarks/artifacts/2026-04-29-phase1/`). Resolves regression flagged in
-`docs/reports/2026-04-29-resource-cost-map-relay.md` §5.
+caches the next UTC-midnight boundary in `HfClock` ticks. Resamples wall-clock only inside
+`RotateNow` (cold path).
+
+BDN gate (Phase 1, `benchmarks/artifacts/2026-04-29-phase1/`):
+predicate `21.84 ns → 13.76 ns` (Δ 8.08 ns absolute, matches the canonical
+`GetSystemTimePreciseAsFileTime` cost on Win32); full `WriteToBackend`
+`69.23 ns → 66.22 ns` (predicate savings diluted by the buffer-copy envelope).
+Resolves regression flagged in `docs/reports/2026-04-29-resource-cost-map-relay.md` §5.
 
 **Files touched:** `src/Relay/Sinks/RotatingFileSink.cs`,
 `tests/Relay.Tests/Sinks/RotatingFileSinkTests.cs`,
