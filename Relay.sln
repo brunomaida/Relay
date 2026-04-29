@@ -13,6 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Relay.Tests", "tests\Relay.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 	ProjectSection(SolutionItems) = preProject
+		CHANGELOG.md = CHANGELOG.md
 		CLAUDE.md = CLAUDE.md
 	EndProjectSection
 EndProject
@@ -104,5 +105,8 @@ Global
 		{DA8219CA-374E-4C94-A33D-6B800FF86930} = {66320409-64EC-F7C5-3DEF-65E7510DAAD1}
 		{4F1F4416-1DD3-467E-8874-FCC0B03F9B23} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{0A37E631-D904-47BE-A65D-C493DE968029} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {218B7B22-73C6-4FAE-88CC-4BB5A9F1C538}
 	EndGlobalSection
 EndGlobal
