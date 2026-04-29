@@ -31,7 +31,7 @@ _generated 2026-04-29 · model x64-zen4/golden-cove v1 · static estimate, not b
 | `MmfSink<T>.FlushBackend` | ~2e3 | 0 | WARM | `MemoryMappedViewAccessor.Flush` (msync) | src/Relay/Sinks/MmfSink.cs:77 |
 | `FileSink.FlushToStream` | ~5e3 | 0 | COLD | `FileStream.Write` + `Flush` | src/Relay/Sinks/FileSink.cs:76 |
 | `NamedPipeSink.FlushBackend` | ~5e3 | 0 | COLD | `NamedPipeClientStream.Write` syscall | src/Relay/Sinks/NamedPipeSink.cs:50 |
-| `RotatingFileSink.ShouldRotate` | ~50 | 0 | HOT (consumer) | `DateTime.UtcNow.Date` — called per-record in `WriteToBackend` | src/Relay/Sinks/RotatingFileSink.cs:82 |
+| `RotatingFileSink.ShouldRotate` | ~3 (BDN: 13.76 ns) | 0 | ULTRA-HOT (consumer) | bounds + `HfClock.NowTicks` cmp (cached boundary) | src/Relay/Sinks/RotatingFileSink.cs:82 |
 | `MpscByteRingBuffer.TryPublish` (uncontended) | ~50 | 0 | ULTRA-HOT | `Interlocked.CompareExchange` 25c + `payload.CopyTo` 8c + 2× volatile header write 4c | src/Relay/Buffers/MpscByteRingBuffer.cs:111 |
 | `SharedMemorySink.Accept` | ~50 | 0 | ULTRA-HOT | CAS loop on WriteIndex + 2× `WriteRing` (modular wrap) | src/Relay/Sinks/SharedMemorySink.cs:88 |
 | `SpscByteRingBuffer.TryPublish` | ~35 | 0 | ULTRA-HOT | bounds + `Unsafe.WriteUnaligned` header + `payload.CopyTo` + `Volatile.Write` tail | src/Relay/Buffers/SpscByteRingBuffer.cs:84 |
@@ -79,7 +79,7 @@ _generated 2026-04-29 · model x64-zen4/golden-cove v1 · static estimate, not b
 | 5 | WARM | ~2e3 | 0 | `MmfSink<T>.FlushBackend` | src/Relay/Sinks/MmfSink.cs:77 | direct | `accessor.Flush` msync |
 | 6 | WARM | ~2e3 | 0 | `TcpSink<T>.FlushBuffer` (no spin) | src/Relay/Sinks/TcpSink.cs:111 | direct | `Socket.Send` |
 | 7 | WARM | ~2e3 | 0 | `*.Stop` | src/Relay/SpscQueueSink.cs:92 | direct | `Thread.Join` |
-| 8 | HOT (consumer) | ~50 | 0 | `RotatingFileSink.ShouldRotate` | src/Relay/Sinks/RotatingFileSink.cs:82 | direct | `DateTime.UtcNow.Date` per record |
+| 8 | ULTRA-HOT (consumer) | ~3 (BDN: 13.76 ns) | 0 | `RotatingFileSink.ShouldRotate` | src/Relay/Sinks/RotatingFileSink.cs:82 | direct | cached day boundary (HfClock ticks) |
 | 9 | ULTRA-HOT | ~50 | 0 | `MpscByteRingBuffer.TryPublish` (uncontended) | src/Relay/Buffers/MpscByteRingBuffer.cs:111 | inlined | CAS + 2× hdr volatile-write |
 | 10 | ULTRA-HOT | ~50 | 0 | `SharedMemorySink.Accept` | src/Relay/Sinks/SharedMemorySink.cs:88 | inlined | CAS loop + 2× modular `WriteRing` |
 | 11 | ULTRA-HOT | ~35 | 0 | `SpscByteRingBuffer.TryPublish` | src/Relay/Buffers/SpscByteRingBuffer.cs:84 | inlined | hdr write + payload CopyTo |
@@ -166,7 +166,7 @@ ConsumeLoop                                src/Relay/SpscQueueSink.Packet.cs:110
 │  ├─ UdpSink.WriteToBackend               src/Relay/Sinks/UdpSink.cs:41            ~2e3c (syscall per record)
 │  ├─ NamedPipeSink.WriteToBackend         src/Relay/Sinks/NamedPipeSink.cs:39      ~18c
 │  ├─ UnixSocketSink.WriteToBackend        src/Relay/Sinks/UnixSocketSink.cs:41     ~18c
-│  ├─ FileSink/RotatingFileSink.WriteToBackend   src/Relay/Sinks/RotatingFileSink.cs:53  ~10c + ~50c rotation check (DateTime.UtcNow.Date)
+│  ├─ FileSink/RotatingFileSink.WriteToBackend   src/Relay/Sinks/RotatingFileSink.cs:53  ~10c + ~3c rotation check (cached HfClock-tick boundary)
 │  └─ BatchSink.WriteToBackend             src/Relay/BatchSink.cs:44                ~10c
 ├─ Advance(advanceBytes)                   src/Relay/Buffers/SpscByteRingBuffer.cs:177  ~2c
 ├─ inner batch up to 256                                                              avoids re-entering idle path
@@ -192,7 +192,7 @@ ConsumeLoop                                src/Relay/SpscQueueSink.Packet.cs:110
 
 | severity | rule | symbol | file:line | evidence |
 |---|---|---|---|---|
-| **block** | `DateTime.UtcNow` on hot consumer path | `RotatingFileSink.ShouldRotate` | src/Relay/Sinks/RotatingFileSink.cs:85 | `DateTime.UtcNow.Date` called per `WriteToBackend` (every payload). CLAUDE.md hard-bans `DateTime.UtcNow` on hot paths. Replace with cached-day check via `HfClock.NowTicks` + threshold. |
+| ~~**block**~~ resolved | `DateTime.UtcNow` on hot consumer path | `RotatingFileSink.ShouldRotate` | src/Relay/Sinks/RotatingFileSink.cs:85 | Fixed in commit `46e10c9`: replaced with `HfClock.NowTicks >= _nextDayBoundaryTicks` (boundary cached at construction + `RotateNow`). BDN (predicate isolated, MediumRun): 21.84 ns -> 13.76 ns (-8.08 ns, 1.59x). Absolute drop matches expected `DateTime.UtcNow.Date` cost (~7-11 ns); residual is benchmark-envelope cost, not residual UtcNow. |
 | warn | unbatched syscall on hot path | `UdpSink.WriteToBackend` | src/Relay/Sinks/UdpSink.cs:50 | `Socket.Send` per record (~2000c). UDP is fire-and-forget, but a multi-payload batch via `SendPackets` or write buffer would amortize. |
 | warn | LINQ + alloc in cold path | `RotatingFileSink.Cleanup` | src/Relay/Sinks/RotatingFileSink.cs:160 | `Directory.GetFiles` + `OrderByDescending.Skip.ToArray()` allocates iterator + array. Cold path (rotation only) — acceptable but flagged. |
 | info | virtual/devirt branch | `DispatchSink<T>.Enqueue` / `PacketSink.Enqueue` | src/Relay/DispatchSink.cs:44 | 11 `DispatchSink<T>` + 9 `PacketSink` subclasses; mitigated when caller holds sealed concrete type (devirt). `PropagateAfterAccept` reduced to a non-virtual field load (saves 1 vtable slot per Enqueue). |
@@ -280,7 +280,7 @@ ConsumeLoop                                src/Relay/SpscQueueSink.Packet.cs:110
 | confirmed | `FilterSink*.Accept` returns true on predicate miss → silent consume, never propagates to Next | src/Relay/FilterSink.cs:31 | semantics preserved | |
 | confirmed | `RamSink<T>.Accept` is fastest local write (~7c) | src/Relay/Sinks/RamSink.cs:39 | unchanged | |
 | confirmed | `MmfSink<T>.WriteToBackend` ~30c — fastest durable backend | src/Relay/Sinks/MmfSink.cs:61 | unchanged | |
-| **regression** | `RotatingFileSink.ShouldRotate` calls `DateTime.UtcNow.Date` per record | src/Relay/Sinks/RotatingFileSink.cs:85 | n/a → +50c per consumed payload | violates CLAUDE.md "no `DateTime.UtcNow` on hot paths"; consumer thread but ULTRA-HOT under load. Replace with `HfClock.NowTicks` + cached threshold; cache `_currentDay` against tick boundary. |
+| ~~**regression**~~ resolved | `RotatingFileSink.ShouldRotate` cached day boundary | src/Relay/Sinks/RotatingFileSink.cs:85 | +50c/payload → +3c/payload (BDN predicate-isolated 21.84 ns → 13.76 ns, 1.59x; -8.08 ns absolute matches expected `DateTime.UtcNow.Date` cost) | Fixed in branch `fix/260429-rotatingfilesink-utcnow-hot-path` (commit `46e10c9`) — added `_nextDayBoundaryTicks` field, replaced `DateTime.UtcNow.Date` check with `HfClock.NowTicks >= _nextDayBoundaryTicks`. |
 | **regression-candidate** | `UdpSink.WriteToBackend` issues `Socket.Send` per record | src/Relay/Sinks/UdpSink.cs:50 | n/a → 2e3c per payload | UDP is per-datagram by design but a 2e3c syscall per payload caps throughput at ~1.5M payloads/s/core; consider `SendPackets` or burst-write coalescing for high-rate use. |
 | risk | `MpscRingBuffer<T>.Slot` unpadded → adjacent slots may straddle cache lines for T not aligned to 64B factor | src/Relay/Buffers/MpscRingBuffer.cs:40 | known | acceptable while T is enforced multiple of 64B; flag if `SinkConstraints` ever loosens |
 | risk | drain-to-Prev SPSC/MPSC race window during recovery | src/Relay/SpscQueueSink.cs:238 | known narrow window | callers must quiesce producers before drain; documented in ConsumeLoop comment |
