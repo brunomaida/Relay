@@ -89,6 +89,29 @@ public class QueuePipeThroughputBenchmarks
         pipe.Stop(30_000);
         return pipe.Sum;
     }
+
+    [Benchmark]
+    public long MpscPush_Single()
+    {
+        using var pipe = new TestMpscPipe(RingCapacity, backendSpinCycles: 0);
+        pipe.Start();
+        for (int i = 0; i < ItemCount; i++)
+            pipe.Enqueue(in _item);
+        pipe.Stop(30_000);
+        return pipe.Sum;
+    }
+
+    [Benchmark]
+    public long MpscPush_Single_SlowBackend()
+    {
+        // Simulated ~50-cycle backend work per item — representative of a tiny file/mem write.
+        using var pipe = new TestMpscPipe(RingCapacity, backendSpinCycles: 50);
+        pipe.Start();
+        for (int i = 0; i < ItemCount; i++)
+            pipe.Enqueue(in _item);
+        pipe.Stop(30_000);
+        return pipe.Sum;
+    }
 }
 
 /// <summary>
@@ -102,6 +125,33 @@ internal sealed class TestSpscPipe : SpscQueueSink<Entry64>
 
     public TestSpscPipe(int ringCapacity, int backendSpinCycles = 0)
         : base(ringCapacity, flushIntervalMs: 100, pipeName: "bench")
+    {
+        _backendSpinCycles = backendSpinCycles;
+    }
+
+    protected override void WriteToBackend(in Entry64 item)
+    {
+        Sum += item.A;
+        if (_backendSpinCycles > 0) Thread.SpinWait(_backendSpinCycles);
+    }
+
+    protected override void FlushBackend() { }
+    protected override void TryRecoverBackend() { }
+    protected override void DisposeBackend() { }
+}
+
+/// <summary>
+/// Trivial MPSC queue pipe: increments <see cref="Sum"/> on every consumed item.
+/// No backend I/O — exercises pure MPSC ring + consumer-loop cost.
+/// Single-producer use only here (BDN runs one-thread); multi-producer in Phase 7.
+/// </summary>
+internal sealed class TestMpscPipe : MpscQueueSink<Entry64>
+{
+    private readonly int _backendSpinCycles;
+    public long Sum;
+
+    public TestMpscPipe(int ringCapacity, int backendSpinCycles = 0)
+        : base(ringCapacity, flushIntervalMs: 100, pipeName: "bench-mpsc")
     {
         _backendSpinCycles = backendSpinCycles;
     }
