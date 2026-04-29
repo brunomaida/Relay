@@ -1,0 +1,113 @@
+# BDN Hot-Path Cross-Check + Coverage Gaps — 2026-04-29
+
+_paired with `docs/reports/2026-04-29-resource-cost-map-relay.md` · short-job BDN · i7-12700 (Golden Cove, 12 P+E)_
+
+## Reading
+
+- **Host:** `12th Gen Intel Core i7-12700 · Windows 11 · .NET 9.0.14 · X64 RyuJIT AVX2`
+- **Job:** `ShortRun (IterationCount=3, LaunchCount=1, WarmupCount=3)` — fast triage; not gate-grade. Margin-of-error >5% on ≤1ns measurements; treat sub-ns numbers as ordinal only.
+- **Conversion:** assume sustained boost ~4.5 GHz on P-cores → **1 ns ≈ 4.5 cycles**.
+- **Cycle column** = `mean_ns × 4.5` (rounded). BDN reports ns; cost-map predicts cycles.
+
+## 1. BDN runs in this snapshot
+
+30 benchmarks executed (typed/byte Enqueue chains, MpscRingBuffer single-thread, Multi/Filter/Propagate). Per-class summary tables under `benchmarks/artifacts/2026-04-29-hotpath/results/*-report-github.md`.
+
+| BDN class | Methods | Status |
+|---|---|---|
+| `EnqueueBenchmarks` (typed Enqueue depth 1-3) | 4 | ✅ |
+| `ByteEnqueueBenchmarks` (packet Enqueue depth 1-3) | 4 | ✅ |
+| `MpscBenchmarks` (Spsc/Mpsc ring single-thread, 3 caps) | 12 | ✅ |
+| `MultiEnqueueBenchmarks` | 2 | ✅ |
+| `MultiIsHealthyBenchmarks` | 2 | ✅ |
+| `FilterSinkBenchmarks` | 2 | ✅ |
+| `PropagateBenchmarks` | 4 | ✅ |
+| `RingBufferBenchmarks` (typed SPSC primitives) | 4 × 3 caps | ⚠ rerun needed (ENOSPC during run) |
+| `ByteRingBufferBenchmarks` (SPSC byte primitives) | 3 × 12 (cap × payload) | ⚠ rerun needed (ENOSPC during run) |
+
+End-to-end consumer-loop BDNs (`QueuePipeThroughputBenchmarks`, `Baselines/TypedSinkBaselineBenchmark`, `PacketSinks/*`) excluded — driven by producer-thread + Sleep(1) idle path; not useful for cycle-level cost validation. Run separately for SLA gates.
+
+## 2. Cross-check: predicted (cost-map) vs measured (BDN)
+
+| Node (cost-map §1/§2) | Pred. cycles | BDN method | ns | Cycles (4.5 GHz) | Δ vs predicted | Verdict |
+|---|---|---|---|---|---|---|
+| `DispatchSink<T>.Enqueue` (sealed sub, healthy) | ~15 | `EnqueueBenchmarks.Depth1_Healthy` (CounterPipe) | 0.48 | 2.2 | **−13** | over-estimate; trivial Accept collapses to single store under JIT |
+| 2 hops, Accept=false then Counter | ~30 | `EnqueueBenchmarks.Depth2_AcceptReject` | 2.99 | 13.5 | **−16** | trivial-accept JIT collapse on second sink |
+| 2 hops, IsHealthy=false then Counter | ~22 | `EnqueueBenchmarks.Depth2_HeadUnhealthy` | 2.59 | 11.7 | **−10** | as above |
+| 3 hops, all unhealthy then Counter | ~40 | `EnqueueBenchmarks.Depth3_AllUnhealthy` | 3.16 | 14.2 | **−26** | each hop ~1c when terminal Accept inlines |
+| `PacketSink.Enqueue` (sealed sub, healthy) | ~15 | `ByteEnqueueBenchmarks.Depth1_Byte_Healthy` | 1.04 | 4.7 | **−10** | span pass + Volatile.Write; ~2.5x typed |
+| 2 hops byte AcceptReject | ~30 | `ByteEnqueueBenchmarks.Depth2_Byte_AcceptReject` | 5.81 | 26.1 | **−4** | aligned |
+| 2 hops byte HeadUnhealthy | ~22 | `ByteEnqueueBenchmarks.Depth2_Byte_HeadUnhealthy` | 4.52 | 20.3 | **−2** | aligned |
+| 3 hops byte AllUnhealthy | ~40 | `ByteEnqueueBenchmarks.Depth3_Byte_AllUnhealthy` | 8.66 | 39.0 | **−1** | aligned |
+| `SpscRingBuffer<T>.TryPublish + TryConsume` round-trip | ~20 (10c × 2) | `MpscBenchmarks.Spsc_TryPublish_Baseline` (cap 1024) | 3.79 | 17.1 | **−3** | aligned |
+| `MpscRingBuffer<T>.TryPublish + TryConsume` round-trip uncontended | ~42 (30c+12c) | `MpscBenchmarks.Mpsc_TryPublish_NoContention` (cap 1024) | 7.97 | 35.9 | **−6** | uncontended CAS cheaper than predicted (~7c vs 25c) on Golden Cove |
+| `MpscRingBuffer.TryPublish` full (fast-reject) | unspecified | `MpscBenchmarks.Mpsc_TryPublish_Full` (cap 1024) | 0.49 | 2.2 | n/a | head-cache hit + early exit |
+| `MpscRingBuffer.TryConsume` empty | unspecified | `MpscBenchmarks.Mpsc_TryConsume_Empty` (cap 1024) | 0.38 | 1.7 | n/a | single Volatile.Read flag + exit |
+| `MultiSink<T>.Accept` (N=2) | 7+2×17 = 41 | `MultiEnqueueBenchmarks.Multi_Enqueue` | 6.89 | 31.0 | **−10** | array foreach + 2 inlined Counter |
+| `Multi2Sink<T,TC1,TC2>.Accept` (sealed) | ~32 | `MultiEnqueueBenchmarks.Multi2_Enqueue` | 5.93 | 26.7 | **−5** | aligned; CRTP saves ~4c vs array |
+| `MultiSink<T>.IsHealthy` short-circuit | ~16 | `MultiIsHealthyBenchmarks.Multi_IsHealthy` | 1.13 | 5.1 | **−11** | first-child returns true → exit |
+| `Multi2Sink<T>.IsHealthy` | ~4 | `MultiIsHealthyBenchmarks.Multi2_IsHealthy` | 1.08 | 4.9 | **+1** | aligned |
+| `FilterSink<T>.Accept` (predicate fail) | ~3 | `FilterSinkBenchmarks.Filter_Reject` | 0.82 | 3.7 | **+1** | aligned |
+| `FilterSink<T>.Accept` (predicate pass + downstream) | ~18 | `FilterSinkBenchmarks.Filter_Pass` | 6.22 | 28.0 | **+10** | predicate=identity still pays delegate slot |
+| Default propagate (no-op tail) | ~15 | `PropagateBenchmarks.Depth1_Healthy_Default` | 0.72 | 3.2 | **−12** | trivial CounterPipe |
+| Propagate=true, Next=null | ~15 | `PropagateBenchmarks.Depth1_Healthy_Propagate_NoNext` | 0.76 | 3.4 | **−12** | confirms field-load + null-check propagate branch is ~0c |
+| `ForkSink<T>` propagate to primary + Next | ~32 | `PropagateBenchmarks.Depth2_Fork_Wrapped` | 5.63 | 25.3 | **−7** | aligned |
+| Custom propagate (no ForkSink wrapper) | ~30 | `PropagateBenchmarks.Depth2_Propagate_Fork` | 3.32 | 14.9 | **−15** | confirms ForkSink wrapper adds ~10c (one extra virt-call layer) |
+
+### Calibration verdict
+
+- Cost-map predicts **upper bound** for `Enqueue` paths assuming realistic backend Accept work (~7c). When the test backend is `CounterPipe` (single `Volatile.Write`), JIT collapses the entire chain to ~2-3c. Predictions for **realistic** sinks (TcpSink/MmfSink/FileSink WriteToBackend) remain valid — the dispatch envelope itself is ~2c, the backend work is what the prediction sums.
+- MPSC uncontended CAS measured **~7c**, not the textbook ~25c. Golden Cove fused-µops on hot-cache `LOCK CMPXCHG` are cheaper than the canonical Agner Fog table number. **Re-cal MpscRingBuffer.TryPublish from ~30c → ~10c (uncontended)** in cost-map.
+- Filter and Multi: aligned to within ±10c — within ShortRun margin-of-error. No regressions.
+- PropagateAfterAccept field-load adds ~0c on the no-propagate path. Confirms the design choice (field, not virtual property) was sound.
+
+## 3. Coverage gaps — ULTRA-HOT cost-map nodes WITHOUT BDN
+
+### Critical (block fix branch until added)
+
+| # | Node | file:line | Why blocking |
+|---|---|---|---|
+| C1 | `RotatingFileSink.ShouldRotate` cost (UtcNow vs HfClock-tick) | src/Relay/Sinks/RotatingFileSink.cs:82 | Without before/after BDN, the impending fix has no measurable gate. Cost-map says ~50c → ~3c expected; BDN must validate ratio ≥10x. |
+
+### High-priority gaps (ULTRA-HOT, new code without coverage)
+
+| # | Node | Predicted cycles | Suggested BDN class |
+|---|---|---|---|
+| H1 | `MpscByteRingBuffer.TryPublish` (uncontended) | ~50 | `MpscByteRingBufferBenchmarks` (parallel to `ByteRingBufferBenchmarks`) |
+| H2 | `MpscByteRingBuffer.TryPeek` / `Advance` | ~12 / ~5 | same class as H1 |
+| H3 | `MpscQueueSink<T>` end-to-end (single producer, sustained Push) | ~30c Accept + consumer | extend `QueuePipeThroughputBenchmarks` with `MpscPush_Single` / `MpscPush_Batch` variants |
+| H4 | `MpscQueueSink` (packet) end-to-end | ~50c Accept + consumer | new `MpscPacketQueueSinkThroughputBenchmarks` |
+| H5 | `SharedMemorySink.Accept` (CAS + modular WriteRing) | ~50 | new `SharedMemorySinkBenchmarks` (Windows-only `[SupportedOSPlatform]` gate) |
+| H6 | `RamSink.Accept` (packet) | ~20 | new `RamSinkPacketBenchmarks` |
+| H7 | `MmfSink<T>.WriteToBackend` (bypass-managed-bounds path) | ~30 | new `MmfSinkBenchmarks`. Cost-map called this "fastest durable backend"; claim is unvalidated. |
+| H8 | `UdpSink.WriteToBackend` syscall | ~2000 | new `UdpSinkBenchmarks`. Validates throughput-ceiling claim (~1.5M payloads/s/core) flagged in cost-map §9. |
+| H9 | `PacketSink.TryEnqueue` (non-fallthrough) | ~13 | extend `ByteEnqueueBenchmarks` with `Depth1_Byte_TryEnqueue_Healthy` / `_Reject` |
+| H10 | `PacketSink.Enqueue` terminal-drop (`Interlocked.Increment(_dropCount)`) | ~25 | extend `ByteEnqueueBenchmarks` with `Depth1_Byte_Drop_NextNull_Unhealthy` |
+
+### Medium-priority gaps (parallel-tree symmetry + blind subgraph)
+
+| # | Node | Predicted cycles | Suggested BDN |
+|---|---|---|---|
+| M1 | `ForkSink` (packet) | ~18 | extend `PropagateBenchmarks` w/ packet variant or new `PropagatePacketBenchmarks` |
+| M2 | `MultiSink` (packet, N=2) | 7+2×17 = 41 | new `MultiPacketEnqueueBenchmarks` |
+| M3 | `Multi2Sink`-equivalent for packet | n/a — type does not exist | DESIGN GAP: should `Multi2PacketSink` exist? cost-map §9 didn't flag this. |
+| M4 | `FilterSink` (packet) | ~18 | new `FilterPacketSinkBenchmarks` |
+| M5 | `BatchSink.WriteToBackend` (consumer scratch fits) | ~10 | new `BatchSinkBenchmarks` (consumer-thread isolated) |
+| M6 | `NamedPipeSink.WriteToBackend` | ~18 | new — Windows-only |
+| M7 | `UnixSocketSink.WriteToBackend` | ~18 | new — Linux/macOS-only |
+| M8 | `RotatingFileSink.WriteToBackend` (excl. ShouldRotate) | ~10 | covered by C1 BDN setup |
+| M9 | `SpscQueueSink` (packet) end-to-end Push | ~35c Accept + consumer | extend `QueuePipeThroughputBenchmarks` with packet variant |
+| M10 | `MpscRingBuffer<T>.TryPublish` **multi-thread contention** | ~30c± retry | new `MpscContentionBenchmarks` (2-4 producer threads, validates "blind subgraph" §8) |
+
+### Low-priority (covered indirectly or low risk)
+
+| # | Node | Why low-priority |
+|---|---|---|
+| L1 | `SerializeSink<T>.Accept` (typed→packet bridge) | Covered by `ChainBenchmark.SerializeSink_Overhead`; ref-cast = no copy |
+| L2 | `NullSink<T>.Accept` / `NullSink.Accept` | Trivial `return true` — JIT folds; not worth measuring |
+| L3 | `HfClock.NowTicks` (RDTSC) | Hardware primitive; well-known cost; not project-specific |
+| L4 | `*.IsHealthy` (single vol-bool read) | Single-instruction; predict 1c, no value adding BDN |
+
+## 4. Plan to close gaps
+
+Master plan: `docs/superpowers/plans/2026-04-29-master-cost-map-coverage.md` — orchestrates 8 sequential branches off `develop`, each closing a related cluster of gaps. Phase 1 addresses C1 + RotatingFileSink UtcNow fix.

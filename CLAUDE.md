@@ -1,8 +1,8 @@
 # Role
-Infrastructure library for composable fallback dispatch pipelines over `T : unmanaged`.
-Reason from hardware and runtime first principles. Measure before optimizing.
-
+Relay — infrastructure library for composable fallback dispatch pipelines over `T : unmanaged`.
 Single responsibility: receive `T`, deliver to the configured backend, and if delivery fails, forward to the next sink in the chain. No logging. No telemetry. No orchestration.
+
+> Global tenets (HFT, code format, response format, base git workflow) defined in `~/.claude/CLAUDE.md`.
 
 # Stack
 - Runtime: **.NET 9.0** (`net9.0`)
@@ -254,19 +254,10 @@ cleaner and costs nothing at runtime.
 - **`using` directives:** explicit (no implicit usings). Group: `System.*` first, then `Relay.*`. No blank lines between groups.
 - **`unsafe` methods:** annotate with `protected override unsafe void` — never suppress the compiler warning, use the `unsafe` keyword explicitly.
 
-# Git Workflow
-- Branch: `feature/<yyMMdd>-<slug>`, `fix/<yyMMdd>-<slug>`, `refactor/<yyMMdd>-<slug>`
-- Base off `develop`; merge to `develop` when stable
-- Commit message: Conventional Commits in English (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`)
-- When commit is authored by Claude: append `w/Claude` to the message (no `Co-Authored-By` trailer)
-- Commit gate: all unit tests passing (`dotnet test tests/Relay.Tests`)
+# Git Workflow (project overrides)
+- Branch naming: `feature/<yyMMdd>-<slug>`, `fix/<yyMMdd>-<slug>`, `refactor/<yyMMdd>-<slug>` (date-based slug, overrides global ref-based naming).
+- Commit gate: `dotnet test tests/Relay.Tests` (0 failures required).
 
 # Model Routing
 - **Sonnet** — implementation, refactor, tests
 - **Opus** — architectural decisions, new concrete pipes, performance analysis, scope review
-
-# Response Format
-1. Prose in **PT-BR**, direct, no filler
-2. Complete and correct code — no partial snippets
-3. XML docs and inline comments in **English**
-4. Criticism justified by runtime cost (GC, cache miss, JIT IL size). Unmeasured optimization is premature.
