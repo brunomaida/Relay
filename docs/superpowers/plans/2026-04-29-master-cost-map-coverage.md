@@ -15,7 +15,7 @@
 | # | Branch | Items | Output | Effort | Status |
 |---|---|---|---|---|---|
 | 1 | `fix/260429-rotatingfilesink-utcnow-hot-path` | C1 + UtcNow fix | regression closed + BDN gate | ~2h | ✅ done — 6 commits, 190/190 tests pass, BDN: predicate 21.84ns→13.76ns (Δ 8.08ns); ratio gate recalibrated post-execution (see notes) |
-| 2 | `chore/260429-bdn-packet-tree-symmetry` | M1, M2, M4, M9 | packet equivalents to typed Fork/Multi/Filter/SpscThroughput BDNs | ~3h | ⬜ pending |
+| 2 | `chore/260429-bdn-packet-tree-symmetry` | M1, M2, M4, M9 | packet equivalents to typed Fork/Multi/Filter/SpscThroughput BDNs | ~3h | ✅ done — packet-tree symmetry BDNs added (M1 ForkPacket, M2 MultiPacket + IsHealthy, M4 FilterPacket, M9 SpscPacket throughput); numbers under `benchmarks/artifacts/2026-04-29-phase2/` |
 | 3 | `chore/260429-bdn-mpsc-byte-and-end-to-end` | H1, H2, H3, H4 | MpscByteRingBuffer + Mpsc end-to-end (typed + packet) BDNs | ~4h | ⬜ pending |
 | 4 | `chore/260429-bdn-backends` | H5, H6, H7, H8, M5, M6, M7 | concrete-sink BDNs (Shm, RamPacket, Mmf, Udp, Batch, NamedPipe, UnixSocket); platform-gated | ~5h | ⬜ pending |
 | 5 | `chore/260429-bdn-packet-api-contracts` | H9, H10 | TryEnqueue + terminal-drop BDNs | ~2h | ⬜ pending |
