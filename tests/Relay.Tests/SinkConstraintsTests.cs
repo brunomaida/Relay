@@ -48,6 +48,34 @@ public sealed class SinkConstraintsTests
     [StructLayout(LayoutKind.Sequential, Size = 32)]
     private struct Entry32  { public long A; }
 
+    [Fact]
+    public void MpscQueueSink_Accepts_192B_Struct()
+    {
+        Action act = () =>
+        {
+            using var pipe = new MpscInMemoryPipe192(ringCapacity: 8, flushIntervalMs: 50);
+        };
+        act.Should().NotThrow();
+    }
+
+#if DEBUG
+    [Fact]
+    public void MpscQueueSink_Rejects_96B_Struct_In_Debug()
+    {
+        Action act = () => _ = new MpscInMemoryPipe96(ringCapacity: 8, flushIntervalMs: 50);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*positive multiple of 64B*");
+    }
+
+    [Fact]
+    public void MpscQueueSink_Rejects_32B_Struct_In_Debug()
+    {
+        Action act = () => _ = new MpscInMemoryPipe32(ringCapacity: 8, flushIntervalMs: 50);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*positive multiple of 64B*");
+    }
+#endif
+
     // --- minimal SpscQueueSink helpers, one per payload type ---
 
     private sealed class InMemoryPipe192 : SpscQueueSink<Entry192>
@@ -75,6 +103,41 @@ public sealed class SinkConstraintsTests
     private sealed class InMemoryPipe32 : SpscQueueSink<Entry32>
     {
         public InMemoryPipe32(int ringCapacity, int flushIntervalMs)
+            : base(ringCapacity, flushIntervalMs, "test") { }
+
+        protected override void WriteToBackend(in Entry32 item) { }
+        protected override void FlushBackend()      { }
+        protected override void TryRecoverBackend() { }
+        protected override void DisposeBackend()    { }
+    }
+
+    // --- minimal MpscQueueSink helpers, one per payload type ---
+
+    private sealed class MpscInMemoryPipe192 : MpscQueueSink<Entry192>
+    {
+        public MpscInMemoryPipe192(int ringCapacity, int flushIntervalMs)
+            : base(ringCapacity, flushIntervalMs, "test") { }
+
+        protected override void WriteToBackend(in Entry192 item) { }
+        protected override void FlushBackend()      { }
+        protected override void TryRecoverBackend() { }
+        protected override void DisposeBackend()    { }
+    }
+
+    private sealed class MpscInMemoryPipe96 : MpscQueueSink<Entry96>
+    {
+        public MpscInMemoryPipe96(int ringCapacity, int flushIntervalMs)
+            : base(ringCapacity, flushIntervalMs, "test") { }
+
+        protected override void WriteToBackend(in Entry96 item) { }
+        protected override void FlushBackend()      { }
+        protected override void TryRecoverBackend() { }
+        protected override void DisposeBackend()    { }
+    }
+
+    private sealed class MpscInMemoryPipe32 : MpscQueueSink<Entry32>
+    {
+        public MpscInMemoryPipe32(int ringCapacity, int flushIntervalMs)
             : base(ringCapacity, flushIntervalMs, "test") { }
 
         protected override void WriteToBackend(in Entry32 item) { }

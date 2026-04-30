@@ -177,16 +177,19 @@ public abstract class MpscQueueSink : PacketSink
                     checkDeadline = true;
                 }
 
-                bool flushDue = Volatile.Read(ref _flushRequested) == 1
-                             || HfClock.NowTicks >= flushDeadline;
-                if (checkDeadline && flushDue)
+                bool flushNow    = Volatile.Read(ref _flushRequested) == 1;
+                bool deadlineHit = checkDeadline && HfClock.NowTicks >= flushDeadline;
+                if (flushNow || deadlineHit)
                 {
                     // Clear BEFORE calling FlushBackend — avoids missing a concurrent Flush()
                     // signal that arrives between the clear and the actual flush operation.
-                    Volatile.Write(ref _flushRequested, 0);
+                    if (flushNow) Volatile.Write(ref _flushRequested, 0);
                     FlushBackend();
-                    TryRecoverBackend();
-                    TryDrainToPrev();
+                    if (deadlineHit)
+                    {
+                        TryRecoverBackend();
+                        TryDrainToPrev();
+                    }
                     flushDeadline = HfClock.NowTicks + _flushIntervalTicks;
                 }
             }
