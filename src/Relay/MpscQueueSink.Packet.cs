@@ -205,13 +205,12 @@ public abstract class MpscQueueSink : PacketSink
         }
     }
 
-    // On recovery, drain accumulated byte payloads back to the predecessor (which has recovered).
-    // MPSC caution: Prev.Enqueue is called from this consumer thread. If the original producers
-    // concurrently resume feeding Prev, multiple threads enter Prev's Accept simultaneously — a race
-    // window proportional to cache-coherency latency. Callers must ensure producers quiesce
-    // before this drain runs, or accept the narrow window for MPSC-violation in pathological cases.
+    // On shutdown, drains ring payloads back to the predecessor (which has recovered).
+    // Gated on !_running: drain during _running=true would let this consumer thread call
+    // Prev.Enqueue concurrently with active producers — SPSC-violation on Prev's ring.
     private void TryDrainToPrev()
     {
+        if (_running) return;
         if (Prev is not { IsHealthy: true }) return;
         while (_ring.TryPeek(out var payload, out int advance))
         {
