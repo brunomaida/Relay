@@ -76,4 +76,76 @@ public sealed class MultiSinkPacketTests
         healthy.Received.Should().HaveCount(1);
         unhealthy.AcceptCallCount.Should().Be(0);
     }
+
+    [Fact]
+    public void Multi2_Enqueue_DeliversToBothChildren()
+    {
+        var a = new CollectingSink();
+        var b = new CollectingSink();
+        var multi2 = new Multi2PacketSink<CollectingSink, CollectingSink>(a, b);
+
+        multi2.Enqueue(Payload);
+
+        a.Received.Should().HaveCount(1);
+        b.Received.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Multi2_IsHealthy_True_WhenAtLeastOneChildHealthy()
+    {
+        var healthy   = new CollectingSink();
+        var unhealthy = new CollectingSink();
+        unhealthy.SetHealthy(false);
+        var multi2 = new Multi2PacketSink<CollectingSink, CollectingSink>(healthy, unhealthy);
+
+        multi2.IsHealthy.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Multi2_IsHealthy_False_WhenBothChildrenUnhealthy()
+    {
+        var a = new CollectingSink();
+        var b = new CollectingSink();
+        a.SetHealthy(false);
+        b.SetHealthy(false);
+        var multi2 = new Multi2PacketSink<CollectingSink, CollectingSink>(a, b);
+
+        multi2.IsHealthy.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Multi2_Flush_ForwardsToBoth()
+    {
+        var a = new CollectingSink();
+        var b = new CollectingSink();
+        var multi2 = new Multi2PacketSink<CollectingSink, CollectingSink>(a, b);
+
+        multi2.Flush();
+
+        a.Flushes.Should().Be(1);
+        b.Flushes.Should().Be(1);
+    }
+
+    [Fact]
+    public void Multi2_Dispose_ForwardsToBoth()
+    {
+        var a = new CollectingSink();
+        var b = new CollectingSink();
+        var multi2 = new Multi2PacketSink<CollectingSink, CollectingSink>(a, b);
+
+        multi2.Dispose();
+
+        a.Disposed.Should().BeTrue();
+        b.Disposed.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Multi2_Ctor_Throws_OnNullChild()
+    {
+        var ok = new CollectingSink();
+        Action a1 = () => new Multi2PacketSink<CollectingSink, CollectingSink>(null!, ok);
+        Action a2 = () => new Multi2PacketSink<CollectingSink, CollectingSink>(ok, null!);
+        a1.Should().Throw<ArgumentNullException>();
+        a2.Should().Throw<ArgumentNullException>();
+    }
 }
