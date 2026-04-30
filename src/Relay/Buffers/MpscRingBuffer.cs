@@ -12,40 +12,28 @@ namespace Relay.Buffers;
 /// on the shared tail; consumer reads a per-slot published flag to detect completed writes.
 /// </summary>
 /// <remarks>
-/// <para>Layout (ported from Log2's <c>MpscRingBuffer&lt;T&gt;</c> — FIX #18):</para>
+/// <para>Layout (ported from Log2's <c>MpscRingBuffer&lt;T&gt;</c> — FIX #18; slot layout
+/// revised in v4 audit to eliminate cache-line straddle):</para>
 /// <list type="bullet">
 ///   <item>Three counters (<c>_claimedTail</c>, <c>_headCache</c>, <c>_head</c>) each on its own
 ///         128-byte <see cref="PaddedLong"/> — zero false sharing between producer CAS, producer
 ///         head-cache read, and consumer head write.</item>
-///   <item>Per-slot <c>Published</c> flag inside an inline <c>Slot</c> struct — producer commits
-///         with a single <see cref="Volatile.Write(ref int, int)"/> after writing the value.</item>
+///   <item>Per-slot <c>Published</c> flag at stride offset 0 (64-byte flag cache line);
+///         <c>Value</c> at stride offset 64 (64-byte payload cache line).
+///         Stride = 64 + sizeof(T). Every slot is exactly 2 cache lines; no slot straddles
+///         a boundary. Backing allocation: <c>NativeMemory.AlignedAlloc(capacity * stride, 64)</c>.</item>
 ///   <item>Producers consult a local <c>_headCache</c> before issuing a volatile read of
 ///         <c>_head</c>; the cross-core read happens only when the ring appears full. Under
 ///         contention this eliminates the dominant cache-line bounce on every <see cref="TryPublish"/>.</item>
-///   <item>Backing memory: <see cref="NativeMemory.AlignedAlloc(nuint, nuint)"/> with 64-byte
-///         alignment — the first slot sits on a cache line boundary, eliminating the straddle
-///         caused by the ~16-byte object-header offset on POH-pinned arrays.</item>
 /// </list>
 /// <para>Contract: N producer threads, 1 consumer thread. Multi-consumer is undefined behaviour.</para>
 /// </remarks>
 internal sealed unsafe class MpscRingBuffer<T> : IDisposable where T : unmanaged
 {
-    /// <summary>
-    /// Per-slot storage: <c>Published</c> is producer-commit / consumer-recycle flag;
-    /// <c>Value</c> carries the payload. Kept as a plain (unpadded) struct — T is guaranteed
-    /// to be a positive multiple of 64 bytes (Relay invariant). Slot size is
-    /// <c>sizeof(T) + padding</c>; adjacent slots may still straddle cache lines depending on
-    /// <c>sizeof(T)</c> — see item #4 in performance audit; revisit under BDN contention data.
-    /// </summary>
-    private struct Slot
-    {
-        public int Published;
-        public T   Value;
-    }
-
-    private readonly Slot* _slots;
+    private readonly byte* _basePtr;
+    private readonly int   _stride;          // = 64 + sizeof(T)
+    private readonly nuint _bytesAllocated;
     private readonly int   _mask;
-    private readonly int   _bytesAllocated;
 
     private PaddedLong _claimedTail;
     private PaddedLong _headCache;
@@ -58,18 +46,21 @@ internal sealed unsafe class MpscRingBuffer<T> : IDisposable where T : unmanaged
 
     /// <summary>Pre-faults every page of the backing slot buffer and attempts a best-effort
     /// <c>VirtualLock</c> on Windows. Called once from the consumer pipe's <c>Start()</c>.</summary>
-    internal void PreFaultAndLock() => RelayMemory.PreFaultAndLock((byte*)_slots, (nuint)_bytesAllocated);
+    internal void PreFaultAndLock() => RelayMemory.PreFaultAndLock(_basePtr, _bytesAllocated);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ref int PublishedAt(long pos) =>
+        ref Unsafe.AsRef<int>(_basePtr + (pos & _mask) * _stride);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ref T ValueAt(long pos) =>
+        ref Unsafe.AsRef<T>(_basePtr + (pos & _mask) * _stride + 64);
 
     /// <summary>True when no published records are available. Consumer thread only.</summary>
     public bool IsEmpty
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get
-        {
-            long pos = _head.Value;
-            ref Slot slot = ref _slots[pos & _mask];
-            return Volatile.Read(ref slot.Published) == 0;
-        }
+        get => Volatile.Read(ref PublishedAt(_head.Value)) == 0;
     }
 
     /// <summary>Approximate in-flight item count (non-atomic, diagnostic only).</summary>
@@ -87,9 +78,10 @@ internal sealed unsafe class MpscRingBuffer<T> : IDisposable where T : unmanaged
 
         Capacity        = capacity;
         _mask           = capacity - 1;
-        _bytesAllocated = capacity * sizeof(Slot);
-        _slots          = (Slot*)NativeMemory.AlignedAlloc((nuint)_bytesAllocated, 64);
-        NativeMemory.Clear(_slots, (nuint)_bytesAllocated);
+        _stride         = 64 + sizeof(T);
+        _bytesAllocated = (nuint)(capacity * _stride);
+        _basePtr        = (byte*)NativeMemory.AlignedAlloc(_bytesAllocated, 64);
+        NativeMemory.Clear(_basePtr, _bytesAllocated);
     }
 
     /// <summary>
@@ -117,9 +109,8 @@ internal sealed unsafe class MpscRingBuffer<T> : IDisposable where T : unmanaged
 
             if (Interlocked.CompareExchange(ref _claimedTail.Value, claimed + 1, claimed) == claimed)
             {
-                ref Slot slot = ref _slots[claimed & _mask];
-                slot.Value = item;
-                Volatile.Write(ref slot.Published, 1);
+                ValueAt(claimed) = item;
+                Volatile.Write(ref PublishedAt(claimed), 1);
                 return true;
             }
             // CAS lost — another producer claimed this position; retry.
@@ -134,16 +125,16 @@ internal sealed unsafe class MpscRingBuffer<T> : IDisposable where T : unmanaged
     public bool TryConsume(out T item)
     {
         long pos = _head.Value;
-        ref Slot slot = ref _slots[pos & _mask];
 
-        if (Volatile.Read(ref slot.Published) == 0)
+        if (Volatile.Read(ref PublishedAt(pos)) == 0)
         {
             Unsafe.SkipInit(out item);
             return false;
         }
 
-        item = slot.Value;
-        Volatile.Write(ref slot.Published, 0);
+        item = ValueAt(pos);
+        Unsafe.InitBlockUnaligned(ref Unsafe.As<T, byte>(ref ValueAt(pos)), 0, (uint)sizeof(T));
+        Volatile.Write(ref PublishedAt(pos), 0);
         Volatile.Write(ref _head.Value, pos + 1);
         return true;
     }
@@ -163,10 +154,10 @@ internal sealed unsafe class MpscRingBuffer<T> : IDisposable where T : unmanaged
 
         while (n < dest.Length)
         {
-            ref Slot slot = ref _slots[(pos + n) & _mask];
-            if (Volatile.Read(ref slot.Published) == 0) break;
-            dest[n] = slot.Value;
-            Volatile.Write(ref slot.Published, 0);
+            if (Volatile.Read(ref PublishedAt(pos + n)) == 0) break;
+            dest[n] = ValueAt(pos + n);
+            Unsafe.InitBlockUnaligned(ref Unsafe.As<T, byte>(ref ValueAt(pos + n)), 0, (uint)sizeof(T));
+            Volatile.Write(ref PublishedAt(pos + n), 0);
             n++;
         }
 
@@ -182,7 +173,7 @@ internal sealed unsafe class MpscRingBuffer<T> : IDisposable where T : unmanaged
         _claimedTail.Value = 0;
         _headCache.Value   = 0;
         _head.Value        = 0;
-        NativeMemory.Clear(_slots, (nuint)_bytesAllocated);
+        NativeMemory.Clear(_basePtr, _bytesAllocated);
     }
 
     /// <summary>Frees the native ring. Idempotent.</summary>
@@ -190,6 +181,6 @@ internal sealed unsafe class MpscRingBuffer<T> : IDisposable where T : unmanaged
     {
         if (_disposed) return;
         _disposed = true;
-        NativeMemory.AlignedFree(_slots);
+        NativeMemory.AlignedFree(_basePtr);
     }
 }
