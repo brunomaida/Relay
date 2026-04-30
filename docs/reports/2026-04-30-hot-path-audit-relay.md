@@ -208,9 +208,7 @@ Slot size: `sizeof(T) + 64`. For T=64B: 128B/slot vs current 72B (or 68B with no
 
 | ID | Component | Severity | Notes |
 |---|---|---|---|
-| H26 | Stress tests | HIGH | No `[Trait("Category","Stress")]`-tagged sustained-load tests. Recommendation: 5-minute SPSC/MPSC throughput under memory pressure, with `GC.GetTotalMemory` baseline/endpoint gate. |
 | F22 | `SpscQueueSink.Start` core-affinity | LOW | No `int coreAffinity = -1` opt-in. Low priority; caller can pin before Start. |
-| M2 | `TryDrainToPrev` SPSC race window | MED | Documented in comments. Callers must quiesce producers before drain runs. |
 | G3 | `UdpSink` per-datagram syscall | LOW | Batching requires protocol-level permission + delivered-count BDN baseline first. Deferred. |
 
 ---
@@ -224,9 +222,9 @@ Slot size: `sizeof(T) + 64`. For T=64B: 128B/slot vs current 72B (or 68B with no
 | F21b / G1 | LOW | Packet ConsumeLoop (SPSC + MPSC) | HfClock + recovery called unconditionally on flush | ✅ Fixed |
 | B6 | MED | `MpscRingBuffer<T>` | Slot layout straddles cache lines | ✅ Fixed (stride layout) |
 | G2 | LOW | `SharedMemorySink.Accept` | No contiguous-write fast path | ✅ Fixed |
-| Carried H26 | HIGH | All | No stress tests | OPEN |
+| Carried H26 | HIGH | All | No stress tests | ✅ Fixed — `StressTests.cs` (5-min SPSC + MPSC, zero-GC gate) |
 | Carried F22 | LOW | `SpscQueueSink.Start` | No core-affinity opt-in | OPEN |
-| Carried M2 | MED | `TryDrainToPrev` | SPSC race window on producer-resume | OPEN/Documented |
+| Carried M2 | MED | `TryDrainToPrev` | SPSC race window on producer-resume | ✅ Fixed — gated on `!_running`; drain runs in shutdown phase only |
 | Carried G3 | LOW | `UdpSink` | Per-datagram syscall; batching deferred | OPEN |
 | Resolved H1 | — | `MpscQueueSink.Flush()` | Producer-thread race → consumer signal | ✅ |
 | Resolved H24a | — | `FilterSink` predicate-fail invariant | Now tested | ✅ |
@@ -290,7 +288,7 @@ and not actionable.
 | E. Compiler & JIT | 9 | **9** | — | No change |
 | F. Concurrency | 9 | 8 | **+1→9** | F21a+F21b resolved: ForkSink.Packet returns true; ConsumeLoop flush split |
 | G. System Boundary | 9 | **9** | — | G2 resolved: SharedMemorySink fast path (−1.35 ns at 256B) |
-| H. Test Validation | 4 | 6 | **+1→7** | +4 new tests (MPSC alignment ×3, ForkSink mid-call-health ×1); stress gap remains |
+| H. Test Validation | 4 | 6 | **+3→9** | +4 unit tests (v4); +3 `TryDrainToPrev` isolation tests (M2); +2 stress tests (H26 — 5-min GC gate) |
 
 ---
 
@@ -300,17 +298,20 @@ and not actionable.
 pressure (small ring / high contention). `SharedMemorySink` fast path saves −1.35 ns (−9.7%) on 256B
 payloads. No regressions on large-ring or single-producer paths.
 
-**Correctness: ALL v4 FINDINGS RESOLVED.**
+**Correctness: ALL v4 FINDINGS + M2 RESOLVED.**
 - F21a: `ForkSink.Accept` (packet) → `return true`. No more spurious `_dropCount`.
 - D13: `MpscQueueSink<T>` ctor alignment guard restored.
 - F21b/G1: Packet ConsumeLoop flush split — `TryRecoverBackend` now deadline-only.
 - G2: `SharedMemorySink` contiguous-write fast path.
+- M2: `TryDrainToPrev` gated on `!_running` — drain runs in shutdown phase only. Eliminates the
+  SPSC race where consumer drain thread and original producer both wrote to `Prev._ring.TryPublish`
+  simultaneously. Trade-off: items routed to fallback during primary failure go to the fallback
+  backend; only items still in the ring at `Stop()` time drain back to Prev.
 
-**Tests: +4.** MPSC alignment assertions (×3) and ForkSink mid-call health transition (×1). Total: 201/201 pass.
+**Tests: +9.** MPSC alignment (×3), ForkSink mid-call health (×1), `TryDrainToPrev` isolation (×3),
+stress suite (×2 — SPSC + MPSC 5-min GC gate). Total: 204/204 pass (excl. `[Trait("Category","Stress")]`).
 
 ### Remaining open items
 
-1. **(HIGH)** Stress test suite: 5-min SPSC/MPSC throughput + `GC.GetTotalMemory` gate. No change from v3.
-2. **(LOW)** `SpscQueueSink.Start` core-affinity opt-in.
-3. **(MED/documented)** `TryDrainToPrev` SPSC race window.
-4. **(LOW/deferred)** `UdpSink` per-datagram syscall — requires protocol permission + delivered-count BDN first.
+1. **(LOW)** `SpscQueueSink.Start` core-affinity opt-in.
+2. **(LOW/deferred)** `UdpSink` per-datagram syscall — requires protocol permission + delivered-count BDN first.

@@ -183,12 +183,12 @@ public abstract class SpscQueueSink : PacketSink
         }
     }
 
-    // Drains accumulated payloads back to Prev when it recovers.
-    // SPSC caution: Prev.Enqueue is called from this consumer thread. If the original
-    // producer resumes feeding Prev concurrently, two threads enter Prev.Accept simultaneously
-    // — a narrow race window. Ensure the producer quiesces before drain runs in SPSC scenarios.
+    // On shutdown, drains ring payloads back to the predecessor (which has recovered).
+    // Gated on !_running: if drain ran during _running=true the consumer thread calling
+    // Prev.Enqueue here would race with the original producer — two writers on a SPSC ring.
     private void TryDrainToPrev()
     {
+        if (_running) return;
         if (Prev is not { IsHealthy: true }) return;
         while (_ring.TryPeek(out var payload, out int advance))
         {
