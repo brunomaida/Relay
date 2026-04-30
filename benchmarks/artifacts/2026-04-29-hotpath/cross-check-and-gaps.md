@@ -81,8 +81,8 @@ End-to-end consumer-loop BDNs (`QueuePipeThroughputBenchmarks`, `Baselines/Typed
 | ~~H6~~ resolved | `RamSink.Accept` (packet) | ~20 | Phase 4: `RamPacketSinkBenchmarks` landed; measured ~4.4 ns at 64B / 256B (well under prediction). |
 | ~~H7~~ resolved | `MmfSink<T>.WriteToBackend` (bypass-managed-bounds path) | ~30 | Phase 4: `MmfSinkBenchmarks` landed; Push@1M = 6.9 ms (~145M/s on producer side; consumer-bounded). |
 | ~~H8~~ resolved | `UdpSink.WriteToBackend` syscall | ~2000 | Phase 4: `UdpSinkBenchmarks` landed; measures producer side, dominated by ring-fill drops on saturation — actual 1.5M/s wire rate cannot be inferred without delivered-count counter. Flagged for follow-up. |
-| H9 | `PacketSink.TryEnqueue` (non-fallthrough) | ~13 | extend `ByteEnqueueBenchmarks` with `Depth1_Byte_TryEnqueue_Healthy` / `_Reject` |
-| H10 | `PacketSink.Enqueue` terminal-drop (`Interlocked.Increment(_dropCount)`) | ~25 | extend `ByteEnqueueBenchmarks` with `Depth1_Byte_Drop_NextNull_Unhealthy` |
+| ~~H9~~ resolved | `PacketSink.TryEnqueue` (non-fallthrough) | ~13 | Phase 5: BDN landed — TryEnqueue_Healthy 0.42 ns (~2c, 6x faster than Enqueue), TryEnqueue_Reject 0.22 ns (~1c). |
+| ~~H10~~ resolved | `PacketSink.Enqueue` terminal-drop (`Interlocked.Increment(_dropCount)`) | ~25 | Phase 5: BDN landed — Drop_NextNull_* 3.75-3.79 ns. Cost-map ~25c was conservative; measured ~5c overhead vs Enqueue baseline (uncontended LOCK INC). |
 
 ### Medium-priority gaps (parallel-tree symmetry + blind subgraph)
 
