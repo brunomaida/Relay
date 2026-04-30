@@ -90,7 +90,7 @@ End-to-end consumer-loop BDNs (`QueuePipeThroughputBenchmarks`, `Baselines/Typed
 |---|---|---|---|
 | ~~M1~~ resolved | `ForkSink` (packet) | ~18 | Phase 2: BDN landed — see `benchmarks/artifacts/2026-04-29-phase2/` |
 | ~~M2~~ resolved | `MultiSink` (packet, N=2) | 7+2×17 = 41 | Phase 2: BDN landed — see `benchmarks/artifacts/2026-04-29-phase2/` |
-| M3 | `Multi2Sink`-equivalent for packet | n/a — type does not exist | DESIGN GAP: should `Multi2PacketSink` exist? cost-map §9 didn't flag this. |
+| ~~M3~~ resolved | `Multi2Sink`-equivalent for packet | ~7c (mirror of typed Multi2Sink) | Phase 6: `Multi2PacketSink<TC1,TC2>` sealed CRTP type landed + builder overload + 7 tests + BDN. ShortRun: Multi2_Packet_Enqueue 3.93 ns vs MultiSink baseline 3.21 ns (ratio 1.23 within sub-ns CI overlap; code size 458B vs 690B confirms leaner path; `__Canon` shared generic body partially suppresses devirt for reference-typed children). Numbers under `benchmarks/artifacts/2026-04-29-phase6/`. |
 | ~~M4~~ resolved | `FilterSink` (packet) | ~18 | Phase 2: BDN landed — see `benchmarks/artifacts/2026-04-29-phase2/` |
 | ~~M5~~ resolved-with-note | `BatchSink.WriteToBackend` (consumer scratch fits) | ~10 | Phase 4: `BatchSinkBenchmarks` landed measuring **producer-side ring publish only** — driving the sealed `WriteToBackend` from a subclass would require a production accessor change which the plan rejected. Consumer-side scratch-copy cost is covered indirectly via Phase 2 SPSC packet throughput. |
 | ~~M6~~ resolved | `NamedPipeSink.WriteToBackend` | ~18 | Phase 4: `NamedPipeSinkBenchmarks` (Windows). Push@10k = 0.5 ms / Push@100k = 1.07 ms. |
