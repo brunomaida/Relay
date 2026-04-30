@@ -97,7 +97,7 @@ End-to-end consumer-loop BDNs (`QueuePipeThroughputBenchmarks`, `Baselines/Typed
 | ~~M7~~ resolved | `UnixSocketSink.WriteToBackend` | ~18 | Phase 4: `UnixSocketSinkBenchmarks`. Compiled on Windows; AF_UNIX is supported on Win10+ so the BDN runs there too — `[SupportedOSPlatform]` did NOT skip it as the plan predicted. Push@1M = 11.9 ms. |
 | M8 | `RotatingFileSink.WriteToBackend` (excl. ShouldRotate) | ~10 | covered by C1 BDN setup |
 | ~~M9~~ resolved | `SpscQueueSink` (packet) end-to-end Push | ~35c Accept + consumer | Phase 2: BDN landed — see `benchmarks/artifacts/2026-04-29-phase2/` |
-| M10 | `MpscRingBuffer<T>.TryPublish` **multi-thread contention** | ~30c± retry | new `MpscContentionBenchmarks` (2-4 producer threads, validates "blind subgraph" §8) |
+| ~~M10~~ resolved | `MpscRingBuffer<T>.TryPublish` **multi-thread contention** | ~30c± retry | Phase 7: `MpscContentionBenchmarks` (typed) + `MpscByteContentionBenchmarks` (packet) landed at N=1,2,4,8. Typed aggregate throughput 10.6M / 7.7M / 12.3M / 13.3M items/s — **N=2 shows negative scaling** (CAS contention dominates uncontended publish); N≥4 amortizes via head-cache cross-core hit avoidance. Packet aggregate 2.18M / 2.46M / 6.05M / 7.16M items/s. Cost-map §8 blind subgraph "MPSC CAS-retry distribution" is closed by **measurement (throughput proxy)** — invasive retry-counter instrumentation in `MpscRingBuffer`/`MpscByteRingBuffer` would require production-code changes and is flagged as a Phase 8 follow-up. Numbers under `benchmarks/artifacts/2026-04-29-phase7/`. |
 
 ### Low-priority (covered indirectly or low risk)
 
