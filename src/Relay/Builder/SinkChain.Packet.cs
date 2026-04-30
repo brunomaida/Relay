@@ -45,6 +45,21 @@ public sealed class SinkChain<THead> where THead : PacketSink
         return this;
     }
 
+    /// <summary>
+    /// Fixed-arity 2-branch broadcast using the CRTP <see cref="Multi2PacketSink{TC1,TC2}"/>
+    /// variant. When <typeparamref name="TC1"/> and <typeparamref name="TC2"/> are sealed, the
+    /// JIT devirtualizes both <c>Enqueue</c> calls — saves 1-3 ns vs the array-based overload.
+    /// </summary>
+    public SinkChain<THead> Multi<TC1, TC2>(TC1 c1, TC2 c2)
+        where TC1 : PacketSink
+        where TC2 : PacketSink
+    {
+        var multi  = new Multi2PacketSink<TC1, TC2>(c1, c2);
+        _tail.Next = multi;
+        _tail      = multi;
+        return this;
+    }
+
     /// <summary>Returns the head as a bare <see cref="PacketSink"/> reference.</summary>
     public static implicit operator PacketSink(SinkChain<THead> chain) => chain.Head;
 
