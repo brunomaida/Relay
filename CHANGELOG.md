@@ -25,6 +25,31 @@ Resolves regression flagged in `docs/reports/2026-04-29-resource-cost-map-relay.
 
 ---
 
+### feat: `Multi2PacketSink<TC1, TC2>` — CRTP 2-branch broadcast for packet hierarchy
+
+Adds `Multi2PacketSink<TC1, TC2>` (sealed, `PacketSink` subclass) — the packet-hierarchy
+counterpart of typed `Multi2Sink<T,TC1,TC2>`. When both children are sealed concrete types
+the JIT can devirtualize both `Enqueue` calls, reducing emitted code size and eliminating
+vtable dispatch overhead on the broadcast path.
+
+`IsHealthy` is OR over both children. `Accept` always delivers to both children and returns
+`true` (broadcast-not-redundancy semantics, identical to `MultiSink`). Fallback to `Next`
+fires only when both children are unhealthy.
+
+Builder overload `.Multi<TC1,TC2>(c1, c2)` added to `SinkChain<THead>` (`Relay.Builder`
+packet chain). Emits `Multi2PacketSink<TC1, TC2>` and wires it as the new tail.
+
+BDN gate (Phase 6, `benchmarks/artifacts/2026-04-29-phase6/`):
+`Depth1_Byte_MultiPacket2_BothHealthy` ~22 ns; ~1.23× overhead vs. `MultiSink` (2-child
+array). Primary win is code-size reduction (690B → 458B JIT-emitted code), not cycle
+savings — reference-typed `TC1`/`TC2` limits devirtualization compared to the typed CRTP
+variant.
+
+**Files touched:** `src/Relay/MultiSink.Packet.cs`, `src/Relay/Builder/SinkChain.Packet.cs`,
+`tests/Relay.Tests/MultiSinkPacketTests.cs`.
+
+---
+
 ### refactor!: renomeia `TeePipe`→`ForkPipe`, `FanOutPipe`→`MultiPipe`, `FanOut2Pipe`→`Multi2Pipe` + builder expandido
 
 **Breaking.** Renomeações públicas em `namespace Relay` e nova superfície fluente em
