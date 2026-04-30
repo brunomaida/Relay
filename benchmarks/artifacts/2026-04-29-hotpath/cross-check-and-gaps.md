@@ -77,10 +77,10 @@ End-to-end consumer-loop BDNs (`QueuePipeThroughputBenchmarks`, `Baselines/Typed
 | ~~H2~~ resolved | `MpscByteRingBuffer.TryPeek` / `Advance` | ~12 / ~5 | Phase 3: BDN landed (same class as H1). |
 | ~~H3~~ resolved | `MpscQueueSink<T>` end-to-end (single producer, sustained Push) | ~30c Accept + consumer | Phase 3: `MpscPush_Single` / `MpscPush_Single_SlowBackend` added to `QueuePipeThroughputBenchmarks`. |
 | ~~H4~~ resolved | `MpscQueueSink` (packet) end-to-end | ~50c Accept + consumer | Phase 3: `MpscPacketQueueSinkThroughputBenchmarks` landed — see `benchmarks/artifacts/2026-04-29-phase3/`. |
-| H5 | `SharedMemorySink.Accept` (CAS + modular WriteRing) | ~50 | new `SharedMemorySinkBenchmarks` (Windows-only `[SupportedOSPlatform]` gate) |
-| H6 | `RamSink.Accept` (packet) | ~20 | new `RamSinkPacketBenchmarks` |
-| H7 | `MmfSink<T>.WriteToBackend` (bypass-managed-bounds path) | ~30 | new `MmfSinkBenchmarks`. Cost-map called this "fastest durable backend"; claim is unvalidated. |
-| H8 | `UdpSink.WriteToBackend` syscall | ~2000 | new `UdpSinkBenchmarks`. Validates throughput-ceiling claim (~1.5M payloads/s/core) flagged in cost-map §9. |
+| ~~H5~~ resolved | `SharedMemorySink.Accept` (CAS + modular WriteRing) | ~50 | Phase 4: `SharedMemorySinkBenchmarks` landed; measured ~12 ns at 64B / ~14 ns at 256B (cost-map prediction conservative). See `benchmarks/artifacts/2026-04-29-phase4/`. |
+| ~~H6~~ resolved | `RamSink.Accept` (packet) | ~20 | Phase 4: `RamPacketSinkBenchmarks` landed; measured ~4.4 ns at 64B / 256B (well under prediction). |
+| ~~H7~~ resolved | `MmfSink<T>.WriteToBackend` (bypass-managed-bounds path) | ~30 | Phase 4: `MmfSinkBenchmarks` landed; Push@1M = 6.9 ms (~145M/s on producer side; consumer-bounded). |
+| ~~H8~~ resolved | `UdpSink.WriteToBackend` syscall | ~2000 | Phase 4: `UdpSinkBenchmarks` landed; measures producer side, dominated by ring-fill drops on saturation — actual 1.5M/s wire rate cannot be inferred without delivered-count counter. Flagged for follow-up. |
 | H9 | `PacketSink.TryEnqueue` (non-fallthrough) | ~13 | extend `ByteEnqueueBenchmarks` with `Depth1_Byte_TryEnqueue_Healthy` / `_Reject` |
 | H10 | `PacketSink.Enqueue` terminal-drop (`Interlocked.Increment(_dropCount)`) | ~25 | extend `ByteEnqueueBenchmarks` with `Depth1_Byte_Drop_NextNull_Unhealthy` |
 
@@ -92,9 +92,9 @@ End-to-end consumer-loop BDNs (`QueuePipeThroughputBenchmarks`, `Baselines/Typed
 | ~~M2~~ resolved | `MultiSink` (packet, N=2) | 7+2×17 = 41 | Phase 2: BDN landed — see `benchmarks/artifacts/2026-04-29-phase2/` |
 | M3 | `Multi2Sink`-equivalent for packet | n/a — type does not exist | DESIGN GAP: should `Multi2PacketSink` exist? cost-map §9 didn't flag this. |
 | ~~M4~~ resolved | `FilterSink` (packet) | ~18 | Phase 2: BDN landed — see `benchmarks/artifacts/2026-04-29-phase2/` |
-| M5 | `BatchSink.WriteToBackend` (consumer scratch fits) | ~10 | new `BatchSinkBenchmarks` (consumer-thread isolated) |
-| M6 | `NamedPipeSink.WriteToBackend` | ~18 | new — Windows-only |
-| M7 | `UnixSocketSink.WriteToBackend` | ~18 | new — Linux/macOS-only |
+| ~~M5~~ resolved-with-note | `BatchSink.WriteToBackend` (consumer scratch fits) | ~10 | Phase 4: `BatchSinkBenchmarks` landed measuring **producer-side ring publish only** — driving the sealed `WriteToBackend` from a subclass would require a production accessor change which the plan rejected. Consumer-side scratch-copy cost is covered indirectly via Phase 2 SPSC packet throughput. |
+| ~~M6~~ resolved | `NamedPipeSink.WriteToBackend` | ~18 | Phase 4: `NamedPipeSinkBenchmarks` (Windows). Push@10k = 0.5 ms / Push@100k = 1.07 ms. |
+| ~~M7~~ resolved | `UnixSocketSink.WriteToBackend` | ~18 | Phase 4: `UnixSocketSinkBenchmarks`. Compiled on Windows; AF_UNIX is supported on Win10+ so the BDN runs there too — `[SupportedOSPlatform]` did NOT skip it as the plan predicted. Push@1M = 11.9 ms. |
 | M8 | `RotatingFileSink.WriteToBackend` (excl. ShouldRotate) | ~10 | covered by C1 BDN setup |
 | ~~M9~~ resolved | `SpscQueueSink` (packet) end-to-end Push | ~35c Accept + consumer | Phase 2: BDN landed — see `benchmarks/artifacts/2026-04-29-phase2/` |
 | M10 | `MpscRingBuffer<T>.TryPublish` **multi-thread contention** | ~30c± retry | new `MpscContentionBenchmarks` (2-4 producer threads, validates "blind subgraph" §8) |
