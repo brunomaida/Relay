@@ -77,6 +77,21 @@ public sealed class ForkSinkPacketTests
         next.Disposed.Should().BeTrue();
     }
 
+    [Fact]
+    public void Enqueue_PrimaryBecomesUnhealthyMidCall_NoDropCount_WhenNextIsNull()
+    {
+        // Primary marks itself unhealthy inside Accept, simulating a mid-call health transition.
+        // ForkSink.Accept must return true regardless (fork contract: best-effort side channel).
+        // With Next=null, old code (return _primary.IsHealthy) would increment DropCount.
+        var primary = new HealthTransitionSink();
+        var fork    = new ForkSink(primary);
+        // Next is intentionally null
+
+        fork.Enqueue(Payload);
+
+        fork.DropCount.Should().Be(0, "fork is a best-effort side channel and must never cause terminal drops");
+    }
+
     private sealed class FlushTrackingSink : PacketSink
     {
         public bool Flushed  { get; private set; }
@@ -85,5 +100,21 @@ public sealed class ForkSinkPacketTests
         protected override bool Accept(ReadOnlySpan<byte> payload) => true;
         public override void Flush()   => Flushed  = true;
         public override void Dispose() => Disposed = true;
+    }
+
+    // Simulates primary transitioning to unhealthy during its own Accept call.
+    private sealed class HealthTransitionSink : PacketSink
+    {
+        private bool _healthy = true;
+        public override bool IsHealthy => _healthy;
+
+        protected override bool Accept(ReadOnlySpan<byte> payload)
+        {
+            _healthy = false;
+            return true;
+        }
+
+        public override void Flush()   { }
+        public override void Dispose() { }
     }
 }
