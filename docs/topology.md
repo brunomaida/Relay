@@ -82,6 +82,7 @@
        │
        ├── ForkSink    (sealed, non-generic)  ← primary + Next propagation
        ├── MultiSink   (sealed, non-generic)  ← broadcast to PacketSink[] children
+       ├── Multi2PacketSink<TC1, TC2>  (sealed)  ← CRTP 2-child broadcast, JIT devirtualizes
        ├── FilterSink  (sealed, non-generic)  ← conditional gate
        └── NullSink    (singleton)            ← NullSink.Instance
 
@@ -103,8 +104,8 @@
   │                            MultiSink<T>, Multi2Sink<T,TC1,TC2>, ForkSink<T>,
   │                            FilterSink<T>, NullSink<T>, SerializeSink<T>,
   │                            PacketSink, SpscQueueSink, MpscQueueSink,
-  │                            ForkSink, MultiSink, FilterSink, NullSink,
-  │                            BatchSink
+  │                            ForkSink, MultiSink, Multi2PacketSink<TC1,TC2>,
+  │                            FilterSink, NullSink, BatchSink
   ├── namespace Relay.Buffers  SpscRingBuffer<T>, MpscRingBuffer<T>,
   │                            SpscByteRingBuffer, MpscByteRingBuffer    [internal]
   ├── namespace Relay.Sinks    FileStreamSink<T>, MmfSink<T>, TcpSink<T>, RamSink<T>
@@ -414,6 +415,9 @@
 
   .Multi(params PacketSink[] children):
        multi = new MultiSink(children) ; _tail.Next = multi ; _tail = multi
+
+  .Multi<TC1,TC2>(c1, c2):
+       multi = new Multi2PacketSink<TC1,TC2>(c1, c2) ; _tail.Next = multi ; _tail = multi
 
   Example typed assembly:
   ┌──────────────────────────────────────────────────────────────────┐
