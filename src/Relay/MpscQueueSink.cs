@@ -212,13 +212,12 @@ public abstract class MpscQueueSink<T> : DispatchSink<T> where T : unmanaged
         }
     }
 
-    // On recovery, drain accumulated items back to the predecessor (which has recovered).
-    // SPSC caution w.r.t. Prev: this consumer thread is the sole caller of Prev.Enqueue during drain.
-    // If the original producers concurrently resume feeding Prev, multiple threads enter Prev's Accept
-    // simultaneously — a race window proportional to cache-coherency latency. Callers must ensure
-    // producers quiesce before this drain runs, or accept the narrow window for violation in pathological cases.
+    // On shutdown, drains ring items back to the predecessor (which has recovered).
+    // Gated on !_running: drain during _running=true would let this consumer thread call
+    // Prev.Enqueue concurrently with active producers — SPSC-violation on Prev's ring.
     private void TryDrainToPrev()
     {
+        if (_running) return;
         if (Prev is not { IsHealthy: true }) return;
         while (_ring.TryConsume(out var item))
         {

@@ -230,13 +230,13 @@ public abstract class SpscQueueSink<T> : DispatchSink<T> where T : unmanaged
         }
     }
 
-    // On recovery, drain accumulated items back to the predecessor (which has recovered).
-    // SPSC caution: Prev.Enqueue is called from this consumer thread. If the original producer
-    // concurrently resumes feeding Prev, two threads enter Prev's Accept simultaneously — a race
-    // window proportional to cache-coherency latency. Callers must ensure the producer quiesces
-    // before this drain runs, or accept the narrow window for SPSC-violation in pathological cases.
+    // On shutdown, drains ring items back to the predecessor (which has recovered).
+    // Gated on !_running: if drain ran during _running=true the consumer thread calling
+    // Prev.Enqueue here would race with the original producer — two writers on a SPSC ring.
+    // Items consumed by WriteToBackend before shutdown are not affected.
     private void TryDrainToPrev()
     {
+        if (_running) return;
         if (Prev is not { IsHealthy: true }) return;
         while (_ring.TryConsume(out var item))
         {
