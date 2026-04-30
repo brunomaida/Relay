@@ -22,7 +22,7 @@ public sealed class ForkSink : PacketSink
     protected override bool Accept(ReadOnlySpan<byte> payload)
     {
         _primary.Enqueue(payload);
-        return _primary.IsHealthy;
+        return true;
     }
 
     /// <inheritdoc/>
