@@ -16,6 +16,8 @@ internal class CollectingSink : PacketSink
 
     public IReadOnlyList<byte[]> Received => _received;
     public int AcceptCallCount { get; private set; }
+    public int Flushes { get; private set; }
+    public bool Disposed { get; private set; }
 
     public override bool IsHealthy => _healthy;
 
@@ -29,6 +31,6 @@ internal class CollectingSink : PacketSink
         return true;
     }
 
-    public override void Flush()   { }
-    public override void Dispose() { }
+    public override void Flush()   { Flushes++; }
+    public override void Dispose() { Disposed = true; }
 }
