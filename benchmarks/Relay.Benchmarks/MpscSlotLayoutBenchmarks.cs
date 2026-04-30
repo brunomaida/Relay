@@ -15,12 +15,14 @@ namespace Relay.Benchmarks;
 /// <remarks>
 /// Gate: stride layout must be ≥ legacy layout throughput at N=1. Improvement at N≥2
 /// is expected (reduced inter-slot false sharing) but not gated — document delta in
-/// commit message. Producer machinery mirrors <see cref="MpscContentionBenchmarks"/>.
+/// commit message. Producer/consumer machinery mirrors <see cref="MpscContentionBenchmarks"/>:
+/// consumer runs on a dedicated thread started in IterationSetup so it drains concurrently
+/// while producers publish (avoids small-ring deadlock).
 /// </remarks>
 [MemoryDiagnoser]
 public class MpscSlotLayoutBenchmarks
 {
-    private const int ItemsPerProducer = 500_000;
+    private const int ItemsPerProducer = 1_000_000;
 
     [Params(1, 2, 4, 8)]
     public int ProducerCount;
@@ -32,6 +34,7 @@ public class MpscSlotLayoutBenchmarks
     private MpscRingBufferLegacy<Entry64> _legacyRing = null!;
     private Entry64                       _item;
     private Thread[]                      _producers    = null!;
+    private Thread                        _consumer     = null!;
     private ManualResetEventSlim          _startGate    = null!;
     private CountdownEvent                _producerDone = null!;
     private long                          _consumed;
@@ -50,7 +53,7 @@ public class MpscSlotLayoutBenchmarks
         for (int i = 0; i < ProducerCount; i++)
         {
             var idx = i;
-            _producers[i] = new Thread(() =>
+            _producers[idx] = new Thread(() =>
             {
                 _startGate.Wait();
                 for (int j = 0; j < ItemsPerProducer; j++)
@@ -65,9 +68,34 @@ public class MpscSlotLayoutBenchmarks
                 Priority     = ThreadPriority.AboveNormal,
                 Name         = $"stride-prod-{idx}"
             };
-            _producers[i].Start();
         }
-        Thread.Sleep(30);
+
+        long target = (long)ProducerCount * ItemsPerProducer;
+        _consumer = new Thread(() =>
+        {
+            SpinWait sp = default;
+            while (Volatile.Read(ref _consumed) < target)
+            {
+                if (_ring.TryConsume(out _))
+                {
+                    Interlocked.Increment(ref _consumed);
+                    sp.Reset();
+                }
+                else
+                {
+                    sp.SpinOnce();
+                }
+            }
+        })
+        {
+            IsBackground = true,
+            Priority     = ThreadPriority.AboveNormal,
+            Name         = "stride-consumer"
+        };
+
+        foreach (var t in _producers) t.Start();
+        _consumer.Start();
+        Thread.Sleep(50);
     }
 
     [IterationCleanup(Target = nameof(StrideLayout_Throughput))]
@@ -79,20 +107,8 @@ public class MpscSlotLayoutBenchmarks
         long target = (long)ProducerCount * ItemsPerProducer;
         _startGate.Set();
         _producerDone.Wait();
-
         SpinWait sp = default;
-        while (Volatile.Read(ref _consumed) < target)
-        {
-            if (_ring.TryConsume(out _))
-            {
-                Interlocked.Increment(ref _consumed);
-                sp.Reset();
-            }
-            else
-            {
-                sp.SpinOnce();
-            }
-        }
+        while (Volatile.Read(ref _consumed) < target) sp.SpinOnce();
         return Volatile.Read(ref _consumed);
     }
 
@@ -107,7 +123,7 @@ public class MpscSlotLayoutBenchmarks
         for (int i = 0; i < ProducerCount; i++)
         {
             var idx = i;
-            _producers[i] = new Thread(() =>
+            _producers[idx] = new Thread(() =>
             {
                 _startGate.Wait();
                 for (int j = 0; j < ItemsPerProducer; j++)
@@ -122,9 +138,34 @@ public class MpscSlotLayoutBenchmarks
                 Priority     = ThreadPriority.AboveNormal,
                 Name         = $"legacy-prod-{idx}"
             };
-            _producers[i].Start();
         }
-        Thread.Sleep(30);
+
+        long target = (long)ProducerCount * ItemsPerProducer;
+        _consumer = new Thread(() =>
+        {
+            SpinWait sp = default;
+            while (Volatile.Read(ref _consumed) < target)
+            {
+                if (_legacyRing.TryConsume(out _))
+                {
+                    Interlocked.Increment(ref _consumed);
+                    sp.Reset();
+                }
+                else
+                {
+                    sp.SpinOnce();
+                }
+            }
+        })
+        {
+            IsBackground = true,
+            Priority     = ThreadPriority.AboveNormal,
+            Name         = "legacy-consumer"
+        };
+
+        foreach (var t in _producers) t.Start();
+        _consumer.Start();
+        Thread.Sleep(50);
     }
 
     [IterationCleanup(Target = nameof(LegacySlotLayout_Throughput))]
@@ -136,20 +177,8 @@ public class MpscSlotLayoutBenchmarks
         long target = (long)ProducerCount * ItemsPerProducer;
         _startGate.Set();
         _producerDone.Wait();
-
         SpinWait sp = default;
-        while (Volatile.Read(ref _consumed) < target)
-        {
-            if (_legacyRing.TryConsume(out _))
-            {
-                Interlocked.Increment(ref _consumed);
-                sp.Reset();
-            }
-            else
-            {
-                sp.SpinOnce();
-            }
-        }
+        while (Volatile.Read(ref _consumed) < target) sp.SpinOnce();
         return Volatile.Read(ref _consumed);
     }
 
