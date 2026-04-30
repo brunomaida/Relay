@@ -111,6 +111,7 @@ src/
 - `Accept` always returns true. Fallback to `Next` only when **all** children are unhealthy (`IsHealthy == false`).
 - Items are not re-delivered to unhealthy children; they silently miss them. Multi-dispatch is not redundancy — it is broadcast.
 - **`Multi2Sink<T, TC1, TC2>` CRTP variant:** prefer when `TC1` and `TC2` are `sealed` — JIT devirtualizes and inlines both `Enqueue` calls, saving ~6c. Requires concrete sealed types known at compile time.
+- **`Multi2PacketSink<TC1, TC2>` (packet hierarchy CRTP variant):** parallel to `Multi2Sink`, fixed-arity 2-child broadcast for `PacketSink` chains. Same JIT devirtualization properties when `TC1`, `TC2` are sealed. Available since Phase 6.
 
 ## `FilterSink<T>` semantics
 - `Accept` returns true even when the predicate fails. Items that fail the predicate are silently consumed; they do NOT propagate to `Next`. This is intentional — filtered items must not trigger the fallback chain.
