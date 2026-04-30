@@ -254,7 +254,7 @@ ConsumeLoop                                src/Relay/SpscQueueSink.Packet.cs:110
 | backend I/O latency (FS / TCP / UDP / Unix / NamedPipe) | src/Relay/Sinks/*.cs | OS + device + network dependent; model uses fixed syscall estimate only | io.device.latency |
 | JIT devirtualization assumption | DispatchSink.cs / PacketSink.cs / Multi2Sink | effective only when caller holds sealed concrete type | jit.devirt.profile |
 | `VirtualLock` NT kernel path | src/Relay/Memory/RelayMemory.cs:48 | best-effort; SeLockMemoryPrivilege required; failure silent | nt.virtuallock.privilege |
-| MPSC CAS-retry distribution | `MpscRingBuffer.TryPublish` / `MpscByteRingBuffer.TryPublish` | retry count under contention is workload-dependent; HeadCache eliminates the steady-state miss but full-ring cases still bounce `_head` cross-core | mpsc.contention.profile |
+| ~~MPSC CAS-retry distribution~~ measured (throughput proxy) | `MpscRingBuffer.TryPublish` / `MpscByteRingBuffer.TryPublish` | Phase 7 BDN closes this — multi-producer throughput at N=1/2/4/8: typed shows negative scaling N=1→N=2 (10.6M→7.7M items/s aggregate, CAS contention dominates immediately) then partial recovery via HeadCache N≥4. Packet ring scales monotonically (variable-record granularity gentler under contention). Retry-counter instrumentation flagged as follow-up. | (closed) |
 
 ## 9. Delta vs 2026-04-23
 
@@ -284,3 +284,29 @@ ConsumeLoop                                src/Relay/SpscQueueSink.Packet.cs:110
 | **regression-candidate** | `UdpSink.WriteToBackend` issues `Socket.Send` per record | src/Relay/Sinks/UdpSink.cs:50 | n/a → 2e3c per payload | UDP is per-datagram by design but a 2e3c syscall per payload caps throughput at ~1.5M payloads/s/core; consider `SendPackets` or burst-write coalescing for high-rate use. |
 | risk | `MpscRingBuffer<T>.Slot` unpadded → adjacent slots may straddle cache lines for T not aligned to 64B factor | src/Relay/Buffers/MpscRingBuffer.cs:40 | known | acceptable while T is enforced multiple of 64B; flag if `SinkConstraints` ever loosens |
 | risk | drain-to-Prev SPSC/MPSC race window during recovery | src/Relay/SpscQueueSink.cs:238 | known narrow window | callers must quiesce producers before drain; documented in ConsumeLoop comment |
+
+### BDN-calibrated (Phases 1–7)
+
+Static estimates above are theoretical upper bounds. The rows below replace them with measured numbers from the Phase 1–7 BDN sweep (i7-12700, ShortRun unless noted). Conversion: ~4.5 GHz → 1 ns ≈ 4.5 cycles.
+
+| change | symbol | predicted (cycles) | measured (ns / cycles) | source |
+|---|---|---|---|---|
+| recalibrate | `MpscRingBuffer<T>.TryPublish` (uncontended round-trip / 2) | ~30c | ~7-10c (`Mpsc_TryPublish_NoContention` 7.97 ns / 2) | Phase 0 (`MpscBenchmarks`, cap 1024) |
+| recalibrate | `MpscByteRingBuffer.TryPublish` (uncontended) | ~50c | ~15-20c (RoundTrip 8.59 ns at cap 1024 payload 64 / 2) | Phase 3 (`MpscByteRingBufferBenchmarks`) |
+| recalibrate | `DispatchSink<T>.Enqueue` (sealed sub w/ trivial Accept) | ~15c | ~2c (`Depth1_Healthy` 0.48 ns) | Phase 0 (`EnqueueBenchmarks`). Prediction is upper-bound assuming non-trivial Accept; trivial Accept collapses under JIT to a single store. |
+| recalibrate | `PacketSink.Enqueue` (sealed sub w/ trivial Accept) | ~15c | ~5c (`Depth1_Byte_Healthy` 1.04 ns; ~2.5x typed due to span-pass) | Phase 0 (`ByteEnqueueBenchmarks`) |
+| recalibrate | `MultiSink<T>.Accept` (N=2 array) | ~41c | ~31c (`Multi_Enqueue` 6.89 ns) | Phase 0 (`MultiEnqueueBenchmarks`) |
+| recalibrate | `Multi2Sink<T,TC1,TC2>.Accept` (sealed CRTP) | ~32c | ~27c (`Multi2_Enqueue` 5.93 ns); saves ~4c vs array | Phase 0 (`MultiEnqueueBenchmarks`) |
+| recalibrate | `MultiSink<T>.IsHealthy` (short-circuit OR) | ~16c | ~5c (`Multi_IsHealthy` 1.13 ns) — first child returns true, exits | Phase 0 (`MultiIsHealthyBenchmarks`) |
+| recalibrate | `FilterSink<T>.Accept` (Pass + downstream) | ~18c | ~28c (`Filter_Pass` 6.22 ns); identity lambda still pays delegate slot | Phase 0 (`FilterSinkBenchmarks`) |
+| recalibrate | `ForkSink<T>` propagate to primary + Next | ~32c | ~25c (`Depth2_Fork_Wrapped` 5.63 ns) | Phase 0 (`PropagateBenchmarks`) |
+| recalibrate | `RotatingFileSink.ShouldRotate` (post-fix) | ~3c | ~3c (BDN predicate isolated 13.76 ns; absolute drop -8.08 ns matches `DateTime.UtcNow.Date` cost). | Phase 1 (`RotatingFileSinkBenchmarks`) |
+| recalibrate | `RamSink.Accept` (packet) | ~20c | ~20c (`Accept_Single` 4.4 ns) — aligned | Phase 4 (`RamPacketSinkBenchmarks`) |
+| recalibrate | `SharedMemorySink.Accept` | ~50c | ~53c (`Accept_Single` 11.8 ns) — aligned | Phase 4 (`SharedMemorySinkBenchmarks`, Windows) |
+| recalibrate | `MmfSink<T>.WriteToBackend` | ~30c (per-record claim) | end-to-end Push@1M = 6.9 ms (~145M items/s producer side; consumer-bounded). "Fastest durable backend" claim **partially confirmed** — fastest at producer side; downstream-bound past producer rate. | Phase 4 (`MmfSinkBenchmarks`) |
+| recalibrate | `UdpSink` syscall throughput | ~2000c per record | producer-side Push@100k = 4.1 ms (saturated ring → drops to terminal `_dropCount` path); **wire-throughput claim of ~1.5M/s NOT validated** without delivered-count counter. | Phase 4 (`UdpSinkBenchmarks`); flagged for follow-up |
+| recalibrate | `PacketSink.TryEnqueue` (non-fallthrough) | ~13c | ~2c (`TryEnqueue_Healthy` 0.42 ns); 6x faster than `Enqueue` because no propagate-field test + no Next traversal | Phase 5 (`ByteEnqueueBenchmarks` extension) |
+| recalibrate | `PacketSink.Enqueue` terminal-drop (`Interlocked.Increment(_dropCount)`) | ~25c | ~5c overhead vs Enqueue baseline (Drop_NextNull 3.75 ns vs Healthy 2.68 ns). Cost-map was conservative; uncontended LOCK INC on Golden Cove is cheaper than textbook. | Phase 5 |
+| recalibrate | `Multi2PacketSink<TC1,TC2>.Accept` (NEW Phase 6) | n/a (type didn't exist) | 3.93 ns vs array `MultiSink` (packet) 3.21 ns — CRTP variant 1.23x slower at this scale due to `__Canon` shared-generic instantiation w/ reference-typed `TC1`/`TC2` (only partial devirtualization). Code size dropped 690B→458B (path IS leaner); timing inversion consistent with array-loop prefetch winning when CI margins overlap. Primary win for packet CRTP is **code size + simpler reasoning**, not guaranteed cycle savings. | Phase 6 (`MultiPacketEnqueueBenchmarks`) |
+| measured | MPSC multi-producer contention (typed) | blind subgraph | N=1: 10.6M items/s aggregate; N=2: **7.7M** (negative scaling, CAS contention dominates); N=4: 12.3M; N=8: 13.3M. Per-producer effective rate drops monotonically (10.6 → 3.86 → 3.07 → 1.66 M/s/thread). | Phase 7 (`MpscContentionBenchmarks`) |
+| measured | MPSC multi-producer contention (packet) | blind subgraph | N=1: 2.18M; N=2: 2.46M; N=4: 6.05M; N=8: 7.16M (monotonic — variable-record granularity gentler). | Phase 7 (`MpscByteContentionBenchmarks`) |

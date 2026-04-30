@@ -39,7 +39,12 @@
       "Bash(echo \"EXIT=$?\")",
       "Read(//tmp/**)",
       "Bash(tee /tmp/bdn-run.log)",
-      "Bash(grep --line-buffered -E \"Benchmark|Failed|error|Mean|Done|Summary|Process|^//\")"
+      "Bash(grep --line-buffered -E \"Benchmark|Failed|error|Mean|Done|Summary|Process|^//\")",
+      "Bash(tee /tmp/phase7-bdn.log)",
+      "Bash(grep -qE \"Test execution time|exited with code|BenchmarkRunner: End[^L]*$|Total time:|// \\\\*\\\\* Done\\\\.\" /c/Users/bruno/AppData/Local/Temp/claude/C--Development-Libs-Relay/dd8357b9-a864-4110-966e-e43e7ac91139/tasks/bhgv0krlv.output)",
+      "Bash(wmic process *)",
+      "Bash(taskkill /F /PID 17152 /T)",
+      "PowerShell(Stop-Process *)"
     ]
   }
 }
