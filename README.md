@@ -85,7 +85,7 @@ Full type hierarchy, ring-buffer internals, builder operators, and recommended t
 | `PacketSink` | Abstract byte-payload base — same fallback semantics as typed tree |
 | `SpscQueueSink` | Abstract non-generic SPSC base for byte payloads |
 | `MpscQueueSink` | Abstract non-generic MPSC base for byte payloads |
-| `ForkSink` / `MultiSink` / `FilterSink` / `NullSink` | Packet-hierarchy counterparts |
+| `ForkSink` / `MultiSink` / `Multi2PacketSink<TC1,TC2>` / `FilterSink` / `NullSink` | Packet-hierarchy counterparts; `Multi2PacketSink` is the CRTP 2-child variant |
 | `BatchSink` | POH scratch accumulator; flushes on fill or interval; `OnFlush` hook |
 | `Sinks/FileStreamSink<T>` | Binary append to `FileStream`, POH buffer, backoff recovery |
 | `Sinks/TcpSink<T>` | TCP send, POH buffer, reconnect with exponential backoff |
@@ -414,7 +414,7 @@ O produtor chama um único método — `Enqueue` — e a biblioteca cuida do rot
 - Gravação de eventos de alta frequência em arquivo binário com fallback em RAM
 - Sink de log estruturado resiliente a falhas de disco ou rede
 - Dispatcher TCP primário + secundário + ring nativo como última camada
-- Fan-out broadcast para múltiplos consumidores simultâneos (`MultiSink`, `Multi2Sink`)
+- Fan-out broadcast para múltiplos consumidores simultâneos (`MultiSink`, `Multi2Sink`, `Multi2PacketSink`)
 - Filtro condicional antes da entrega (`FilterSink`)
 - Envio batch de eventos CLEF para Seq com circuit breaker (`SeqSink`)
 
