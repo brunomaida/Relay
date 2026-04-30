@@ -1,6 +1,5 @@
 using System;
 using BenchmarkDotNet.Attributes;
-using Relay;
 using Relay.Sinks;
 
 namespace Relay.Benchmarks.Sinks;
@@ -10,10 +9,10 @@ namespace Relay.Benchmarks.Sinks;
 /// No consumer thread; the sink is fill-once until <c>DrainTo</c> resets pointers.
 /// </summary>
 /// <remarks>
-/// <see cref="IterationSetup"/> drains the buffer to <see cref="NullSink.Instance"/> before
-/// every BDN iteration so capacity is reset and <see cref="RamSink.Accept"/> stays on the
-/// happy path (<c>_tail + recordSize &lt;= _capacity</c>) regardless of how many invocations
-/// BDN runs per iteration.
+/// The buffer fills monotonically during the benchmark. Once exhausted, <see cref="RamSink.Accept"/>
+/// returns false and <see cref="PacketSink.Enqueue"/> falls through to <c>_dropCount</c>
+/// increment — both paths are sub-10 ns. The reported mean is a stable mix once steady state
+/// is reached. <see cref="GlobalSetup"/> sizes capacity for the BDN window without recycling.
 /// </remarks>
 [MemoryDiagnoser]
 [DisassemblyDiagnoser(maxDepth: 3)]
@@ -29,14 +28,11 @@ public class RamPacketSinkBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        // 64MB ring — drained to NullSink between iterations to keep Accept on the fast path.
-        _sink    = new RamSink(capacity: 64 * 1024 * 1024);
+        // 256MB ring — large enough that the Accept fast path dominates BDN's invocation window.
+        _sink    = new RamSink(capacity: 256 * 1024 * 1024);
         _payload = new byte[PayloadSize];
         for (int i = 0; i < PayloadSize; i++) _payload[i] = (byte)i;
     }
-
-    [IterationSetup]
-    public void IterationSetup() => _sink.DrainTo(NullSink.Instance);
 
     [GlobalCleanup]
     public void Cleanup() => _sink.Dispose();
