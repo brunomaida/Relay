@@ -104,13 +104,19 @@ public sealed unsafe class SharedMemorySink : PacketSink
 
         byte* data = _ptr + HEADER_SIZE;
 
-        // Write 4-byte big-endian length prefix, then payload — both ring-wrapped.
+        // Fast path: frame fits without wrapping — direct write, no stackalloc or loop.
+        if (oldIdx + frameLen <= _dataCapacity)
+        {
+            BinaryPrimitives.WriteInt32BigEndian(new Span<byte>(data + oldIdx, 4), payload.Length);
+            payload.CopyTo(new Span<byte>(data + oldIdx + 4, payload.Length));
+            return true;
+        }
+
+        // Slow path: frame wraps — ring-modular write for length prefix and payload.
         Span<byte> lenBuf = stackalloc byte[4];
         BinaryPrimitives.WriteInt32BigEndian(lenBuf, payload.Length);
         WriteRing(data, _dataCapacity, oldIdx, lenBuf);
-
-        int payloadPos = (oldIdx + 4) % _dataCapacity;
-        WriteRing(data, _dataCapacity, payloadPos, payload);
+        WriteRing(data, _dataCapacity, (oldIdx + 4) % _dataCapacity, payload);
 
         return true;
     }

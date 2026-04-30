@@ -69,6 +69,7 @@ public abstract class MpscQueueSink<T> : DispatchSink<T> where T : unmanaged
     /// <param name="pipeName">Optional name used as thread suffix for debugger/profiler visibility.</param>
     protected MpscQueueSink(int ringCapacity, int flushIntervalMs, string pipeName = "")
     {
+        SinkConstraints.AssertCacheLineAligned<T>();
         _ring               = new MpscRingBuffer<T>(ringCapacity);
         _flushIntervalTicks = (long)flushIntervalMs * (Stopwatch.Frequency / 1_000);
         _pipeName           = pipeName;
