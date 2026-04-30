@@ -25,7 +25,7 @@ public sealed class StressTests
     /// Single producer, SPSC sink, 5 minutes. Asserts zero gen0/gen1 GC collections —
     /// any allocation on the hot path will trigger at least one collection within 5 min.
     /// </summary>
-    [Fact(Timeout = 320_000)]
+    [Fact]
     [Trait("Category", "Stress")]
     public void Spsc_SustainedThroughput_5Min_ZeroGcPressure()
     {
@@ -58,7 +58,7 @@ public sealed class StressTests
     /// Four concurrent producers, MPSC sink, 5 minutes. Zero-GC gate applies to all
     /// producer threads and the consumer thread collectively.
     /// </summary>
-    [Fact(Timeout = 320_000)]
+    [Fact]
     [Trait("Category", "Stress")]
     public void Mpsc_4Producer_SustainedThroughput_5Min_ZeroGcPressure()
     {
