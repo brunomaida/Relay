@@ -1,5 +1,6 @@
 using System;
 using FluentAssertions;
+using Relay.Builder;
 using Relay.Tests.TestSinks;
 using Xunit;
 
@@ -147,5 +148,23 @@ public sealed class MultiSinkPacketTests
         Action a2 = () => new Multi2PacketSink<CollectingSink, CollectingSink>(ok, null!);
         a1.Should().Throw<ArgumentNullException>();
         a2.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Builder_Multi_TC1_TC2_WiresChain()
+    {
+        // The .Multi<TC1,TC2>(c1,c2) overload installs Multi2PacketSink as Next of NullSink.
+        // NullSink.Accept always returns true, so payloads never reach the multi under default
+        // PropagateAfterAccept=false — this test asserts the builder did not throw and returned a
+        // chain whose head is the original NullSink.Instance.
+        var a    = new CollectingSink();
+        var b    = new CollectingSink();
+        var head = RelayBuilder
+            .StartPacket(NullSink.Instance)
+            .Multi(a, b)
+            .Head;
+
+        head.Should().BeSameAs(NullSink.Instance);
+        head.Next.Should().BeOfType<Multi2PacketSink<CollectingSink, CollectingSink>>();
     }
 }
