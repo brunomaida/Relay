@@ -10,6 +10,7 @@ namespace Relay.Sinks;
 /// Never throws IOException; <see cref="IsHealthy"/> is false only when the ring is full.
 /// Drain via <see cref="DrainTo"/> when the primary pipe recovers.
 /// </summary>
+// unsealed to allow [Obsolete] RamSink compat shim in _Compat/
 public unsafe class MemorySink<T> : DispatchSink<T> where T : unmanaged
 {
     private const int DefaultCapacity = 1 << 23; // 8_388_608 entries — ~512 MB for T=64B
