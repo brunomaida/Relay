@@ -8,7 +8,7 @@ namespace Relay.Builder;
 /// // Serial fallback (single-producer): file → RAM
 /// var head = RelayBuilder
 ///     .StartSpsc&lt;Entry, FileStreamSink&lt;Entry&gt;&gt;(new FileStreamSink&lt;Entry&gt;("/data/rec.bin"))
-///     .To(new RamSink&lt;Entry&gt;())
+///     .To(new MemorySink&lt;Entry&gt;())
 ///     .Build();
 ///
 /// head.Start();

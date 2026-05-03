@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -10,7 +10,7 @@ namespace Relay.Sinks;
 /// Never throws IOException; <see cref="IsHealthy"/> is false only when the ring is full.
 /// Drain via <see cref="DrainTo"/> when the primary pipe recovers.
 /// </summary>
-public sealed unsafe class RamSink<T> : DispatchSink<T> where T : unmanaged
+public unsafe class MemorySink<T> : DispatchSink<T> where T : unmanaged
 {
     private const int DefaultCapacity = 1 << 23; // 8_388_608 entries — ~512 MB for T=64B
 
@@ -22,7 +22,7 @@ public sealed unsafe class RamSink<T> : DispatchSink<T> where T : unmanaged
     private long _tail;
     private bool _disposed;
 
-    public RamSink(long capacity = DefaultCapacity)
+    public MemorySink(long capacity = DefaultCapacity)
     {
         if (capacity <= 0 || (capacity & (capacity - 1)) != 0)
             throw new ArgumentException("Capacity must be a positive power of two.", nameof(capacity));

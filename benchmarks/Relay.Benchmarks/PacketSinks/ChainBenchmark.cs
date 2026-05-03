@@ -14,8 +14,8 @@ namespace Relay.Benchmarks.PacketSinks;
 [IterationCount(5)]
 public class ChainBenchmark
 {
-    private TcpSink?  _tcp;
-    private RamSink?  _ram;
+    private TcpSink?    _tcp;
+    private MemorySink? _ram;
     private TcpSink?  _tcp2;
     private TcpSink?  _tcp3;
     private TcpListener? _l1, _l2, _l3;
@@ -35,7 +35,7 @@ public class ChainBenchmark
         var a3 = _l3.AcceptTcpClientAsync();
 
         _tcp  = new TcpSink("127.0.0.1", Port(_l1));
-        _ram  = new RamSink();
+        _ram  = new MemorySink();
         _tcp2 = new TcpSink("127.0.0.1", Port(_l2));
         _tcp3 = new TcpSink("127.0.0.1", Port(_l3));
 
