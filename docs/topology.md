@@ -39,7 +39,7 @@
        ├── NullSink<T>       (sealed)  ← singleton no-op sink
        └── SerializeSink<T>  (sealed)  ← bridge: typed T → PacketSink (MemoryMarshal.AsBytes)
 
-  RamSink<T>  (sealed)  ← direct subclass of DispatchSink<T>
+  MemorySink<T>  (unsealed)  ← direct subclass of DispatchSink<T>
        │  _buffer: T* (NativeMemory.AllocZeroed)
        │  _head / _tail: long  ← single-threaded, not SPSC ring
        │  IsHealthy => _tail - _head < _capacity
@@ -86,7 +86,7 @@
        ├── FilterSink  (sealed, non-generic)  ← conditional gate
        └── NullSink    (singleton)            ← NullSink.Instance
 
-  RamSink  (sealed, non-generic)  ← direct subclass of PacketSink
+  MemorySink  (unsealed, non-generic)  ← direct subclass of PacketSink
        │  Native memory fill-once buffer, linear layout with 4-byte BE headers
        │  DrainTo(PacketSink) ← called externally on recovery
 
@@ -108,9 +108,9 @@
   │                            FilterSink, NullSink, BatchSink
   ├── namespace Relay.Buffers  SpscRingBuffer<T>, MpscRingBuffer<T>,
   │                            SpscByteRingBuffer, MpscByteRingBuffer    [internal]
-  ├── namespace Relay.Sinks    FileStreamSink<T>, MmfSink<T>, TcpSink<T>, RamSink<T>
+  ├── namespace Relay.Sinks    FileStreamSink<T>, MmfSink<T>, TcpSink<T>, MemorySink<T>
   │                            FileSink, RotatingFileSink, NamedPipeSink,
-  │                            UdpSink, TcpSink, RamSink, SharedMemorySink
+  │                            UdpSink, TcpSink, MemorySink, SharedMemorySink
   ├── namespace Relay.Builder  RelayBuilder, SinkChain<T,THead>, MultiBuilder<T>,
   │                            FilterBinding<T,THead>                    [typed chain]
   │                            SinkChainBuilder, SinkChain<THead>,
@@ -191,12 +191,12 @@
 
   T2 — Serial depth 2
   ────────────────────
-  caller ──▶ [FileStreamSink<T>] ──(Next)──▶ [RamSink<T>]
+  caller ──▶ [FileStreamSink<T>] ──(Next)──▶ [MemorySink<T>]
              unhealthy? ───────────────────────────────▶
 
   T3 — Serial depth 3
   ────────────────────
-  caller ──▶ [FileStreamSink<T>] ──▶ [TcpSink<T>] ──▶ [RamSink<T>]
+  caller ──▶ [FileStreamSink<T>] ──▶ [TcpSink<T>] ──▶ [MemorySink<T>]
 
   T4 — Multi broadcast to 2 children
   ────────────────────────────────────
@@ -208,7 +208,7 @@
   ─────────────────────────────
   caller ──▶ [MultiSink<T>] ──▶ c1 [FileStreamSink<T>]
              │               └──▶ c2 [TcpSink<T>]
-             └──(Next)──▶ [RamSink<T>]       ← only when all children unhealthy
+             └──(Next)──▶ [MemorySink<T>]    ← only when all children unhealthy
 
   T6 — Filter gate
   ─────────────────
@@ -233,7 +233,7 @@
 
   T10 — Packet HTTP batch → Seq
   ──────────────────────────────
-  caller ──▶ [SeqSink] ──(circuit-breaker open)──▶ [RamSink / NullSink]
+  caller ──▶ [SeqSink] ──(circuit-breaker open)──▶ [MemorySink / NullSink]
 
 
 ================================================================================
@@ -348,7 +348,7 @@
 
   Use case:
     p1 = FileStreamSink<T> (primary, was broken)
-    p2 = RamSink<T> (fallback, accumulated items during p1 outage)
+    p2 = MemorySink<T> (fallback, accumulated items during p1 outage)
     On p1 recovery → p2 drains back to p1 → normal path resumes
 
   Only SpscQueueSink<T> / MpscQueueSink<T> nodes get Prev. Other DispatchSink<T>
@@ -432,7 +432,7 @@
   │    tcp.Next  = ram    (tcp is SpscQueueSink → tcp.Prev = file)   │
   │    ram.Next  = null   (ram is DispatchSink → no Prev)            │
   │                                                                  │
-  │  ram.Prev is NOT set — RamSink<T> is not SpscQueueSink<T>.       │
+  │  ram.Prev is NOT set — MemorySink<T> is not SpscQueueSink<T>.    │
   │  Recovery drain is tcp → file (tcp drains to its predecessor).   │
   └──────────────────────────────────────────────────────────────────┘
 
@@ -535,8 +535,8 @@
   Recovery: none — capacity is permanent; TryRecoverBackend is a no-op
   Note:     MemoryMappedViewAccessor.Write never throws IOException
 
-  RamSink<T>  (direct DispatchSink<T> subclass — no consumer thread)
-  ────────────────────────────────────────────────────────────────────
+  MemorySink<T>  (direct DispatchSink<T> subclass — no consumer thread)
+  ──────────────────────────────────────────────────────────────────────
   Enqueue → Accept → native pointer write (_buffer[_tail & _mask] = item; _tail++)
   No threading: single-threaded, synchronous write (hot path thread)
   Failure:  ring full (_tail - _head >= _capacity) → IsHealthy = false
@@ -587,8 +587,8 @@
   Default: ringCapacity=65536, batchCapacity=65536, flushInterval=1000ms,
            cbFailures=3, cbOpenDurationMs=30000ms
 
-  RamSink  (packet, direct PacketSink subclass)
-  ──────────────────────────────────────────────
+  MemorySink  (packet, direct PacketSink subclass)
+  ─────────────────────────────────────────────────
   Fill-once native memory ring. Linear layout with 4-byte host-order headers.
   DrainTo(PacketSink) for recovery. No consumer thread.
 
@@ -618,7 +618,7 @@
   relay-seq              BelowNormal  SeqSink                   Drain ring → HTTP POST
   relay-{name}           BelowNormal  SpscQueueSink subclass    Custom backend
 
-  RamSink, RamSink (packet), SharedMemorySink have NO dedicated thread.
+  MemorySink, MemorySink (packet), SharedMemorySink have NO dedicated thread.
   Writes happen synchronously on the producer thread.
   MultiSink, ForkSink, FilterSink, NullSink, SerializeSink have NO threads.
 
@@ -674,7 +674,7 @@
     Lives on POH (Pinned Object Heap) — never moved by GC
     Capacity: 4096 entries × sizeof(T) bytes
 
-  RamSink<T> native ring:
+  MemorySink<T> native ring:
     NativeMemory.AllocZeroed(capacity × sizeof(T))
     Unmanaged heap — not subject to GC pressure
     Freed explicitly in Dispose via NativeMemory.Free
@@ -719,17 +719,17 @@
   │ T1: Enqueue depth-1 (success, SpscQueueSink)        │   ~32c   │   ~9 ns  │
   │ T2: Enqueue depth-2 (success, p1 healthy)           │   ~32c   │   ~9 ns  │
   │ T2: Enqueue depth-2 (fallback, p1 unhealthy→p2)     │   ~12c   │   ~3 ns  │
-  │ T3: Enqueue depth-3 (p1+p2 unhealthy→p3 RamSink)    │   ~16c   │   ~5 ns  │
+  │ T3: Enqueue depth-3 (p1+p2 unhealthy→p3 MemorySink)  │   ~16c   │   ~5 ns  │
   │ T4: Multi 2 children (both healthy, array-based)    │   ~74c   │  ~21 ns  │
   │ T4: Multi 2 children (CRTP Multi2Sink, sealed)      │   ~68c   │  ~19 ns  │
-  │ T5: Multi all-fail → Next (RamSink)                 │   ~19c   │   ~5 ns  │
+  │ T5: Multi all-fail → Next (MemorySink)              │   ~19c   │   ~5 ns  │
   │ Drop (Next == null, depth 1)                        │    ~2c   │  <1 ns   │
   │ Drop (Next == null, depth 3)                        │   ~14c   │   ~4 ns  │
   └─────────────────────────────────────────────────────┴──────────┴──────────┘
 
   Key insight: fallback is often CHEAPER than success because:
     - Unhealthy short-circuit = ~1c (vs ~7c IsHealthy normal)
-    - RamSink has no mfence (vs ~15c in SpscQueueSink.TryPublish)
+    - MemorySink has no mfence (vs ~15c in SpscQueueSink.TryPublish)
     - Hot path degradation is lighter than normal hot path
 
   Multi scales linearly: Total ≈ N × 35c + 6c for N healthy SpscQueueSink children.
@@ -741,7 +741,7 @@
   │ FileStreamSink<T>   │ 524,288        │  ~32 MB          │
   │ TcpSink<T>          │  16,384        │   ~1 MB          │
   │ MmfSink<T>          │  65,536        │   ~4 MB          │
-  │ RamSink<T>          │ 8,388,608      │ ~512 MB (native) │
+  │ MemorySink<T>       │ 8,388,608      │ ~512 MB (native) │
   ├─────────────────────┼────────────────┼──────────────────┤
   │ FileSink            │  65,536 bytes  │  ~64 KB          │
   │ SeqSink             │  65,536 bytes  │  ~64 KB          │
@@ -753,15 +753,15 @@
 ================================================================================
 
   Recording (primary local file, typed):
-    FileStreamSink<T> → RamSink<T>
+    FileStreamSink<T> → MemorySink<T>
     ~32c success │ ~12c fallback │ ~2c drop
 
   Recording with remote redundancy:
-    FileStreamSink<T> → TcpSink<T> → RamSink<T>
+    FileStreamSink<T> → TcpSink<T> → MemorySink<T>
     ~32c success │ ~36c fallback-to-tcp │ ~16c fallback-to-ram
 
   IPC dispatch to multiple destinations:
-    Multi2Sink<T, FileStreamSink<T>, TcpSink<T>>  →  RamSink<T>
+    Multi2Sink<T, FileStreamSink<T>, TcpSink<T>>  →  MemorySink<T>
     ~68c success │ ~19c all-fail-to-ram
 
   Symbol-filtered recording:
@@ -769,12 +769,12 @@
     ~45c pass │ ~8c blocked (silently consumed)
 
   Typed pipeline → Seq observability sink:
-    SerializeSink<T> → SeqSink → RamSink (packet)
+    SerializeSink<T> → SeqSink → MemorySink (packet)
     Typed structs serialized zero-copy; CLEF encoding is producer responsibility.
 
   Rules of thumb:
     - Each additional serial hop costs 0c on the success path, +4c per unhealthy hop.
     - Multi broadcast multiplies by N. Keep N ≤ 4.
-    - RamSink as last resort adds ~0c on success path, ~6c on all-children-fail path.
+    - MemorySink as last resort adds ~0c on success path, ~6c on all-children-fail path.
     - Multi2Sink (CRTP) saves ~6c over MultiSink when children are sealed types.
 ```

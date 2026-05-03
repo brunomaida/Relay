@@ -22,6 +22,7 @@ namespace Relay.Sinks;
 /// <para><b>Capacity:</b> Partial drain does NOT free capacity. Only full drain
 /// (<c>_head &gt;= _tail</c>) resets the pointers to zero, reopening the buffer.</para>
 /// </remarks>
+// unsealed to allow [Obsolete] RamSink compat shim in _Compat/
 public unsafe class MemorySink : PacketSink
 {
     private readonly byte* _buffer;

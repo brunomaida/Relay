@@ -46,7 +46,7 @@ Producer
 [Sink 2 — IsHealthy? → Accept(item)]
    │ failure
    ▼
-[Sink N — last resort, e.g. RamSink]
+[Sink N — last resort, e.g. MemorySink]
    │ failure (ring full)
    ▼
  silent drop
@@ -90,13 +90,13 @@ Full type hierarchy, ring-buffer internals, builder operators, and recommended t
 | `Sinks/FileStreamSink<T>` | Binary append to `FileStream`, POH buffer, backoff recovery |
 | `Sinks/TcpSink<T>` | TCP send, POH buffer, reconnect with exponential backoff |
 | `Sinks/MmfSink<T>` | Memory-mapped file write, capacity-only failure mode |
-| `Sinks/RamSink<T>` | Native memory ring, last-resort typed sink, `DrainTo` on recovery |
+| `Sinks/MemorySink<T>` | Native memory ring, last-resort typed sink, `DrainTo` on recovery |
 | `Sinks/FileSink` | Byte append to `FileStream`, optional file header, backoff recovery |
 | `Sinks/RotatingFileSink` | Like `FileSink` with size + date rotation and file-count cleanup |
 | `Sinks/NamedPipeSink` | Length-prefixed named-pipe client (Input2Log compatible) |
 | `Sinks/UdpSink` | UDP datagrams, one datagram per enqueued payload |
 | `Sinks/TcpSink` | Length-framed TCP (packet hierarchy) |
-| `Sinks/RamSink` | Native memory linear buffer, last-resort packet sink |
+| `Sinks/MemorySink` | Native memory linear buffer, last-resort packet sink |
 | `Sinks/SharedMemorySink` | Synchronous MMF ring (Log2 wire protocol) |
 | `Buffers/SpscRingBuffer<T>` | Lock-free SPSC ring with 128-byte padded head/tail |
 | `Buffers/MpscRingBuffer<T>` | Lock-free MPSC ring (Log2 FIX #18 layout) |
@@ -138,9 +138,9 @@ public struct LogEntry
 
 ## Use Cases & Examples
 
-### 1 — Structured Log Sink (File with RAM fallback)
+### 1 — Structured Log Sink (File with memory fallback)
 
-Binary log records written to a local file. If the file system fails, records accumulate in RAM. When the file recovers, the RAM sink drains back upstream automatically via the `Prev` pointer wired by the builder.
+Binary log records written to a local file. If the file system fails, records accumulate in native memory. When the file recovers, the memory sink drains back upstream automatically via the `Prev` pointer wired by the builder.
 
 ```csharp
 using Relay;
@@ -150,7 +150,7 @@ using Relay.Sinks;
 var head = RelayBuilder
     .Start<LogEntry, FileStreamSink<LogEntry>>(
         new FileStreamSink<LogEntry>("/var/log/app.bin"))
-    .To(new RamSink<LogEntry>())          // last-resort ring while file is down
+    .To(new MemorySink<LogEntry>())        // last-resort ring while file is down
     .Build();
 
 head.Start();                             // spawns consumer thread
@@ -170,27 +170,27 @@ head.Dispose();
 
 ---
 
-### 2 — Tiered Persistence (File → MMF → RAM)
+### 2 — Tiered Persistence (File → MMF → Memory)
 
-Three-tier fallback: fast append log, then a fixed-size memory-mapped snapshot, then native RAM ring as the ultimate sink.
+Three-tier fallback: fast append log, then a fixed-size memory-mapped snapshot, then native memory ring as the ultimate sink.
 
 ```csharp
 var head = RelayBuilder
     .Start<MarketTick, FileStreamSink<MarketTick>>(
         new FileStreamSink<MarketTick>("/data/ticks.bin"))
     .To(new MmfSink<MarketTick>("/data/ticks.mmf", maxBytes: 512 * 1024 * 1024))
-    .To(new RamSink<MarketTick>())
+    .To(new MemorySink<MarketTick>())
     .Build();
 
 head.Start();
 head.Enqueue(in tick);
 ```
 
-`MmfSink` never throws `IOException` — its failure mode is capacity exhaustion, at which point items fall to the RAM ring.
+`MmfSink` never throws `IOException` — its failure mode is capacity exhaustion, at which point items fall to the memory ring.
 
 ---
 
-### 3 — Remote TCP Dispatcher (Primary → Backup → RAM)
+### 3 — Remote TCP Dispatcher (Primary → Backup → Memory)
 
 Items delivered to a primary TCP receiver first. On disconnect, the SPSC ring absorbs the burst while reconnection retries with exponential backoff (1 s → 30 s). On recovery, items accumulated downstream drain back upstream.
 
@@ -199,7 +199,7 @@ var head = RelayBuilder
     .Start<TradeEvent, TcpSink<TradeEvent>>(
         new TcpSink<TradeEvent>("risk-engine.internal", port: 9090))
     .To(new TcpSink<TradeEvent>("backup-engine.internal", port: 9090))
-    .To(new RamSink<TradeEvent>())
+    .To(new MemorySink<TradeEvent>())
     .Build();
 
 head.Start();
@@ -220,7 +220,7 @@ var head = RelayBuilder
         new MultiSink<SensorReading>(
             new FileStreamSink<SensorReading>("/data/sensors.bin"),
             new TcpSink<SensorReading>("dashboard.local", 9200)))
-    .To(new RamSink<SensorReading>())     // fallback when ALL children are unhealthy
+    .To(new MemorySink<SensorReading>())   // fallback when ALL children are unhealthy
     .Build();
 
 head.Start();
@@ -315,7 +315,7 @@ var seq  = new SeqSink(http, serverUrl: "http://seq:5341", apiKey: "my-key");
 
 var chain = SinkChainBuilder
     .StartSpsc(seq)
-    .To(RamSink.Instance)              // buffer during breaker-open window
+    .To(new MemorySink())              // buffer during breaker-open window
     .Head;
 
 seq.Start();
@@ -406,9 +406,9 @@ Base all branches off `develop`. Merge back to `develop` when stable.
 
 O produtor chama um único método — `Enqueue` — e a biblioteca cuida do roteamento: entrega ao primeiro backend saudável da cadeia, e em caso de falha (I/O, desconexão, capacidade esgotada), encaminha automaticamente ao próximo sink. Quando o backend se recupera, os itens acumulados no fallback são drenados de volta upstream (mecanismo `Prev` drain).
 
-**Sinks concretos (tipados):** `FileStreamSink<T>`, `TcpSink<T>`, `MmfSink<T>`, `RamSink<T>`
+**Sinks concretos (tipados):** `FileStreamSink<T>`, `TcpSink<T>`, `MmfSink<T>`, `MemorySink<T>`
 
-**Sinks concretos (packet):** `FileSink`, `RotatingFileSink`, `NamedPipeSink`, `UdpSink`, `TcpSink`, `RamSink`, `SharedMemorySink`, `SeqSink` (CLEF/HTTP via `BatchSink` → `HttpBatchSink`)
+**Sinks concretos (packet):** `FileSink`, `RotatingFileSink`, `NamedPipeSink`, `UdpSink`, `TcpSink`, `MemorySink`, `SharedMemorySink`, `SeqSink` (CLEF/HTTP via `BatchSink` → `HttpBatchSink`)
 
 **Casos de uso principais:**
 - Gravação de eventos de alta frequência em arquivo binário com fallback em RAM

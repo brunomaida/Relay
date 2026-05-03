@@ -104,6 +104,20 @@ public sealed class RamSinkObsoleteTests
         sink.Should().BeAssignableTo<MemorySink<Entry64>>("shim must inherit from MemorySink<T>");
     }
 
+    [Fact]
+    public void RamSink_DefaultCtor_IsHealthy()
+    {
+        using var sink = new RamSink();
+        Assert.True(sink.IsHealthy);
+    }
+
+    [Fact]
+    public void RamSinkGeneric_DefaultCtor_IsHealthy()
+    {
+        using var sink = new RamSink<Entry64>();
+        Assert.True(sink.IsHealthy);
+    }
+
     private sealed class CountingSink : DispatchSink<Entry64>
     {
         private int _count;

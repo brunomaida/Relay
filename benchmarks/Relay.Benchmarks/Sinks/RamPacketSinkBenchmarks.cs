@@ -16,6 +16,7 @@ namespace Relay.Benchmarks.Sinks;
 /// </remarks>
 [MemoryDiagnoser]
 [DisassemblyDiagnoser(maxDepth: 3)]
+// class name kept for benchmark artifact continuity — sink type was renamed to MemorySink
 public class RamPacketSinkBenchmarks
 {
     private MemorySink _sink    = null!;
