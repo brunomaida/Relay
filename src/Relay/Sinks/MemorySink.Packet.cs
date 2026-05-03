@@ -22,7 +22,7 @@ namespace Relay.Sinks;
 /// <para><b>Capacity:</b> Partial drain does NOT free capacity. Only full drain
 /// (<c>_head &gt;= _tail</c>) resets the pointers to zero, reopening the buffer.</para>
 /// </remarks>
-public sealed unsafe class RamSink : PacketSink
+public unsafe class MemorySink : PacketSink
 {
     private readonly byte* _buffer;
     private readonly int   _capacity;
@@ -33,7 +33,7 @@ public sealed unsafe class RamSink : PacketSink
     private bool _disposed;
 
     /// <param name="capacity">Buffer size in bytes. Must be a positive power of two.</param>
-    public RamSink(int capacity = 4 * 1024 * 1024)
+    public MemorySink(int capacity = 4 * 1024 * 1024)
     {
         if (capacity <= 0 || (capacity & (capacity - 1)) != 0)
             throw new ArgumentException("Capacity must be a positive power of two.", nameof(capacity));
