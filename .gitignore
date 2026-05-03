@@ -17,3 +17,4 @@ BenchmarkDotNet.Artifacts/
 # BDN run artifacts — only committed JSON snapshots under benchmarks/baselines/ are tracked
 benchmarks/baselines/results/
 benchmarks/baselines/BenchmarkRun-*.log
+/docs/superpowers/specs/2026-04-30-release-skills-design.md
