@@ -244,10 +244,11 @@ cleaner and costs nothing at runtime.
 | `MemorySink<T>` | `NativeMemory.AllocZeroed`, unsafe circular ring | Ring full | None — `DrainTo(target)` on recovery. **Must free in `Dispose`.** |
 
 # Testing
-- `dotnet test tests/Relay.Tests` must pass (0 failures) before any commit.
+- Commit gate: `dotnet test Relay.sln -c Release --filter "Category!=Endurance&Category!=Stress&Category!=Perf"` must pass (0 failures).
 - Test file per concern: `DispatchSinkChainTests`, `SpscQueueSinkTests`, `MultiSinkTests`, `ForkSinkTests`, `RecoveryDrainTests`.
 - Local test pipes extend `DispatchSink<T>` or `SpscQueueSink<T>` directly — no mocking frameworks.
 - Tests that use `Thread.Sleep` for consumer timing must use short, deterministic windows. Prefer `Stop(drainTimeoutMs)` to signal completion rather than sleeping and asserting on side effects.
+- Timing analysis: `.\tools\test-timing.ps1 -RunFirst` — parses TRX output, groups by >5min/>2min/>1min/>30s.
 
 # Code Style
 - **File size:** target < 200 LOC. Concrete pipes with complex recovery may reach 120–150 LOC; document if exceeding 200.

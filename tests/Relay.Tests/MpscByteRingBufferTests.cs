@@ -174,6 +174,7 @@ public sealed class MpscByteRingBufferTests
 
     // ── stress: single producer + single consumer ─────────────────────────────
 
+    [Trait("Category", "Stress")]
     [Fact]
     public void Stress_SingleProducerSingleConsumer_100KRecords_NoLossNoCorruption()
     {
@@ -269,6 +270,7 @@ public sealed class MpscByteRingBufferTests
 
     // ── stress: multi-producer ────────────────────────────────────────────────
 
+    [Trait("Category", "Stress")]
     [Fact]
     public void Stress_MultiProducer_4Threads_100KTotal_NoLossNoCorruption()
     {

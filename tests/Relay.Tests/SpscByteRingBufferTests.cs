@@ -160,6 +160,7 @@ public sealed class SpscByteRingBufferTests
 
     // ── stress ───────────────────────────────────────────────────────────────
 
+    [Trait("Category", "Stress")]
     [Fact]
     public void Stress_SingleProducerSingleConsumer_1MRecords_NoLossNoCorruption()
     {
