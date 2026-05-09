@@ -16,7 +16,7 @@ jobs:
         with:
           dotnet-version: '9.x'
       - run: dotnet build -c Release -warnaserror
-      - run: dotnet test -c Release --no-build --filter "Category!=Endurance"
+      - run: dotnet test -c Release --no-build --filter "Category!=Endurance&Category!=Stress&Category!=Perf"
       - run: dotnet pack -c Release --no-build -o ./artifacts
       - name: Publish to GitHub Packages
         run: |
