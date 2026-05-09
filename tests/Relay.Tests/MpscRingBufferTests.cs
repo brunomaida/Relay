@@ -216,6 +216,7 @@ public sealed class MpscRingBufferTests
         monotonic.Should().BeTrue("per-producer sequence must be monotonically increasing");
     }
 
+    [Trait("Category", "Stress")]
     [Fact]
     public void MultiProducer_HighContention_NoCorruption_Stress()
     {
