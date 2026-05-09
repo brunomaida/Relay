@@ -6,8 +6,12 @@
     <Optimize>true</Optimize>
     <RootNamespace>Relay.Sinks.Observability</RootNamespace>
     <AssemblyName>Relay.Sinks.Observability</AssemblyName>
+    <PackageId>Relay.Sinks.Observability</PackageId>
     <ImplicitUsings>disable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+  </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Relay.Tests" />
   </ItemGroup>

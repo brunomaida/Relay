@@ -7,8 +7,12 @@
     <Optimize>true</Optimize>
     <RootNamespace>Relay.Sinks.Http</RootNamespace>
     <AssemblyName>Relay.Sinks.Http</AssemblyName>
+    <PackageId>Relay.Sinks.Http</PackageId>
     <ImplicitUsings>disable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+  </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Relay.Tests" />
   </ItemGroup>
