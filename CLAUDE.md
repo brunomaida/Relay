@@ -251,12 +251,11 @@ cleaner and costs nothing at runtime.
 - **File size:** target < 200 LOC. Concrete pipes with complex recovery may reach 120–150 LOC; document if exceeding 200.
 - **Comments:** default none. Add only when the WHY is non-obvious (invariant, platform quirk, correctness constraint).
 - **XML docs:** `<summary>` on all public types and members. `<remarks>` for cross-cutting concerns (e.g. threading constraints, fallback semantics). No paraphrasing of method names.
-- **Naming:** PascalCase public, camelCase locals, `_camelCase` private fields, `SCREAMING_SNAKE_CASE` for `const` only.
 - **`using` directives:** explicit (no implicit usings). Group: `System.*` first, then `Relay.*`. No blank lines between groups.
 - **`unsafe` methods:** annotate with `protected override unsafe void` — never suppress the compiler warning, use the `unsafe` keyword explicitly.
 
-# Git Workflow (project overrides)
-- Branch naming: `feature/<yyMMdd>-<slug>`, `fix/<yyMMdd>-<slug>`, `refactor/<yyMMdd>-<slug>` (date-based slug, overrides global ref-based naming).
+# Git Workflow (override)
+- Branch naming: `feature/<yyMMdd>-<slug>`, `fix/<yyMMdd>-<slug>`, `refactor/<yyMMdd>-<slug>` — no `<ref>` segment (lib has no issue tracker).
 - Commit gate: `dotnet test tests/Relay.Tests` (0 failures required).
 
 # Model Routing

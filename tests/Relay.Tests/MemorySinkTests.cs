@@ -8,12 +8,12 @@ using Xunit;
 
 namespace Relay.Tests;
 
-public sealed class RamSinkTests
+public sealed class MemorySinkTests
 {
     [Fact]
     public void Accept_PayloadsBuffered_DrainToDeliversInOrder()
     {
-        using var sink = new RamSink(capacity: 4_096);
+        using var sink = new MemorySink(capacity: 4_096);
         var target = new CollectingSink();
         byte[] a = [1, 2], b = [3, 4, 5], c = [6];
 
@@ -32,7 +32,7 @@ public sealed class RamSinkTests
     [Fact]
     public void Accept_ReturnsFalse_WhenBufferFull()
     {
-        using var sink = new RamSink(capacity: 64);
+        using var sink = new MemorySink(capacity: 64);
         byte[] payload = new byte[28];
 
         bool first  = sink.IsHealthy;
@@ -49,7 +49,7 @@ public sealed class RamSinkTests
     [Fact]
     public void DrainTo_UnhealthyTarget_StopsDrain()
     {
-        using var sink = new RamSink(capacity: 4_096);
+        using var sink = new MemorySink(capacity: 4_096);
         var target = new CollectingSink();
         target.SetHealthy(false);
 
@@ -64,7 +64,7 @@ public sealed class RamSinkTests
     [Fact]
     public void DrainTo_CompletelyDrained_IsHealthyBecomesTrue()
     {
-        using var sink = new RamSink(capacity: 64);
+        using var sink = new MemorySink(capacity: 64);
         byte[] payload = new byte[28];
         sink.Enqueue(payload);
         sink.Enqueue(payload);
@@ -81,7 +81,7 @@ public sealed class RamSinkTests
         // Regression: fill-once contract. If DrainTo stops early (target unhealthy), _head
         // advances but _tail stays at capacity. Accept must still return false — writing at
         // _buffer + _tail with _tail ~= _capacity would overflow the buffer.
-        using var sink = new RamSink(capacity: 64);
+        using var sink = new MemorySink(capacity: 64);
         byte[] payload = new byte[28];
 
         sink.Enqueue(payload);
@@ -118,7 +118,7 @@ public sealed class RamSinkTests
     [Fact]
     public void Dispose_ReleasesNativeMemory_NoException()
     {
-        var sink = new RamSink(capacity: 4_096);
+        var sink = new MemorySink(capacity: 4_096);
         sink.Enqueue([1, 2, 3]);
         var act = () => sink.Dispose();
         act.Should().NotThrow();
@@ -127,7 +127,7 @@ public sealed class RamSinkTests
     [Fact]
     public void Dispose_CalledTwice_IsIdempotent()
     {
-        var sink = new RamSink(capacity: 4_096);
+        var sink = new MemorySink(capacity: 4_096);
         sink.Dispose();
         var act = () => sink.Dispose();
         act.Should().NotThrow();
