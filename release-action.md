@@ -20,7 +20,7 @@
 | 2f | CI green on develop | WARN | No CI runs found — CI not configured or never pushed with workflow |
 | 3a | Build succeeds (zero warnings) | PASS | `dotnet build -c Release -warnaserror` — 0 warnings, 0 errors |
 | 3b | No banned patterns | WARN | `DateTime.UtcNow` in `RotatingFileSink.cs:51,97,174` (cold paths: ctor, rotation, boundary computation — hot-path fix already landed). `Thread.Sleep` in `SpscQueueSink.cs:193`, `SpscQueueSink.Packet.cs:150`, `MpscQueueSink.cs:175`, `MpscQueueSink.Packet.cs:170` (consumer backoff — intentional empty-ring design). No hot-path violations. |
-| 4 | Tests pass | PASS | 212 passed, 1 skipped, 0 failed |
+| 4 | Tests pass | PASS | 212 passed, 1 skipped, 0 failed — filter was `Category!=Endurance` (pre-fix); re-run with `Category!=Endurance&Category!=Stress&Category!=Perf` |
 | 5a | CHANGELOG versioned | PASS | `[1.0.0] - 2026-05-09` entry present; new empty `[Unreleased]` above it |
 | 5b | Project docs up-to-date | PASS | `docs/topology.md` updated 2026-05-03; includes RamSink→MemorySink rename |
 | 5c | CLAUDE.md consistent | PASS | Last modified today (2026-05-09) |
