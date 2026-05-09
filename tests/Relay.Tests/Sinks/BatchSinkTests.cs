@@ -57,7 +57,7 @@ public sealed class BatchSinkTests
 
         sink.Enqueue(new byte[] { 0xCC });
         sink.Flush();
-        Thread.Sleep(100);
+        sink.Stop(1_000);
 
         sink.Flushes.Should().HaveCount(1);
         sink.Flushes[0].Should().Equal(new byte[] { 0xCC });
