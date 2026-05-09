@@ -64,7 +64,8 @@
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(dotnet pack *)",
       "Bash(gh release *)",
-      "Bash(Remove-Item -Recurse -Force artifacts)"
+      "Bash(Remove-Item -Recurse -Force artifacts)",
+      "Bash(grep -E \"\\\\.cs$|\\\\.csproj$|\\\\.sln$\")"
     ]
   }
 }
