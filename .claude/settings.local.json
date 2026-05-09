@@ -52,7 +52,12 @@
       "Bash(mkdir -p \"C:/Users/bruno/.claude/skills/release-2-merge-master\")",
       "Bash(mkdir -p \"C:/Users/bruno/.claude/skills/release-3-execute\")",
       "Bash(echo \"EXIT: $?\")",
-      "PowerShell(dotnet test *)"
+      "PowerShell(dotnet test *)",
+      "Bash(gh run *)",
+      "Bash(grep -v \"//.*DateTime\\\\|//.*Thread\")",
+      "Bash(sed -n '45,55p' src/Relay/Sinks/RotatingFileSink.cs)",
+      "Bash(sed -n '90,100p' src/Relay/Sinks/RotatingFileSink.cs)",
+      "Bash(sed -n '170,180p' src/Relay/Sinks/RotatingFileSink.cs)"
     ]
   }
 }
