@@ -7,6 +7,24 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+### refactor: rename `RamSink` → `MemorySink` + `[Obsolete]` compat shims
+
+`RamSink<T>` and `RamSink` (packet, non-generic) renamed to `MemorySink<T>` and `MemorySink`
+respectively. Both classes unsealed to permit inheritance by the backward-compatibility shims.
+
+Compat shims preserved at `src/Relay/Sinks/_Compat/RamSink.cs`:
+- `RamSink<T>` — `[Obsolete]` sealed subclass of `MemorySink<T>`; delegates all ctors.
+- `RamSink` — `[Obsolete]` sealed subclass of `MemorySink`; delegates all ctors.
+
+Planned removal in 2.0.
+
+**Files touched:** `src/Relay/Sinks/MemorySink.cs`, `src/Relay/Sinks/MemorySink.Packet.cs`,
+`src/Relay/Sinks/_Compat/RamSink.cs`, `tests/Relay.Tests/RamSinkObsoleteTests.cs`,
+`benchmarks/Relay.Benchmarks/Sinks/RamPacketSinkBenchmarks.cs`,
+`README.md`, `docs/topology.md`.
+
+---
+
 ### fix: `RotatingFileSink.ShouldRotate` — remove `DateTime.UtcNow.Date` from consumer hot path
 
 `RotatingFileSink.ShouldRotate` no longer calls `DateTime.UtcNow.Date` per consumed payload;
