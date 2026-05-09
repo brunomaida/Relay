@@ -42,7 +42,9 @@ src/
       FileStreamSink.cs      ← binary write to FileStream, POH buffer, backoff recovery
       MmfSink.cs             ← MemoryMappedFile, capacity-only failure
       TcpSink.cs             ← TCP socket, POH send buffer, backoff reconnect
-      RamSink.cs             ← native memory circular ring, last-resort fallback
+      MemorySink.cs          ← native memory circular ring, last-resort fallback
+    Sinks/_Compat/
+      RamSink.cs             ← [Obsolete] shim → MemorySink<T>
     Builder/
       RelayBuilder.cs        ← static entry points: Start / StartSpsc / StartMpsc
       SinkChain.cs           ← fluent chain builder; To / Fork / When / Multi; wires Next + Prev
@@ -60,7 +62,7 @@ src/
 |---|---|
 | `Relay` | `DispatchSink<T>`, `SpscQueueSink<T>`, `MpscQueueSink<T>`, `MultiSink<T>`, `Multi2Sink<T,TC1,TC2>`, `FilterSink<T>`, `NullSink<T>`, `ForkSink<T>`, `PacketSink`, `SpscQueueSink`, `MpscQueueSink`, `NullSink` |
 | `Relay.Buffers` | `SpscRingBuffer<T>`, `MpscRingBuffer<T>`, `SpscByteRingBuffer`, `MpscByteRingBuffer` (internal to lib) |
-| `Relay.Sinks` | Concrete backends: `FileStreamSink<T>`, `MmfSink<T>`, `TcpSink<T>`, `RamSink<T>` |
+| `Relay.Sinks` | Concrete backends: `FileStreamSink<T>`, `MmfSink<T>`, `TcpSink<T>`, `MemorySink<T>` |
 | `Relay.Builder` | `RelayBuilder`, `SinkChain<T,THead>`, `MultiBuilder<T>`, `FilterBinding<T,THead>` |
 | `Relay.Memory` | `RelayMemory` (internal) |
 | `Relay.Internal` | `HfClock`, `SinkConstraints` (internal) |
@@ -239,7 +241,7 @@ cleaner and costs nothing at runtime.
 | `FileStreamSink<T>` | `FileStream`, POH write buffer | `IOException` in `FlushBuffer` | Reopen stream, backoff 1s → 60s |
 | `TcpSink<T>` | `TcpClient` + `NetworkStream`, POH send buffer | `Exception` in `FlushBuffer` | Reconnect, backoff 1s → 30s |
 | `MmfSink<T>` | `MemoryMappedViewAccessor` | Capacity exhaustion (`_position + sizeof(T) > maxBytes`) | None — capacity only |
-| `RamSink<T>` | `NativeMemory.AllocZeroed`, unsafe circular ring | Ring full | None — `DrainTo(target)` on recovery. **Must free in `Dispose`.** |
+| `MemorySink<T>` | `NativeMemory.AllocZeroed`, unsafe circular ring | Ring full | None — `DrainTo(target)` on recovery. **Must free in `Dispose`.** |
 
 # Testing
 - `dotnet test tests/Relay.Tests` must pass (0 failures) before any commit.
