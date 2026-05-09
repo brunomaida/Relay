@@ -57,7 +57,15 @@
       "Bash(grep -v \"//.*DateTime\\\\|//.*Thread\")",
       "Bash(sed -n '45,55p' src/Relay/Sinks/RotatingFileSink.cs)",
       "Bash(sed -n '90,100p' src/Relay/Sinks/RotatingFileSink.cs)",
-      "Bash(sed -n '170,180p' src/Relay/Sinks/RotatingFileSink.cs)"
+      "Bash(sed -n '170,180p' src/Relay/Sinks/RotatingFileSink.cs)",
+      "PowerShell(dotnet build *)",
+      "Bash(grep -v \"^--$\")",
+      "Bash(Get-ChildItem -Recurse -Filter \"*.trx\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(dotnet pack *)",
+      "Bash(gh release *)",
+      "Bash(Remove-Item -Recurse -Force artifacts)",
+      "Bash(grep -E \"\\\\.cs$|\\\\.csproj$|\\\\.sln$\")"
     ]
   }
 }
