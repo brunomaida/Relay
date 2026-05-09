@@ -161,7 +161,13 @@ public abstract class SpscQueueSink : PacketSink
                 bool deadlineHit = checkDeadline && HfClock.NowTicks >= flushDeadline;
                 if (flushNow || deadlineHit)
                 {
-                    if (flushNow) Volatile.Write(ref _flushRequested, 0);
+                    if (flushNow)
+                    {
+                        // Drain ring before clearing the signal — items published before Flush()
+                        // must be included in this batch (signal can arrive before ring item is peeked).
+                        while (_ring.TryPeek(out var p, out int a)) { WriteToBackend(p); _ring.Advance(a); }
+                        Volatile.Write(ref _flushRequested, 0);
+                    }
                     FlushBackend();
                     if (deadlineHit)
                     {
