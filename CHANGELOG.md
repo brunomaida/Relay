@@ -7,6 +7,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.0.0] - 2026-05-09
+
 ### refactor: rename `RamSink` → `MemorySink` + `[Obsolete]` compat shims
 
 `RamSink<T>` and `RamSink` (packet, non-generic) renamed to `MemorySink<T>` and `MemorySink`
