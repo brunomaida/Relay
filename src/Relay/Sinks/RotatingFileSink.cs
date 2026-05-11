@@ -15,8 +15,16 @@ public sealed class RotatingFileSink : SpscQueueSink
     private const int MinBackoffMs = 1_000;
     private const int MaxBackoffMs = 60_000;
 
+    /// <summary>
+    /// Default file name format. Placeholders: <c>{0}</c> = prefix, <c>{1}</c> = date (DateTime),
+    /// <c>{2}</c> = sequence number (int).
+    /// Example result: <c>myprefix-20260511.0000.log</c>.
+    /// </summary>
+    public const string DefaultFileNameFormat = "{0}-{1:yyyyMMdd}.{2:D4}.log";
+
     private readonly string               _dir;
     private readonly string               _prefix;
+    private readonly string               _fileNameFormat;
     private readonly long                 _maxBytes;
     private readonly int                  _maxFiles;
     private readonly byte[]               _writeBuffer;
@@ -31,6 +39,10 @@ public sealed class RotatingFileSink : SpscQueueSink
     private int         _backoffMs      = MinBackoffMs;
     private long        _nextRetryTicks;
 
+    /// <param name="fileNameFormat">
+    /// Optional file name format string. Placeholders: <c>{0}</c> = prefix, <c>{1}</c> = date,
+    /// <c>{2}</c> = sequence. Defaults to <see cref="DefaultFileNameFormat"/>.
+    /// </param>
     public RotatingFileSink(
         string                dir,
         string                filenamePrefix,
@@ -39,15 +51,17 @@ public sealed class RotatingFileSink : SpscQueueSink
         int                   writeBufferCapacity = 65_536,
         int                   ringCapacity        = 65_536,
         int                   flushIntervalMs     = 200,
-        ReadOnlyMemory<byte>? header              = null)
+        ReadOnlyMemory<byte>? header              = null,
+        string?               fileNameFormat      = null)
         : base(ringCapacity, flushIntervalMs, $"file-{filenamePrefix}")
     {
-        _dir         = dir;
-        _prefix      = filenamePrefix;
-        _maxBytes    = maxBytes;
-        _maxFiles    = maxFiles;
-        _writeBuffer = GC.AllocateArray<byte>(writeBufferCapacity, pinned: true);
-        _header      = header ?? ReadOnlyMemory<byte>.Empty;
+        _dir            = dir;
+        _prefix         = filenamePrefix;
+        _fileNameFormat = fileNameFormat ?? DefaultFileNameFormat;
+        _maxBytes       = maxBytes;
+        _maxFiles       = maxFiles;
+        _writeBuffer    = GC.AllocateArray<byte>(writeBufferCapacity, pinned: true);
+        _header         = header ?? ReadOnlyMemory<byte>.Empty;
         _currentDay           = DateTime.UtcNow.Date;
         _nextDayBoundaryTicks = ComputeNextDayBoundaryTicks();
     }
@@ -127,7 +141,8 @@ public sealed class RotatingFileSink : SpscQueueSink
     {
         try
         {
-            string filename = $"{_prefix}-{_currentDay:yyyyMMdd}.{_seq:D4}.log";
+            string filename = string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                                            _fileNameFormat, _prefix, _currentDay, _seq);
             string path     = Path.Combine(_dir, filename);
 
             _stream = new FileStream(path, FileMode.Append, FileAccess.Write,
