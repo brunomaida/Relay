@@ -4,6 +4,9 @@ Single responsibility: receive `T`, deliver to the configured backend, and if de
 
 > Global tenets (HFT, code format, response format, base git workflow) defined in `~/.claude/CLAUDE.md`.
 
+## Tier
+`tier: ultra-low-latency` — all `.cs` files are hot-path; no cold-path exceptions. Enforced globally by `banned-api-enforce`.
+
 # Stack
 - Runtime: **.NET 9.0** (`net9.0`)
 - Language: **C# 13** (`<LangVersion>13</LangVersion>`)
