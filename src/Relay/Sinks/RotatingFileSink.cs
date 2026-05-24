@@ -72,6 +72,27 @@ public sealed class RotatingFileSink : SpscQueueSink
 
         if (ShouldRotate(payload.Length)) RotateNow();
 
+        // Payload larger than the write buffer — bypass batching and write directly.
+        if (payload.Length > _writeBuffer.Length)
+        {
+            if (_filled > 0) FlushToStream();
+            if (_stream is null) return;
+            try
+            {
+                _stream.Write(payload);
+                _stream.Flush();
+                _currentFileBytes += payload.Length;
+                _backoffMs = MinBackoffMs;
+            }
+            catch
+            {
+                _healthy = false;
+                _stream?.Dispose();
+                _stream = null;
+            }
+            return;
+        }
+
         if (_filled + payload.Length > _writeBuffer.Length) FlushToStream();
 
         payload.CopyTo(_writeBuffer.AsSpan(_filled));
