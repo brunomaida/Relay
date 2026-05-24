@@ -20,6 +20,10 @@ namespace Relay;
 /// Recovery drain: on flush interval, if <see cref="PacketSink.Next"/> (set via builder as
 /// <see cref="Prev"/>) has recovered, byte payloads buffered during failure are drained back upstream.
 /// </para>
+/// <para>Thread safety: <c>multi-producer-safe via Interlocked CAS</c>. Any number of threads may
+/// call <see cref="PacketSink.Enqueue"/> concurrently. Do NOT wrap <c>Enqueue</c> in an external
+/// lock — this sink uses lock-free CAS; adding a monitor costs ~1000 cycles per call with no
+/// benefit.</para>
 /// </remarks>
 public abstract class MpscQueueSink : PacketSink
 {

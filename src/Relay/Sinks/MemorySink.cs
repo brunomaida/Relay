@@ -10,6 +10,13 @@ namespace Relay.Sinks;
 /// Never throws IOException; <see cref="IsHealthy"/> is false only when the ring is full.
 /// Drain via <see cref="DrainTo"/> when the primary pipe recovers.
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: <c>single-producer per instance</c>. Only one thread may call
+/// <see cref="DispatchSink{T}.Enqueue"/> at a time. <see cref="DrainTo"/> must be called from
+/// a single recovery thread and never concurrently with <c>Enqueue</c>. No CAS — volatile
+/// reads/writes on head and tail suffice for the SPSC invariant. Do NOT wrap <c>Enqueue</c> in
+/// an external lock — adding a monitor costs ~1000 cycles per call with no benefit.</para>
+/// </remarks>
 // unsealed to allow [Obsolete] RamSink compat shim in _Compat/
 public unsafe class MemorySink<T> : DispatchSink<T> where T : unmanaged
 {

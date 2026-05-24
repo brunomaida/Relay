@@ -22,6 +22,10 @@ namespace Relay;
 /// Drain-to-Prev is SPSC w.r.t. Prev — the consumer thread is the sole caller of Prev.Enqueue
 /// during drain, matching the single-consumer contract on this ring.
 /// </para>
+/// <para>Thread safety: <c>multi-producer-safe via Interlocked CAS</c>. Any number of threads may
+/// call <see cref="DispatchSink{T}.Enqueue"/> concurrently. Do NOT wrap <c>Enqueue</c> in an
+/// external lock — this sink uses lock-free CAS; adding a monitor costs ~1000 cycles per call
+/// with no benefit.</para>
 /// </remarks>
 public abstract class MpscQueueSink<T> : DispatchSink<T> where T : unmanaged
 {
