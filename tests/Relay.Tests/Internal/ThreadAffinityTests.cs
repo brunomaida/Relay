@@ -40,11 +40,10 @@ public sealed class ThreadAffinityTests
         t.Start();
         t.Join(TimeSpan.FromSeconds(5));
 
-        if (!pinResult)
-        {
-            // Pin failed (e.g. permission denied in CI). Skip rather than fail.
-            return;
-        }
+        // Windows and Linux are the only supported platforms — Pin must succeed here.
+        // A false would indicate a broken P/Invoke or insufficient privilege (fail the test,
+        // don't silently swallow it).
+        pinResult.Should().BeTrue("ThreadAffinity.Pin must succeed on Windows and Linux");
 
         // Every iteration must land on CPU 0 — no migration should occur after pinning.
         foreach (int cpu in cpusObserved)
