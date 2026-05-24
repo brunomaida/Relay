@@ -46,6 +46,26 @@ public sealed class FileSink : SpscQueueSink
     {
         if (_stream is null && !TryOpenStream()) return;
 
+        // Payload larger than the write buffer — bypass batching and write directly.
+        if (payload.Length > _writeBuffer.Length)
+        {
+            if (_filled > 0) FlushToStream();
+            if (_stream is null) return;
+            try
+            {
+                _stream.Write(payload);
+                _stream.Flush();
+                _backoffMs = MinBackoffMs;
+            }
+            catch
+            {
+                _healthy = false;
+                _stream?.Dispose();
+                _stream = null;
+            }
+            return;
+        }
+
         if (_filled + payload.Length > _writeBuffer.Length)
             FlushToStream();
 

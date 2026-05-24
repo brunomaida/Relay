@@ -39,6 +39,28 @@ public sealed class NamedPipeSink : SpscQueueSink
     protected override void WriteToBackend(ReadOnlySpan<byte> payload)
     {
         int needed = 4 + payload.Length;
+
+        // Framed payload larger than the send buffer — bypass batching and write directly.
+        if (needed > _sendBuffer.Length)
+        {
+            if (_filled > 0) FlushBackend();
+            if (_client is null || !_client.IsConnected) return;
+            Span<byte> hdr = stackalloc byte[4];
+            BinaryPrimitives.WriteUInt32BigEndian(hdr, (uint)payload.Length);
+            try
+            {
+                _client.Write(hdr);
+                _client.Write(payload);
+                _backoffMs = MinBackoffMs;
+            }
+            catch
+            {
+                _filled  = 0;
+                _healthy = false;
+            }
+            return;
+        }
+
         if (_filled + needed > _sendBuffer.Length) FlushBackend();
 
         BinaryPrimitives.WriteUInt32BigEndian(_sendBuffer.AsSpan(_filled), (uint)payload.Length);
