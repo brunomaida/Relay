@@ -45,6 +45,44 @@ public sealed class NamedPipeSinkTests
     }
 
     [Fact]
+    public async Task Accept_PayloadLargerThanBuffer_BypassesBuffer()
+    {
+        // sendBufferCapacity=64: a 256-byte payload (+ 4B header = 260B) exceeds buffer → bypass path.
+        string name    = "relay-test-big-" + Guid.NewGuid().ToString("N");
+        byte[] payload = new byte[256];
+        for (int i = 0; i < payload.Length; i++) payload[i] = (byte)(i & 0xFF);
+
+        var ready = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var serverTask = Task.Run(() =>
+        {
+            using var server = new NamedPipeServerStream(name, PipeDirection.In, 1,
+                                                         PipeTransmissionMode.Byte, PipeOptions.None);
+            server.WaitForConnection();
+            byte[] lenBuf = new byte[4];
+            int read = server.Read(lenBuf, 0, 4);
+            if (read != 4) { ready.SetException(new Exception("short header")); return; }
+            int len = (int)BinaryPrimitives.ReadUInt32BigEndian(lenBuf);
+            byte[] buf = new byte[len];
+            int got = 0;
+            while (got < len) got += server.Read(buf, got, len - got);
+            ready.SetResult(buf);
+        });
+
+        await Task.Delay(100);
+
+        using var sink = new NamedPipeSink(name, sendBufferCapacity: 64, flushIntervalMs: 50);
+        sink.Start();
+        sink.Enqueue(payload);
+        sink.Stop(drainTimeoutMs: 2_000);
+
+        var received = await ready.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        sink.ConsumerException.Should().BeNull("consumer must not crash on oversized payload");
+        received.Should().Equal(payload);
+        await serverTask;
+    }
+
+    [Fact]
     public void Dispose_IsIdempotent()
     {
         var sink = new NamedPipeSink("relay-disp-" + Guid.NewGuid().ToString("N"));
