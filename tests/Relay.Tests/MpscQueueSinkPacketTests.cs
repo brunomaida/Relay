@@ -184,8 +184,8 @@ public sealed class MpscQueueSinkPacketTests
     {
         // Verifies that SinkChain<THead>.To wires MpscQueueSink.Prev so recovery
         // drain-to-prev is operative for packet MPSC consumer sinks.
-        var head     = new InMemorySpscByteSink();
-        var fallback = new InMemoryMpscByteSink();
+        using var head     = new InMemorySpscByteSink();
+        using var fallback = new InMemoryMpscByteSink();
 
         RelayBuilder
             .StartPacket<InMemorySpscByteSink>(head)
