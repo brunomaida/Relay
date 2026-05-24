@@ -1,0 +1,71 @@
+```
+
+BenchmarkDotNet v0.13.12, Windows 11 (10.0.26200.8457)
+12th Gen Intel Core i7-12700, 1 CPU, 20 logical and 12 physical cores
+.NET SDK 9.0.312
+  [Host]     : .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+
+
+```
+| Method                      | Capacity | PayloadSize | Mean       | Error     | StdDev    | Ratio | RatioSD | Code Size | Allocated | Alloc Ratio |
+|---------------------------- |--------- |------------ |-----------:|----------:|----------:|------:|--------:|----------:|----------:|------------:|
+| **Spsc_RoundTrip**              | **64**       | **8**           |  **3.1415 ns** | **0.0149 ns** | **0.0133 ns** |  **1.00** |    **0.00** |     **936 B** |         **-** |          **NA** |
+| Mpsc_RoundTrip_NoContention | 64       | 8           |  7.2432 ns | 0.0338 ns | 0.0283 ns |  2.31 |    0.01 |   1,424 B |         - |          NA |
+| Mpsc_TryPublish_Full        | 64       | 8           |  0.8153 ns | 0.0062 ns | 0.0058 ns |  0.26 |    0.00 |     767 B |         - |          NA |
+| Mpsc_TryPeek_Empty          | 64       | 8           |  0.1977 ns | 0.0063 ns | 0.0059 ns |  0.06 |    0.00 |     515 B |         - |          NA |
+|                             |          |             |            |           |           |       |         |           |           |             |
+| **Spsc_RoundTrip**              | **64**       | **64**          |  **0.7979 ns** | **0.0079 ns** | **0.0070 ns** |  **1.00** |    **0.00** |     **794 B** |         **-** |          **NA** |
+| Mpsc_RoundTrip_NoContention | 64       | 64          |  1.3559 ns | 0.0076 ns | 0.0063 ns |  1.70 |    0.01 |   1,299 B |         - |          NA |
+| Mpsc_TryPublish_Full        | 64       | 64          |  0.3989 ns | 0.0058 ns | 0.0052 ns |  0.50 |    0.01 |     750 B |         - |          NA |
+| Mpsc_TryPeek_Empty          | 64       | 64          |  0.2204 ns | 0.0344 ns | 0.0321 ns |  0.28 |    0.04 |     515 B |         - |          NA |
+|                             |          |             |            |           |           |       |         |           |           |             |
+| **Spsc_RoundTrip**              | **64**       | **256**         |  **0.9015 ns** | **0.0496 ns** | **0.0552 ns** |  **1.00** |    **0.00** |     **794 B** |         **-** |          **NA** |
+| Mpsc_RoundTrip_NoContention | 64       | 256         |  1.3827 ns | 0.0176 ns | 0.0156 ns |  1.53 |    0.09 |   1,299 B |         - |          NA |
+| Mpsc_TryPublish_Full        | 64       | 256         |  0.3899 ns | 0.0110 ns | 0.0098 ns |  0.43 |    0.02 |     750 B |         - |          NA |
+| Mpsc_TryPeek_Empty          | 64       | 256         |  0.1945 ns | 0.0075 ns | 0.0066 ns |  0.22 |    0.01 |     515 B |         - |          NA |
+|                             |          |             |            |           |           |       |         |           |           |             |
+| **Spsc_RoundTrip**              | **64**       | **1024**        |  **0.8053 ns** | **0.0124 ns** | **0.0110 ns** |  **1.00** |    **0.00** |     **794 B** |         **-** |          **NA** |
+| Mpsc_RoundTrip_NoContention | 64       | 1024        |  1.3868 ns | 0.0222 ns | 0.0197 ns |  1.72 |    0.03 |   1,299 B |         - |          NA |
+| Mpsc_TryPublish_Full        | 64       | 1024        |  0.4040 ns | 0.0101 ns | 0.0090 ns |  0.50 |    0.01 |     750 B |         - |          NA |
+| Mpsc_TryPeek_Empty          | 64       | 1024        |  0.1923 ns | 0.0043 ns | 0.0038 ns |  0.24 |    0.01 |     515 B |         - |          NA |
+|                             |          |             |            |           |           |       |         |           |           |             |
+| **Spsc_RoundTrip**              | **1024**     | **8**           |  **3.2706 ns** | **0.0817 ns** | **0.0724 ns** |  **1.00** |    **0.00** |     **936 B** |         **-** |          **NA** |
+| Mpsc_RoundTrip_NoContention | 1024     | 8           |  7.3605 ns | 0.0828 ns | 0.0647 ns |  2.26 |    0.06 |   1,424 B |         - |          NA |
+| Mpsc_TryPublish_Full        | 1024     | 8           |  0.8512 ns | 0.0459 ns | 0.0596 ns |  0.26 |    0.02 |     767 B |         - |          NA |
+| Mpsc_TryPeek_Empty          | 1024     | 8           |  0.1671 ns | 0.0052 ns | 0.0046 ns |  0.05 |    0.00 |     515 B |         - |          NA |
+|                             |          |             |            |           |           |       |         |           |           |             |
+| **Spsc_RoundTrip**              | **1024**     | **64**          |  **3.3276 ns** | **0.0187 ns** | **0.0166 ns** |  **1.00** |    **0.00** |     **961 B** |         **-** |          **NA** |
+| Mpsc_RoundTrip_NoContention | 1024     | 64          |  8.0168 ns | 0.0492 ns | 0.0460 ns |  2.41 |    0.02 |   1,449 B |         - |          NA |
+| Mpsc_TryPublish_Full        | 1024     | 64          |  0.8165 ns | 0.0072 ns | 0.0068 ns |  0.25 |    0.00 |     767 B |         - |          NA |
+| Mpsc_TryPeek_Empty          | 1024     | 64          |  0.1925 ns | 0.0099 ns | 0.0092 ns |  0.06 |    0.00 |     515 B |         - |          NA |
+|                             |          |             |            |           |           |       |         |           |           |             |
+| **Spsc_RoundTrip**              | **1024**     | **256**         |  **5.2306 ns** | **0.0973 ns** | **0.0910 ns** |  **1.00** |    **0.00** |     **938 B** |         **-** |          **NA** |
+| Mpsc_RoundTrip_NoContention | 1024     | 256         |  8.8062 ns | 0.0378 ns | 0.0335 ns |  1.68 |    0.03 |   1,405 B |         - |          NA |
+| Mpsc_TryPublish_Full        | 1024     | 256         |  0.8150 ns | 0.0064 ns | 0.0060 ns |  0.16 |    0.00 |     767 B |         - |          NA |
+| Mpsc_TryPeek_Empty          | 1024     | 256         |  0.1949 ns | 0.0037 ns | 0.0035 ns |  0.04 |    0.00 |     515 B |         - |          NA |
+|                             |          |             |            |           |           |       |         |           |           |             |
+| **Spsc_RoundTrip**              | **1024**     | **1024**        |  **0.8815 ns** | **0.0232 ns** | **0.0206 ns** |  **1.00** |    **0.00** |     **794 B** |         **-** |          **NA** |
+| Mpsc_RoundTrip_NoContention | 1024     | 1024        |  1.3556 ns | 0.0087 ns | 0.0077 ns |  1.54 |    0.04 |   1,299 B |         - |          NA |
+| Mpsc_TryPublish_Full        | 1024     | 1024        |  0.4016 ns | 0.0090 ns | 0.0080 ns |  0.46 |    0.01 |     750 B |         - |          NA |
+| Mpsc_TryPeek_Empty          | 1024     | 1024        |  0.1989 ns | 0.0062 ns | 0.0055 ns |  0.23 |    0.01 |     515 B |         - |          NA |
+|                             |          |             |            |           |           |       |         |           |           |             |
+| **Spsc_RoundTrip**              | **65536**    | **8**           |  **3.1925 ns** | **0.0416 ns** | **0.0389 ns** |  **1.00** |    **0.00** |     **936 B** |         **-** |          **NA** |
+| Mpsc_RoundTrip_NoContention | 65536    | 8           |  7.4879 ns | 0.0545 ns | 0.0483 ns |  2.34 |    0.04 |   1,424 B |         - |          NA |
+| Mpsc_TryPublish_Full        | 65536    | 8           |  0.8134 ns | 0.0076 ns | 0.0071 ns |  0.25 |    0.00 |     751 B |         - |          NA |
+| Mpsc_TryPeek_Empty          | 65536    | 8           |  0.1955 ns | 0.0056 ns | 0.0050 ns |  0.06 |    0.00 |     515 B |         - |          NA |
+|                             |          |             |            |           |           |       |         |           |           |             |
+| **Spsc_RoundTrip**              | **65536**    | **64**          |  **3.6229 ns** | **0.0188 ns** | **0.0157 ns** |  **1.00** |    **0.00** |     **961 B** |         **-** |          **NA** |
+| Mpsc_RoundTrip_NoContention | 65536    | 64          |  7.6837 ns | 0.0679 ns | 0.0635 ns |  2.12 |    0.02 |   1,449 B |         - |          NA |
+| Mpsc_TryPublish_Full        | 65536    | 64          |  0.8151 ns | 0.0071 ns | 0.0063 ns |  0.23 |    0.00 |     767 B |         - |          NA |
+| Mpsc_TryPeek_Empty          | 65536    | 64          |  0.1933 ns | 0.0039 ns | 0.0033 ns |  0.05 |    0.00 |     515 B |         - |          NA |
+|                             |          |             |            |           |           |       |         |           |           |             |
+| **Spsc_RoundTrip**              | **65536**    | **256**         |  **5.7497 ns** | **0.0304 ns** | **0.0269 ns** |  **1.00** |    **0.00** |     **934 B** |         **-** |          **NA** |
+| Mpsc_RoundTrip_NoContention | 65536    | 256         |  9.4505 ns | 0.2144 ns | 0.3400 ns |  1.67 |    0.06 |   1,422 B |         - |          NA |
+| Mpsc_TryPublish_Full        | 65536    | 256         |  0.8174 ns | 0.0096 ns | 0.0085 ns |  0.14 |    0.00 |     767 B |         - |          NA |
+| Mpsc_TryPeek_Empty          | 65536    | 256         |  0.1967 ns | 0.0068 ns | 0.0064 ns |  0.03 |    0.00 |     515 B |         - |          NA |
+|                             |          |             |            |           |           |       |         |           |           |             |
+| **Spsc_RoundTrip**              | **65536**    | **1024**        | **14.0768 ns** | **0.3109 ns** | **0.3931 ns** |  **1.00** |    **0.00** |     **934 B** |         **-** |          **NA** |
+| Mpsc_RoundTrip_NoContention | 65536    | 1024        | 17.2695 ns | 0.3628 ns | 0.4319 ns |  1.23 |    0.05 |   1,422 B |         - |          NA |
+| Mpsc_TryPublish_Full        | 65536    | 1024        |  0.8157 ns | 0.0073 ns | 0.0064 ns |  0.06 |    0.00 |     767 B |         - |          NA |
+| Mpsc_TryPeek_Empty          | 65536    | 1024        |  0.1941 ns | 0.0061 ns | 0.0054 ns |  0.01 |    0.00 |     515 B |         - |          NA |
