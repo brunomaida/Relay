@@ -5,7 +5,7 @@ namespace Relay;
 
 /// <summary>
 /// Abstract base for a composable fallback dispatch pipeline.
-/// T must be a cache-line-aligned unmanaged struct (32, 64, 128, or 256 bytes).
+/// T must be an unmanaged struct whose size is a positive multiple of 64 bytes (64, 128, 192, ...).
 /// Zero counters in base — subclasses opt in via override.
 /// </summary>
 /// <remarks>
