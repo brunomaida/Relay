@@ -13,13 +13,15 @@ public sealed class SinkChain<THead> where THead : PacketSink
     internal SinkChain(THead head) { Head = head; _tail = head; }
 
     /// <summary>
-    /// Appends <paramref name="sink"/> as fallback. Wires <see cref="SpscQueueSink.Prev"/>
-    /// when <paramref name="sink"/> is an <see cref="SpscQueueSink"/> (enables drain-to-prev).
+    /// Appends <paramref name="sink"/> as fallback. Wires <see cref="SpscQueueSink.Prev"/> or
+    /// <see cref="MpscQueueSink.Prev"/> when <paramref name="sink"/> is a queue sink (enables
+    /// drain-to-prev recovery).
     /// </summary>
     public SinkChain<THead> To(PacketSink sink)
     {
         _tail.Next = sink;
-        if (sink is SpscQueueSink spsc) spsc.Prev = _tail;
+        if      (sink is SpscQueueSink spsc) spsc.Prev = _tail;
+        else if (sink is MpscQueueSink mpsc) mpsc.Prev = _tail;
         _tail = sink;
         return this;
     }
