@@ -12,6 +12,13 @@ namespace Relay;
 /// Abstract base for a <see cref="PacketSink"/> that buffers payloads in a lock-free SPSC ring
 /// and delivers them via a dedicated consumer thread. Subclasses implement the backend.
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: <c>single-producer</c>. Only one thread may call
+/// <see cref="PacketSink.Enqueue"/> at a time. The consumer thread that drains the ring is
+/// owned internally by this base class. Do NOT wrap <c>Enqueue</c> in an external lock —
+/// this sink uses volatile/Interlocked primitives; adding a monitor costs ~1000 cycles per call
+/// with no benefit.</para>
+/// </remarks>
 public abstract class SpscQueueSink : PacketSink
 {
     private const int SpinIter  = 10;

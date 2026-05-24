@@ -19,6 +19,11 @@ namespace Relay;
 /// Recovery drain: on flush interval, if <see cref="DispatchSink{T}.Next"/> (set via builder as
 /// <see cref="Prev"/>) has recovered, items buffered during failure are drained back upstream.
 /// </para>
+/// <para>Thread safety: <c>single-producer</c>. Only one thread may call
+/// <see cref="DispatchSink{T}.Enqueue"/> at a time. The consumer thread that drains the ring is
+/// owned internally by this base class. Do NOT wrap <c>Enqueue</c> in an external lock —
+/// this sink uses volatile/Interlocked primitives; adding a monitor costs ~1000 cycles per call
+/// with no benefit.</para>
 /// </remarks>
 public abstract class SpscQueueSink<T> : DispatchSink<T> where T : unmanaged
 {

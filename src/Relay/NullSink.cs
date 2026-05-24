@@ -6,6 +6,10 @@ namespace Relay;
 /// No-op sink: accepts every item and discards it immediately.
 /// Useful as a terminal fallback, in tests, or to disable a pipe without restructuring the chain.
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: thread-safe (no-op singleton). Any number of threads may call
+/// <c>Enqueue</c> concurrently with no locking required.</para>
+/// </remarks>
 public sealed class NullSink<T> : DispatchSink<T> where T : unmanaged
 {
     /// <summary>Shared singleton — allocation-free.</summary>
