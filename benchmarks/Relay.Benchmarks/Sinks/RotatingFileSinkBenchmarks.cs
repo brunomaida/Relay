@@ -7,9 +7,9 @@ namespace Relay.Benchmarks.Sinks;
 
 /// <summary>
 /// Measures <see cref="RotatingFileSink"/> consumer hot path — specifically the cost of
-/// the per-record rotation predicate (<c>ShouldRotate</c>) which historically called
-/// <c>DateTime.UtcNow.Date</c>. Used as a regression gate for the fix that caches the
-/// next-day boundary in <c>HfClock</c> ticks.
+/// the per-record rotation predicate (<c>ShouldRotate</c>). Used as the regression gate
+/// for the fix that replaced <c>HfClock</c>-tick boundary caching with a direct
+/// <c>DateTime.UtcNow.Date</c> comparison for correctness under hibernation/TSC drift.
 /// </summary>
 /// <remarks>
 /// Two benchmarks:
@@ -58,8 +58,9 @@ public class RotatingFileSinkBenchmarks
 
     /// <summary>
     /// Isolated <c>ShouldRotate</c> predicate — the rotation gate without surrounding
-    /// buffer copy. Before fix: dominated by <c>DateTime.UtcNow.Date</c> (~7-11 ns).
-    /// After fix: bounds check + cached <c>HfClock</c>-tick compare (~1-2 ns).
+    /// buffer copy. Uses <c>DateTime.UtcNow.Date</c> comparison (~13-22 ns) for correctness
+    /// under hibernation / TSC drift; HfClock-tick caching was faster (~1-2 ns) but
+    /// desynchronized across sleep/wake cycles.
     /// </summary>
     [Benchmark]
     public bool ShouldRotate_Predicate()

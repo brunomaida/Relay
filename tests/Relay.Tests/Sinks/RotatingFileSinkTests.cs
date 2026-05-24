@@ -89,7 +89,7 @@ public sealed class RotatingFileSinkTests : IDisposable
         sink.Enqueue(new byte[100]);
         Thread.Sleep(120);                              // let the consumer drain into file 1
 
-        sink.SetDayBoundaryForTest(Relay.Internal.HfClock.NowTicks - 1); // simulate "yesterday ended"
+        sink.SetCurrentDayForTest(DateTime.UtcNow.Date.AddDays(-1)); // simulate "yesterday"
 
         sink.Enqueue(new byte[100]);
         sink.Stop(drainTimeoutMs: 1_000);
