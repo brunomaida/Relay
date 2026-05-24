@@ -1,6 +1,7 @@
 using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Sockets;
 using Relay.Internal;
 
@@ -57,10 +58,13 @@ public sealed class TcpSink : SpscQueueSink
             if (_socket is null) return;
             Span<byte> hdr = stackalloc byte[4];
             BinaryPrimitives.WriteUInt32BigEndian(hdr, (uint)payload.Length);
+            // Header and payload are sent as a logical unit: if either send fails or only
+            // partially succeeds mid-way, we set _healthy=false so recovery reconnects
+            // (re-syncing the peer's frame reader at the next connection boundary).
             try
             {
-                _socket.Send(hdr);
-                _socket.Send(payload);
+                SendAll(hdr);
+                SendAll(payload);
                 _backoffMs = MinBackoffMs;
             }
             catch
@@ -85,7 +89,7 @@ public sealed class TcpSink : SpscQueueSink
         if (_filled == 0 || _socket is null) return;
         try
         {
-            _socket.Send(_sendBuffer.AsSpan(0, _filled));
+            SendAll(_sendBuffer.AsSpan(0, _filled));
             _filled    = 0;
             _backoffMs = MinBackoffMs;
         }
@@ -93,6 +97,19 @@ public sealed class TcpSink : SpscQueueSink
         {
             _filled  = 0;
             _healthy = false;
+        }
+    }
+
+    /// <summary>Sends all bytes in <paramref name="buffer"/>, looping on partial sends.</summary>
+    /// <exception cref="IOException">Thrown when the remote end closes the connection.</exception>
+    private void SendAll(ReadOnlySpan<byte> buffer)
+    {
+        int total = 0;
+        while (total < buffer.Length)
+        {
+            int sent = _socket!.Send(buffer.Slice(total));
+            if (sent <= 0) throw new IOException("Send returned 0; peer closed");
+            total += sent;
         }
     }
 

@@ -47,6 +47,9 @@ public sealed class NamedPipeSink : SpscQueueSink
             if (_client is null || !_client.IsConnected) return;
             Span<byte> hdr = stackalloc byte[4];
             BinaryPrimitives.WriteUInt32BigEndian(hdr, (uint)payload.Length);
+            // Stream.Write contract (blocking byte-mode PipeStream): writes all bytes or throws.
+            // No partial-write loop required — unlike sockets, PipeStream does not return a
+            // partial count; it either completes fully or raises an exception.
             try
             {
                 _client.Write(hdr);
@@ -72,6 +75,8 @@ public sealed class NamedPipeSink : SpscQueueSink
     protected override void FlushBackend()
     {
         if (_filled == 0 || _client is null || !_client.IsConnected) return;
+        // Stream.Write contract (blocking byte-mode PipeStream): writes all bytes or throws.
+        // No partial-write loop required.
         try
         {
             _client.Write(_sendBuffer.AsSpan(0, _filled));
