@@ -44,12 +44,10 @@ internal static class ThreadAffinity
     [SupportedOSPlatform("linux")]
     private static unsafe bool PinLinux(int cpu)
     {
-        // cpu_set_t on Linux is 128 bytes; we model it as two ulongs (supports CPUs 0-127).
-        // Only the low 64-bit word is needed for cpu < 64, which is enforced above.
-        ulong lo = 1UL << cpu;
-        ulong hi = 0UL;
-        int rc = sched_setaffinity(0, 16, &lo);
-        _ = hi; // suppress unused-variable warning
+        // cpu_set_t on Linux is 128 bytes; we model it as one ulong (supports CPUs 0-63,
+        // enforced by the caller guard) and pass cpusetsize=8.
+        ulong mask = 1UL << cpu;
+        int rc = sched_setaffinity(0, 8, &mask);
         return rc == 0;
     }
 
