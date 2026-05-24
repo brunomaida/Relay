@@ -55,7 +55,7 @@ public sealed class TcpSink : SpscQueueSink
         if (needed > _sendBuffer.Length)
         {
             if (_filled > 0) FlushBackend();
-            if (_socket is null) return;
+            if (_socket is null || !_healthy) return;
             Span<byte> hdr = stackalloc byte[4];
             BinaryPrimitives.WriteUInt32BigEndian(hdr, (uint)payload.Length);
             // Header and payload are sent as a logical unit: if either send fails or only
