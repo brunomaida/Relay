@@ -15,7 +15,10 @@ namespace Relay;
 /// <see cref="MpscQueueSink{T}"/>), <c>Enqueue</c> on this sink carries no additional
 /// synchronisation cost. Do NOT wrap <c>Enqueue</c> in an external lock — any child sinks
 /// that require single-producer discipline must be respected individually; a monitor here
-/// adds ~1000 cycles per call with no benefit.</para>
+/// adds ~1000 cycles per call with no benefit.
+/// Therefore <c>Enqueue</c> on this sink is safe for concurrent callers only when every child
+/// is itself multi-producer-safe (e.g. <see cref="MpscQueueSink{T}"/>); mixing SPSC children
+/// with concurrent producers is undefined behaviour.</para>
 /// </remarks>
 public sealed class MultiSink<T> : DispatchSink<T> where T : unmanaged
 {
@@ -62,7 +65,10 @@ public sealed class MultiSink<T> : DispatchSink<T> where T : unmanaged
 /// <remarks>
 /// <para>Thread safety: inherits from children — same contract as <see cref="MultiSink{T}"/>.
 /// Do NOT wrap <c>Enqueue</c> in an external lock; adding a monitor costs ~1000 cycles per call
-/// with no benefit.</para>
+/// with no benefit.
+/// Therefore <c>Enqueue</c> on this sink is safe for concurrent callers only when every child
+/// is itself multi-producer-safe (e.g. <see cref="MpscQueueSink{T}"/>); mixing SPSC children
+/// with concurrent producers is undefined behaviour.</para>
 /// </remarks>
 public sealed class Multi2Sink<T, TC1, TC2> : DispatchSink<T>
     where T   : unmanaged
