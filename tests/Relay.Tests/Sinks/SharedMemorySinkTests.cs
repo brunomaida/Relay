@@ -2,6 +2,7 @@ using System;
 using System.Buffers.Binary;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.Versioning;
+using System.Threading;
 using FluentAssertions;
 using Relay.Sinks;
 using Xunit;
@@ -9,7 +10,7 @@ using Xunit;
 namespace Relay.Tests.Sinks;
 
 /// <summary>
-/// Tests for <see cref="SharedMemorySink"/>.
+/// Tests for <see cref="SharedMemorySpscSink"/>.
 /// Verifies byte-exact compatibility with Log2 SharedMemorySink protocol:
 ///   Magic = 0x4C473200 ("LG2\0"), int WriteIndex at offset 8, int ReadIndex at offset 64,
 ///   records = 4-byte BE length prefix + payload, ring-wrapped modular index.
@@ -29,7 +30,7 @@ public sealed class SharedMemorySinkTests
         string name = "Local\\relay-shm-" + Guid.NewGuid().ToString("N");
         int    cap  = 4 * 1024;
 
-        using var sink = new SharedMemorySink(name, cap);
+        using var sink = new SharedMemorySpscSink(name, cap);
         byte[] payload = [10, 20, 30];
         sink.Enqueue(payload);
 
@@ -72,7 +73,7 @@ public sealed class SharedMemorySinkTests
         int    dataArea = 64;
         int    total    = HeaderSize + dataArea;
 
-        using var sink = new SharedMemorySink(name, total);
+        using var sink = new SharedMemorySpscSink(name, total);
 
         // A payload that by itself (4 + payload) exceeds dataArea forces Accept to return false.
         byte[] tooBig = new byte[dataArea]; // frameLen = 4 + 64 = 68 > 64 → Accept returns false
@@ -90,7 +91,7 @@ public sealed class SharedMemorySinkTests
         int    dataArea = 32;
         int    total    = HeaderSize + dataArea;
 
-        using var sink = new SharedMemorySink(name, total);
+        using var sink = new SharedMemorySpscSink(name, total);
 
         // First record: 4 + 10 = 14 bytes → WriteIndex = 14
         sink.Enqueue(new byte[10]);
@@ -129,9 +130,113 @@ public sealed class SharedMemorySinkTests
     public void Dispose_IsIdempotent()
     {
         string name = "Local\\relay-shm-disp-" + Guid.NewGuid().ToString("N");
-        var sink = new SharedMemorySink(name, 1024);
+        var sink = new SharedMemorySpscSink(name, 1024);
         sink.Dispose();
         var act = () => sink.Dispose();
         act.Should().NotThrow();
+    }
+
+    /// <summary>
+    /// Regression test for the publish-ordering race: reader must never observe a partial frame.
+    /// Producer writes N frames with a distinctive pattern (high bit set, low 7 bits = seq).
+    /// A concurrent reader spins on WriteIndex and validates every payload byte before the
+    /// index advances equals the expected pattern — zero bytes signal incomplete writes.
+    /// This test fails on the pre-fix CAS-before-write code; passes on the fixed code.
+    /// </summary>
+    [Fact]
+    [SupportedOSPlatform("windows")]
+    public unsafe void Reader_NeverObservesPartialFrame()
+    {
+        const int  Frames      = 20_000;
+        const int  PayloadSize = 4_096; // large payload widens the race window (~500+ cycles to copy)
+        const int  FrameLen    = 4 + PayloadSize;
+        // Ring large enough to never wrap during the run — avoids wrap-path in reader
+        int        dataArea    = FrameLen * (Frames + 1);
+        int        total       = HeaderSize + dataArea;
+
+        string name = "Local\\relay-shm-race-" + Guid.NewGuid().ToString("N");
+
+        using var sink = new SharedMemorySpscSink(name, total);
+
+        // Open a reader view into the same MMF
+        using var readerMmf  = MemoryMappedFile.OpenExisting(name);
+        using var readerView = readerMmf.CreateViewAccessor(0, total);
+
+        byte* readerPtr = null;
+        readerView.SafeMemoryMappedViewHandle.AcquirePointer(ref readerPtr);
+        try
+        {
+            bool    producerDone = false;
+            string? raceError    = null;
+
+            var reader = new Thread(() =>
+            {
+                int prevIdx = 0;
+                byte* data  = readerPtr + HeaderSize;
+
+                while (!Volatile.Read(ref producerDone) || prevIdx < Frames * FrameLen)
+                {
+                    int writeIdx = Volatile.Read(ref *(int*)(readerPtr + WriteIndexOffset));
+                    if (writeIdx == prevIdx)
+                    {
+                        Thread.SpinWait(10);
+                        continue;
+                    }
+
+                    // A frame was published. Validate every byte in [prevIdx .. prevIdx+FrameLen).
+                    // Length prefix (4 bytes BE): first byte must be 0 (len = PayloadSize < 256)
+                    // then remaining prefix bytes, then PayloadSize bytes with high bit set.
+                    // Any zero in the payload region = partial write race.
+                    int off = prevIdx;
+
+                    // Check length prefix: expect 0x00_00_00_10 (=16, big-endian)
+                    byte lenB0 = data[off];
+                    byte lenB1 = data[off + 1];
+                    byte lenB2 = data[off + 2];
+                    byte lenB3 = data[off + 3];
+                    int  len   = (lenB0 << 24) | (lenB1 << 16) | (lenB2 << 8) | lenB3;
+                    if (len != PayloadSize)
+                    {
+                        raceError = $"Frame at {off}: length prefix = {len}, expected {PayloadSize}";
+                        break;
+                    }
+
+                    // Validate payload bytes — each byte has high bit set (0x80..0xFF)
+                    for (int i = 0; i < PayloadSize; i++)
+                    {
+                        byte b = data[off + 4 + i];
+                        if ((b & 0x80) == 0)
+                        {
+                            raceError = $"Partial frame at {off}: payload[{i}] = 0x{b:X2} (high bit not set) — producer had not finished writing";
+                            break;
+                        }
+                    }
+                    if (raceError != null) break;
+
+                    prevIdx = writeIdx;
+                }
+            });
+
+            reader.IsBackground = true;
+            reader.Start();
+
+            // Produce N frames. Each payload byte has high bit set so zero = race.
+            byte[] payload = new byte[PayloadSize];
+            for (int seq = 0; seq < Frames; seq++)
+            {
+                byte marker = (byte)(0x80 | (seq & 0x7F));
+                Array.Fill(payload, marker);
+                sink.Enqueue(payload);
+            }
+
+            Volatile.Write(ref producerDone, true);
+            reader.Join(TimeSpan.FromSeconds(10));
+
+            raceError.Should().BeNull(because: "reader must never see a partial frame");
+        }
+        finally
+        {
+            readerView.SafeMemoryMappedViewHandle.ReleasePointer();
+        }
     }
 }

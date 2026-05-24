@@ -13,6 +13,21 @@ namespace Relay.Sinks;
 /// </summary>
 /// <remarks>
 /// <para>
+/// <b>Producer topology: single-producer, multi-process-reader (SPSC at the producer level).</b><br/>
+/// Only one producer thread — and only one producing process — may call <see cref="PacketSink.Enqueue"/>
+/// concurrently. Multiple producers, even from different processes, produce undefined behavior
+/// (torn writes, invisible frames). <see cref="SharedMemorySpscSink"/> intentionally removes the
+/// previous <c>Interlocked.CompareExchange</c> claim-before-write pattern that falsely implied
+/// MPSC tolerance.
+/// </para>
+/// <para>
+/// <b>Publish ordering guarantee:</b> the payload is fully copied to shared memory BEFORE
+/// <c>WriteIdx</c> is advanced via <see cref="Volatile.Write"/>. An explicit
+/// <see cref="Thread.MemoryBarrier"/> between the last store and the index publish ensures
+/// readers in other processes never observe a partial frame. Cost: ~10–30 extra cycles per
+/// frame vs. the previous CAS-first ordering (Codex estimate; see SharedMemorySinkBenchmarks).
+/// </para>
+/// <para>
 /// <b>MMF layout (128-byte header):</b><br/>
 /// CL0 [0..63]:  Magic(4) + DataCapacity(4) + WriteIndex(4) + pad(52)<br/>
 /// CL1 [64..127]: ReadIndex(4) + pad(60)<br/>
@@ -21,14 +36,14 @@ namespace Relay.Sinks;
 /// <para>
 /// <b>WriteIndex semantics:</b> modular int, wraps on every increment
 /// (<c>newIdx = (oldIdx + frameLen) % _dataCapacity</c>). Matches Log2 exactly.
-/// MPSC-tolerant via <see cref="Interlocked.CompareExchange(ref int,int,int)"/> on WriteIndex.
 /// </para>
 /// <para>
 /// <b>Platform:</b> Named MMFs require Windows. Will throw on other platforms.
 /// </para>
 /// </remarks>
+// unsealed to allow [Obsolete] SharedMemorySink compat shim in _Compat/
 [SupportedOSPlatform("windows")]
-public sealed unsafe class SharedMemorySink : PacketSink
+public unsafe class SharedMemorySpscSink : PacketSink
 {
     // Must match Log2 SharedMemorySink exactly — "LG2\0" = 0x4C473200
     private const uint SHM_MAGIC     = 0x4C473200u;
@@ -48,7 +63,7 @@ public sealed unsafe class SharedMemorySink : PacketSink
     /// <param name="name">Named MMF identifier (e.g. "Local\\my-shm"). Must match the Log2 producer.</param>
     /// <param name="totalCapacity">Total MMF size in bytes, including the 128-byte header.
     /// Must exceed 128. Ignored when opening an existing mapping.</param>
-    public SharedMemorySink(string name, int totalCapacity = 4 * 1024 * 1024)
+    public SharedMemorySpscSink(string name, int totalCapacity = 4 * 1024 * 1024)
     {
         if (totalCapacity <= HEADER_SIZE)
             throw new ArgumentException("totalCapacity must exceed 128B header.", nameof(totalCapacity));
@@ -91,16 +106,9 @@ public sealed unsafe class SharedMemorySink : PacketSink
         int frameLen = 4 + payload.Length;
         if (frameLen > _dataCapacity) return false;
 
-        // CAS to claim write slot — modular index, wraps at _dataCapacity.
-        // Matches Log2 SharedMemorySink exactly; no buffer-full guard in Log2.
-        int oldIdx, newIdx;
-        do
-        {
-            oldIdx = Volatile.Read(ref *(int*)(_ptr + WRITE_IDX_OFF));
-            newIdx = (oldIdx + frameLen) % _dataCapacity;
-        }
-        while (Interlocked.CompareExchange(
-            ref *(int*)(_ptr + WRITE_IDX_OFF), newIdx, oldIdx) != oldIdx);
+        // SPSC: producer is the sole writer of WriteIdx — plain read, no CAS.
+        int oldIdx = Volatile.Read(ref *(int*)(_ptr + WRITE_IDX_OFF));
+        int newIdx = (oldIdx + frameLen) % _dataCapacity;
 
         byte* data = _ptr + HEADER_SIZE;
 
@@ -109,6 +117,10 @@ public sealed unsafe class SharedMemorySink : PacketSink
         {
             BinaryPrimitives.WriteInt32BigEndian(new Span<byte>(data + oldIdx, 4), payload.Length);
             payload.CopyTo(new Span<byte>(data + oldIdx + 4, payload.Length));
+            // Barrier: all payload stores must be visible before WriteIdx advances.
+            // Readers in other processes observe WriteIdx only AFTER full frame is in memory.
+            Thread.MemoryBarrier();
+            Volatile.Write(ref *(int*)(_ptr + WRITE_IDX_OFF), newIdx);
             return true;
         }
 
@@ -117,7 +129,9 @@ public sealed unsafe class SharedMemorySink : PacketSink
         BinaryPrimitives.WriteInt32BigEndian(lenBuf, payload.Length);
         WriteRing(data, _dataCapacity, oldIdx, lenBuf);
         WriteRing(data, _dataCapacity, (oldIdx + 4) % _dataCapacity, payload);
-
+        // Barrier: same ordering guarantee — wrap path too.
+        Thread.MemoryBarrier();
+        Volatile.Write(ref *(int*)(_ptr + WRITE_IDX_OFF), newIdx);
         return true;
     }
 
