@@ -13,6 +13,13 @@ namespace Relay.Sinks;
 /// IOException sets <c>_healthy = false</c>; <see cref="TryRecoverBackend"/> reopens the stream
 /// with exponential backoff 1s → <see cref="RetryMaxDelayMs"/>.
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: <c>single-producer</c> — inherits <see cref="SpscQueueSink{T}"/> topology.
+/// Only one thread may call <c>Enqueue</c> at a time. File I/O runs on the internally-owned
+/// consumer thread via <c>WriteToBackend</c> and <c>FlushBackend</c>; do not call those methods
+/// directly. Do NOT wrap <c>Enqueue</c> in an external lock — this sink uses volatile/Interlocked
+/// primitives; adding a monitor costs ~1000 cycles per call with no benefit.</para>
+/// </remarks>
 public sealed class FileStreamSink<T> : SpscQueueSink<T> where T : unmanaged
 {
     private const int DefaultRingCapacity  = 524_288;

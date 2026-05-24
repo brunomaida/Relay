@@ -3,6 +3,10 @@ using System;
 namespace Relay;
 
 /// <summary>No-op <see cref="PacketSink"/> terminal. Always healthy; silently discards payloads.</summary>
+/// <remarks>
+/// <para>Thread safety: thread-safe (no-op singleton). Any number of threads may call
+/// <c>Enqueue</c> concurrently with no locking required.</para>
+/// </remarks>
 public sealed class NullSink : PacketSink
 {
     /// <summary>Shared singleton. Use instead of allocating a new instance.</summary>

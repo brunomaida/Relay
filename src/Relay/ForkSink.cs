@@ -20,6 +20,11 @@ namespace Relay;
 /// <see cref="DispatchSink{T}.Enqueue"/> constant-folds the propagate branch — the call to
 /// <c>Next?.Enqueue</c> is issued unconditionally after local acceptance.
 /// </para>
+/// <para>Thread safety: inherits from the primary sink. If primary is a
+/// <see cref="SpscQueueSink{T}"/>, only one thread may call <c>Enqueue</c> at a time; if
+/// primary is a <see cref="MpscQueueSink{T}"/>, concurrent producers are safe. Do NOT wrap
+/// <c>Enqueue</c> in an external lock — the fork itself is stateless; adding a monitor costs
+/// ~1000 cycles per call with no benefit.</para>
 /// </remarks>
 public sealed class ForkSink<T> : DispatchSink<T> where T : unmanaged
 {

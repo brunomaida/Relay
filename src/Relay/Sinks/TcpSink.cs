@@ -14,6 +14,13 @@ namespace Relay.Sinks;
 /// unhealthy so new items fall through to <c>Next</c>. <see cref="TryRecoverBackend"/>
 /// reconnects with exponential backoff 1s → 30s.
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: <c>single-producer</c> — inherits <see cref="SpscQueueSink{T}"/> topology.
+/// Only one thread may call <c>Enqueue</c> at a time. The socket send loop runs on the
+/// internally-owned consumer thread; do not call <c>WriteToBackend</c> or <c>FlushBackend</c>
+/// directly. Do NOT wrap <c>Enqueue</c> in an external lock — this sink uses volatile/Interlocked
+/// primitives; adding a monitor costs ~1000 cycles per call with no benefit.</para>
+/// </remarks>
 public sealed class TcpSink<T> : SpscQueueSink<T> where T : unmanaged
 {
     private const int DefaultRingCapacity  = 16_384;
