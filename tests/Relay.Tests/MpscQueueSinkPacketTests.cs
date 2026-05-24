@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using FluentAssertions;
 using Relay;
+using Relay.Builder;
 using Xunit;
 
 namespace Relay.Tests;
@@ -176,7 +177,34 @@ public sealed class MpscQueueSinkPacketTests
         primary.Stop(drainTimeoutMs: 500);
     }
 
+    // ── builder wiring ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Builder_WiresPrevForMpscFallback()
+    {
+        // Verifies that SinkChain<THead>.To wires MpscQueueSink.Prev so recovery
+        // drain-to-prev is operative for packet MPSC consumer sinks.
+        var head     = new InMemorySpscByteSink();
+        var fallback = new InMemoryMpscByteSink();
+
+        RelayBuilder
+            .StartPacket<InMemorySpscByteSink>(head)
+            .To(fallback);
+
+        fallback.Prev.Should().BeSameAs(head, "builder must wire Prev on MpscQueueSink fallback");
+    }
+
     // ── private test pipes ────────────────────────────────────────────────────
+
+    private sealed class InMemorySpscByteSink : SpscQueueSink
+    {
+        public InMemorySpscByteSink() : base(64, 50, "test-spsc") { }
+
+        protected override void WriteToBackend(ReadOnlySpan<byte> payload) { }
+        protected override void FlushBackend()      { }
+        protected override void TryRecoverBackend() { }
+        protected override void DisposeBackend()    { }
+    }
 
     private sealed class InMemoryMpscByteSink : MpscQueueSink
     {
