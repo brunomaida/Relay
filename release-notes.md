@@ -19,6 +19,7 @@ Patch release. Corretude em sinks de pacote e sinks concretos; opt-in de affinit
 - **Packet sinks** (`TcpSink`, `NamedPipeSink`): loop `Send/Write` para corretude em partial-send.
 - **Fixed-buffer sinks**: guarda payload > capacidade do buffer.
 - **`SinkChain.Packet` builder**: `MpscQueueSink.Prev` não era wired — recovery drain nunca disparava em chains MPSC packet.
+- **`SharedMemorySink`** (packet, non-generic): renomeado para `SharedMemorySpscSink`; shim `[Obsolete]` preservado para compatibilidade — remoção planejada para 2.0.
 
 ## Perf
 
