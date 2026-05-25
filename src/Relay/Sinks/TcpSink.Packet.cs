@@ -58,30 +58,6 @@ public sealed class TcpSink : SpscQueueSink
         // UnixSocket/SharedMemory receivers (BinaryPrimitives.ReadInt32BigEndian).
         int needed = 4 + payload.Length;
 
-        // Framed payload larger than the send buffer — bypass batching and send directly.
-        if (needed > _sendBuffer.Length)
-        {
-            if (_filled > 0) FlushBackend();
-            if (_socket is null || !_healthy) return;
-            Span<byte> hdr = stackalloc byte[4];
-            BinaryPrimitives.WriteUInt32BigEndian(hdr, (uint)payload.Length);
-            // Header and payload are sent as a logical unit: if either send fails or only
-            // partially succeeds mid-way, we set _healthy=false so recovery reconnects
-            // (re-syncing the peer's frame reader at the next connection boundary).
-            try
-            {
-                SendAll(hdr);
-                SendAll(payload);
-                _backoffMs = MinBackoffMs;
-            }
-            catch
-            {
-                _filled  = 0;
-                _healthy = false;
-            }
-            return;
-        }
-
         if (_filled + needed > _sendBuffer.Length)
             FlushBackend();
 
