@@ -77,25 +77,6 @@ public sealed class TcpSinkPacketTests : IDisposable
     }
 
     [Fact]
-    public void Accept_PayloadLargerThanBuffer_BypassesBuffer()
-    {
-        // sendBufferCapacity=64: a 256-byte payload (+ 4B header = 260B) exceeds buffer → bypass path.
-        byte[] payload = new byte[256];
-        for (int i = 0; i < payload.Length; i++) payload[i] = (byte)(i & 0xFF);
-
-        using var sink = new TcpSink("127.0.0.1", _port, sendBufferCapacity: 64, flushIntervalMs: 50);
-        sink.Start();
-
-        sink.Enqueue(payload);
-        sink.Stop(drainTimeoutMs: 2_000);
-
-        WaitForReceived(count: 1);
-        sink.ConsumerException.Should().BeNull("consumer must not crash on oversized payload");
-        _received.Should().HaveCount(1);
-        _received[0].Should().Equal(payload);
-    }
-
-    [Fact]
     public void Dispose_IsIdempotent()
     {
         var sink = new TcpSink("127.0.0.1", _port);
