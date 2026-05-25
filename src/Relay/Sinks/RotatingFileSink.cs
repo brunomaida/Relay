@@ -29,6 +29,7 @@ public sealed class RotatingFileSink : SpscQueueSink
     private readonly int                  _maxFiles;
     private readonly byte[]               _writeBuffer;
     private readonly ReadOnlyMemory<byte> _header;
+    private readonly Func<DateTime>       _utcNow;
 
     private FileStream? _stream;
     private int         _filled;
@@ -52,7 +53,8 @@ public sealed class RotatingFileSink : SpscQueueSink
         int                   ringCapacity        = 65_536,
         int                   flushIntervalMs     = 200,
         ReadOnlyMemory<byte>? header              = null,
-        string?               fileNameFormat      = null)
+        string?               fileNameFormat      = null,
+        Func<DateTime>?       utcNow              = null)
         : base(ringCapacity, flushIntervalMs, $"file-{filenamePrefix}")
     {
         _dir            = dir;
@@ -62,7 +64,8 @@ public sealed class RotatingFileSink : SpscQueueSink
         _maxFiles       = maxFiles;
         _writeBuffer    = GC.AllocateArray<byte>(writeBufferCapacity, pinned: true);
         _header         = header ?? ReadOnlyMemory<byte>.Empty;
-        _currentDay           = DateTime.UtcNow.Date;
+        _utcNow               = utcNow ?? (static () => DateTime.UtcNow);
+        _currentDay           = _utcNow().Date;
         _nextDayBoundaryTicks = ComputeNextDayBoundaryTicks();
     }
 
@@ -129,7 +132,7 @@ public sealed class RotatingFileSink : SpscQueueSink
         _stream?.Dispose();
         _stream = null;
         _seq++;
-        _currentDay           = DateTime.UtcNow.Date;
+        _currentDay           = _utcNow().Date;
         _nextDayBoundaryTicks = ComputeNextDayBoundaryTicks();
         _currentFileBytes     = 0;
         TryOpenStream();
@@ -205,9 +208,9 @@ public sealed class RotatingFileSink : SpscQueueSink
         catch { /* best-effort */ }
     }
 
-    private static long ComputeNextDayBoundaryTicks()
+    private long ComputeNextDayBoundaryTicks()
     {
-        var  now          = DateTime.UtcNow;
+        var  now          = _utcNow();
         var  nextMidnight = now.Date.AddDays(1);
         long msUntil      = (long)(nextMidnight - now).TotalMilliseconds;
         return HfClock.NowTicks + msUntil * (Stopwatch.Frequency / 1_000);
@@ -232,7 +235,7 @@ public sealed class RotatingFileSink : SpscQueueSink
     /// Benchmark-only accessor: invokes <see cref="ShouldRotate"/> in isolation, so BDN can
     /// measure the predicate cost without the surrounding buffer copy in
     /// <see cref="WriteToBackend"/>. Used as the regression gate for the
-    /// <c>DateTime.UtcNow.Date</c> → <c>HfClock</c>-tick fix. Visible to
+    /// injected-clock → <c>HfClock</c>-tick fix. Visible to
     /// <c>Relay.Benchmarks</c> via <c>InternalsVisibleTo</c>; never call from production.
     /// </summary>
     internal bool BenchInvokeShouldRotate(int incomingBytes) => ShouldRotate(incomingBytes);
