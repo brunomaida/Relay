@@ -10,13 +10,6 @@ namespace Relay.Sinks;
 /// SpscQueueSink that rotates files by size and/or date. Optional header written once per
 /// new file. Cleanup retention by max-file count.
 /// </summary>
-/// <remarks>
-/// <para>Thread safety: <c>single-producer</c> — inherits <see cref="SpscQueueSink"/> topology.
-/// Only one thread may call <c>Enqueue</c> at a time. File rotation and I/O run on the
-/// internally-owned consumer thread; do not call <c>WriteToBackend</c> or <c>FlushBackend</c>
-/// directly. Do NOT wrap <c>Enqueue</c> in an external lock — this sink uses volatile/Interlocked
-/// primitives; adding a monitor costs ~1000 cycles per call with no benefit.</para>
-/// </remarks>
 public sealed class RotatingFileSink : SpscQueueSink
 {
     private const int MinBackoffMs = 1_000;
@@ -42,6 +35,7 @@ public sealed class RotatingFileSink : SpscQueueSink
     private long        _currentFileBytes;
     private int         _seq;
     private DateTime    _currentDay;
+    private long        _nextDayBoundaryTicks;          // HfClock ticks at the next UTC midnight
     private int         _backoffMs      = MinBackoffMs;
     private long        _nextRetryTicks;
 
@@ -67,8 +61,9 @@ public sealed class RotatingFileSink : SpscQueueSink
         _maxBytes       = maxBytes;
         _maxFiles       = maxFiles;
         _writeBuffer    = GC.AllocateArray<byte>(writeBufferCapacity, pinned: true);
-        _header     = header ?? ReadOnlyMemory<byte>.Empty;
-        _currentDay = DateTime.UtcNow.Date;
+        _header         = header ?? ReadOnlyMemory<byte>.Empty;
+        _currentDay           = DateTime.UtcNow.Date;
+        _nextDayBoundaryTicks = ComputeNextDayBoundaryTicks();
     }
 
     protected override void WriteToBackend(ReadOnlySpan<byte> payload)
@@ -124,7 +119,7 @@ public sealed class RotatingFileSink : SpscQueueSink
     private bool ShouldRotate(int incomingBytes)
     {
         if (_currentFileBytes + incomingBytes > _maxBytes) return true;
-        if (DateTime.UtcNow.Date > _currentDay) return true;
+        if (HfClock.NowTicks >= _nextDayBoundaryTicks) return true;
         return false;
     }
 
@@ -134,8 +129,9 @@ public sealed class RotatingFileSink : SpscQueueSink
         _stream?.Dispose();
         _stream = null;
         _seq++;
-        _currentDay       = DateTime.UtcNow.Date;
-        _currentFileBytes = 0;
+        _currentDay           = DateTime.UtcNow.Date;
+        _nextDayBoundaryTicks = ComputeNextDayBoundaryTicks();
+        _currentFileBytes     = 0;
         TryOpenStream();
         Cleanup();
     }
@@ -209,12 +205,20 @@ public sealed class RotatingFileSink : SpscQueueSink
         catch { /* best-effort */ }
     }
 
+    private static long ComputeNextDayBoundaryTicks()
+    {
+        var  now          = DateTime.UtcNow;
+        var  nextMidnight = now.Date.AddDays(1);
+        long msUntil      = (long)(nextMidnight - now).TotalMilliseconds;
+        return HfClock.NowTicks + msUntil * (Stopwatch.Frequency / 1_000);
+    }
+
     /// <summary>
-    /// Test-only hook: overrides <c>_currentDay</c> so callers can simulate a date change
-    /// without waiting for UTC midnight. Visible to <c>Relay.Tests</c> via
-    /// <c>InternalsVisibleTo</c>.
+    /// Test-only hook: forces the next-day-boundary tick threshold. Visible to
+    /// <c>Relay.Tests</c> via <c>InternalsVisibleTo</c>. Production callers must use
+    /// <see cref="ComputeNextDayBoundaryTicks"/> (resampled inside <see cref="RotateNow"/>).
     /// </summary>
-    internal void SetCurrentDayForTest(DateTime day) => _currentDay = day.Date;
+    internal void SetDayBoundaryForTest(long ticks) => _nextDayBoundaryTicks = ticks;
 
     /// <summary>
     /// Benchmark-only accessor: invokes <see cref="WriteToBackend"/> directly so BDN can
@@ -228,7 +232,7 @@ public sealed class RotatingFileSink : SpscQueueSink
     /// Benchmark-only accessor: invokes <see cref="ShouldRotate"/> in isolation, so BDN can
     /// measure the predicate cost without the surrounding buffer copy in
     /// <see cref="WriteToBackend"/>. Used as the regression gate for the
-    /// <c>HfClock</c>-tick → <c>DateTime.UtcNow.Date</c> correctness fix. Visible to
+    /// <c>DateTime.UtcNow.Date</c> → <c>HfClock</c>-tick fix. Visible to
     /// <c>Relay.Benchmarks</c> via <c>InternalsVisibleTo</c>; never call from production.
     /// </summary>
     internal bool BenchInvokeShouldRotate(int incomingBytes) => ShouldRotate(incomingBytes);
