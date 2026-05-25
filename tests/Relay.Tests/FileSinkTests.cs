@@ -67,6 +67,23 @@ public sealed class FileSinkTests : IDisposable
     }
 
     [Fact]
+    public void Accept_PayloadLargerThanBuffer_BypassesBuffer()
+    {
+        // writeBufferCapacity=64 forces the bypass path for a 256-byte payload.
+        byte[] payload = new byte[256];
+        for (int i = 0; i < payload.Length; i++) payload[i] = (byte)(i & 0xFF);
+
+        using var sink = new FileSink(_path, writeBufferCapacity: 64, ringCapacity: 4_096, flushIntervalMs: 50);
+        sink.Start();
+
+        sink.Enqueue(payload);
+        sink.Stop(drainTimeoutMs: 1_000);
+
+        sink.ConsumerException.Should().BeNull("consumer must not crash on oversized payload");
+        File.ReadAllBytes(_path).Should().Equal(payload);
+    }
+
+    [Fact]
     public void Dispose_IsIdempotent()
     {
         var sink = new FileSink(_path, ringCapacity: 4_096);

@@ -10,6 +10,13 @@ namespace Relay.Sinks;
 /// to a <see cref="FileStream"/> on the flush interval. Supports an optional header written once
 /// when the file is first created (stream position == 0). No rotation.
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: <c>single-producer</c> — inherits <see cref="SpscQueueSink"/> topology.
+/// Only one thread may call <c>Enqueue</c> at a time. File I/O runs on the internally-owned
+/// consumer thread; do not call <c>WriteToBackend</c> or <c>FlushBackend</c> directly.
+/// Do NOT wrap <c>Enqueue</c> in an external lock — this sink uses volatile/Interlocked
+/// primitives; adding a monitor costs ~1000 cycles per call with no benefit.</para>
+/// </remarks>
 public sealed class FileSink : SpscQueueSink
 {
     private const int MinBackoffMs = 1_000;
@@ -45,6 +52,26 @@ public sealed class FileSink : SpscQueueSink
     protected override void WriteToBackend(ReadOnlySpan<byte> payload)
     {
         if (_stream is null && !TryOpenStream()) return;
+
+        // Payload larger than the write buffer — bypass batching and write directly.
+        if (payload.Length > _writeBuffer.Length)
+        {
+            if (_filled > 0) FlushToStream();
+            if (_stream is null) return;
+            try
+            {
+                _stream.Write(payload);
+                _stream.Flush();
+                _backoffMs = MinBackoffMs;
+            }
+            catch
+            {
+                _healthy = false;
+                _stream?.Dispose();
+                _stream = null;
+            }
+            return;
+        }
 
         if (_filled + payload.Length > _writeBuffer.Length)
             FlushToStream();

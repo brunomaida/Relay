@@ -19,6 +19,11 @@ namespace Relay;
 /// Recovery drain: on flush interval, if <see cref="DispatchSink{T}.Next"/> (set via builder as
 /// <see cref="Prev"/>) has recovered, items buffered during failure are drained back upstream.
 /// </para>
+/// <para>Thread safety: <c>single-producer</c>. Only one thread may call
+/// <see cref="DispatchSink{T}.Enqueue"/> at a time. The consumer thread that drains the ring is
+/// owned internally by this base class. Do NOT wrap <c>Enqueue</c> in an external lock —
+/// this sink uses volatile/Interlocked primitives; adding a monitor costs ~1000 cycles per call
+/// with no benefit.</para>
 /// </remarks>
 public abstract class SpscQueueSink<T> : DispatchSink<T> where T : unmanaged
 {
@@ -61,16 +66,38 @@ public abstract class SpscQueueSink<T> : DispatchSink<T> where T : unmanaged
     /// </summary>
     public override bool IsHealthy => _healthy;
 
+    private readonly ThreadPriority _threadPriority;
+    private readonly int            _affinityCpu;
+
     /// <param name="ringCapacity">SPSC ring capacity in entries. Must be a positive power of two.</param>
     /// <param name="flushIntervalMs">Max time between forced flushes in milliseconds.</param>
     /// <param name="pipeName">Optional name used as thread suffix for debugger/profiler visibility.</param>
-    protected SpscQueueSink(int ringCapacity, int flushIntervalMs, string pipeName = "")
+    /// <param name="threadPriority">
+    /// Priority of the consumer thread. Defaults to <see cref="ThreadPriority.BelowNormal"/>.
+    /// Pass <see cref="ThreadPriority.Normal"/> (or higher) on shared machines where the consumer
+    /// competes with other workloads and scheduler migration cost matters.
+    /// </param>
+    /// <param name="affinityCpu">
+    /// Logical CPU index to pin the consumer thread to, or <c>-1</c> (default) for no pinning.
+    /// When set to ≥ 0, calls <see cref="Internal.ThreadAffinity.Pin"/> inside the consumer thread
+    /// before any work begins. Best-effort: if the pin fails the thread runs unpinned.
+    /// Pinning is most effective on shared/multi-tenant machines; on dedicated machines
+    /// the scheduler typically preserves core affinity without explicit pinning.
+    /// </param>
+    protected SpscQueueSink(
+        int            ringCapacity,
+        int            flushIntervalMs,
+        string         pipeName       = "",
+        ThreadPriority threadPriority = ThreadPriority.BelowNormal,
+        int            affinityCpu    = -1)
     {
         SinkConstraints.AssertCacheLineAligned<T>();
         _ring               = new SpscRingBuffer<T>(ringCapacity);
         _flushIntervalTicks = (long)flushIntervalMs * (Stopwatch.Frequency / 1_000);
         _pipeName           = pipeName;
         _consumeBuf         = GC.AllocateArray<T>(BatchSize, pinned: true);
+        _threadPriority     = threadPriority;
+        _affinityCpu        = affinityCpu;
     }
 
     /// <summary>Pre-faults the ring buffer and starts the consumer thread.</summary>
@@ -83,7 +110,7 @@ public abstract class SpscQueueSink<T> : DispatchSink<T> where T : unmanaged
         {
             Name         = string.IsNullOrEmpty(_pipeName) ? "relay" : $"relay-{_pipeName}",
             IsBackground = true,
-            Priority     = ThreadPriority.BelowNormal
+            Priority     = _threadPriority
         };
         _thread.Start();
     }
@@ -155,6 +182,8 @@ public abstract class SpscQueueSink<T> : DispatchSink<T> where T : unmanaged
 
     private void ConsumeLoop()
     {
+        if (_affinityCpu >= 0) ThreadAffinity.Pin(_affinityCpu);
+
         try
         {
             long flushDeadline = HfClock.NowTicks + _flushIntervalTicks;

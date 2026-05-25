@@ -7,6 +7,12 @@ namespace Relay;
 /// <see cref="PacketSink"/> that delivers to a primary sink and propagates to <see cref="PacketSink.Next"/>
 /// after a successful accept — enabling tee/audit patterns.
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: inherits from both the primary sink and <see cref="PacketSink.Next"/>.
+/// The fork itself is stateless — both <c>_primary.Enqueue</c> and <c>Next?.Enqueue</c> are
+/// called on the caller thread with no additional synchronisation. If either is a single-producer
+/// sink, concurrent callers of this sink's <c>Enqueue</c> are undefined behaviour.</para>
+/// </remarks>
 public sealed class ForkSink : PacketSink
 {
     private readonly PacketSink _primary;
