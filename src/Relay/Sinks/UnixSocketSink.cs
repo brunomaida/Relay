@@ -1,6 +1,7 @@
 using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Sockets;
 using System.Runtime.Versioning;
 using Relay.Internal;
@@ -11,6 +12,13 @@ namespace Relay.Sinks;
 /// SpscQueueSink that delivers payloads to a Unix domain socket with 4-byte BE length prefix.
 /// Acts as client; expects an existing server (e.g., Input2Log UnixSocketInput).
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: <c>single-producer</c> — inherits <see cref="SpscQueueSink"/> topology.
+/// Only one thread may call <c>Enqueue</c> at a time. Socket writes run on the internally-owned
+/// consumer thread; do not call <c>WriteToBackend</c> or <c>FlushBackend</c> directly.
+/// Do NOT wrap <c>Enqueue</c> in an external lock — this sink uses volatile/Interlocked
+/// primitives; adding a monitor costs ~1000 cycles per call with no benefit.</para>
+/// </remarks>
 [SupportedOSPlatform("linux")]
 [SupportedOSPlatform("macos")]
 public sealed class UnixSocketSink : SpscQueueSink
@@ -41,6 +49,31 @@ public sealed class UnixSocketSink : SpscQueueSink
     protected override void WriteToBackend(ReadOnlySpan<byte> payload)
     {
         int needed = 4 + payload.Length;
+
+        // Framed payload larger than the send buffer — bypass batching and send directly.
+        if (needed > _sendBuffer.Length)
+        {
+            if (_filled > 0) FlushBackend();
+            if (_socket is null || !_healthy) return;
+            Span<byte> hdr = stackalloc byte[4];
+            BinaryPrimitives.WriteUInt32BigEndian(hdr, (uint)payload.Length);
+            // Header and payload are sent as a logical unit: if either send fails or only
+            // partially succeeds mid-way, we set _healthy=false so recovery reconnects
+            // (re-syncing the peer's frame reader at the next connection boundary).
+            try
+            {
+                SendAll(hdr);
+                SendAll(payload);
+                _backoffMs = MinBackoffMs;
+            }
+            catch
+            {
+                _filled  = 0;
+                _healthy = false;
+            }
+            return;
+        }
+
         if (_filled + needed > _sendBuffer.Length) FlushBackend();
 
         BinaryPrimitives.WriteUInt32BigEndian(_sendBuffer.AsSpan(_filled), (uint)payload.Length);
@@ -54,7 +87,7 @@ public sealed class UnixSocketSink : SpscQueueSink
         if (_filled == 0 || _socket is null) return;
         try
         {
-            _socket.Send(_sendBuffer.AsSpan(0, _filled));
+            SendAll(_sendBuffer.AsSpan(0, _filled));
             _filled    = 0;
             _backoffMs = MinBackoffMs;
         }
@@ -62,6 +95,19 @@ public sealed class UnixSocketSink : SpscQueueSink
         {
             _filled  = 0;
             _healthy = false;
+        }
+    }
+
+    /// <summary>Sends all bytes in <paramref name="buffer"/>, looping on partial sends.</summary>
+    /// <exception cref="IOException">Thrown when the remote end closes the connection.</exception>
+    private void SendAll(ReadOnlySpan<byte> buffer)
+    {
+        int total = 0;
+        while (total < buffer.Length)
+        {
+            int sent = _socket!.Send(buffer.Slice(total));
+            if (sent <= 0) throw new IOException("Send returned 0; peer closed");
+            total += sent;
         }
     }
 

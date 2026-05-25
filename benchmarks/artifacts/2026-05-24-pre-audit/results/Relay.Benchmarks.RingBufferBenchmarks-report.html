@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>Relay.Benchmarks.RingBufferBenchmarks-20260524-135951</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.13.12, Windows 11 (10.0.26200.8457)
+12th Gen Intel Core i7-12700, 1 CPU, 20 logical and 12 physical cores
+.NET SDK 9.0.312
+  [Host]     : .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method     </th><th>Capacity</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Median</th><th>Ratio</th><th>RatioSD</th><th>Code Size</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>TryConsume_Empty</td><td>64</td><td>0.2159 ns</td><td>0.0074 ns</td><td>0.0069 ns</td><td>0.2150 ns</td><td>1.000</td><td>0.00</td><td>73 B</td><td>-</td><td>NA</td>
+</tr><tr><td>RoundTrip</td><td>64</td><td>0.6510 ns</td><td>0.0067 ns</td><td>0.0059 ns</td><td>0.6504 ns</td><td>3.007</td><td>0.09</td><td>178 B</td><td>-</td><td>NA</td>
+</tr><tr><td>TryPublish_Full</td><td>64</td><td>0.0019 ns</td><td>0.0041 ns</td><td>0.0036 ns</td><td>0.0000 ns</td><td>0.009</td><td>0.02</td><td>110 B</td><td>-</td><td>NA</td>
+</tr><tr><td>RoundTrip_Batch32</td><td>64</td><td>36.1127 ns</td><td>0.2455 ns</td><td>0.2050 ns</td><td>36.0036 ns</td><td>166.694</td><td>4.94</td><td>422 B</td><td>-</td><td>NA</td>
+</tr><tr><td>TryConsume_Empty</td><td>1024</td><td>0.2063 ns</td><td>0.0033 ns</td><td>0.0029 ns</td><td>0.2064 ns</td><td>1.00</td><td>0.00</td><td>73 B</td><td>-</td><td>NA</td>
+</tr><tr><td>RoundTrip</td><td>1024</td><td>0.9448 ns</td><td>0.0112 ns</td><td>0.0104 ns</td><td>0.9404 ns</td><td>4.58</td><td>0.09</td><td>178 B</td><td>-</td><td>NA</td>
+</tr><tr><td>TryPublish_Full</td><td>1024</td><td>0.0025 ns</td><td>0.0049 ns</td><td>0.0045 ns</td><td>0.0000 ns</td><td>0.01</td><td>0.02</td><td>110 B</td><td>-</td><td>NA</td>
+</tr><tr><td>RoundTrip_Batch32</td><td>1024</td><td>48.5355 ns</td><td>1.0030 ns</td><td>2.1804 ns</td><td>47.3255 ns</td><td>247.93</td><td>6.61</td><td>431 B</td><td>-</td><td>NA</td>
+</tr><tr><td>TryConsume_Empty</td><td>65536</td><td>0.0000 ns</td><td>0.0000 ns</td><td>0.0000 ns</td><td>0.0000 ns</td><td>?</td><td>?</td><td>73 B</td><td>-</td><td>?</td>
+</tr><tr><td>RoundTrip</td><td>65536</td><td>2.2848 ns</td><td>0.1106 ns</td><td>0.3138 ns</td><td>2.1769 ns</td><td>?</td><td>?</td><td>184 B</td><td>-</td><td>?</td>
+</tr><tr><td>TryPublish_Full</td><td>65536</td><td>0.2046 ns</td><td>0.0049 ns</td><td>0.0041 ns</td><td>0.2032 ns</td><td>?</td><td>?</td><td>110 B</td><td>-</td><td>?</td>
+</tr><tr><td>RoundTrip_Batch32</td><td>65536</td><td>62.0749 ns</td><td>0.2489 ns</td><td>0.2207 ns</td><td>62.0580 ns</td><td>?</td><td>?</td><td>431 B</td><td>-</td><td>?</td>
+</tr></tbody></table>
+</body>
+</html>

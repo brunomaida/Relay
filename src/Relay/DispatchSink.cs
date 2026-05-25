@@ -5,13 +5,17 @@ namespace Relay;
 
 /// <summary>
 /// Abstract base for a composable fallback dispatch pipeline.
-/// T must be a cache-line-aligned unmanaged struct (32, 64, 128, or 256 bytes).
+/// T must be an unmanaged struct whose size is a positive multiple of 64 bytes (64, 128, 192, ...).
 /// Zero counters in base — subclasses opt in via override.
 /// </summary>
 /// <remarks>
 /// Hot path: <see cref="Enqueue"/> checks <see cref="IsHealthy"/> (short-circuit) then
 /// <see cref="Accept"/>. On any failure, delegates to <see cref="Next"/> (if set) or drops silently.
 /// The chain is decentralized — no orchestrator; each pipe manages its own health and routing.
+/// <para>Thread safety: defined by the concrete subclass. <see cref="SpscQueueSink{T}"/> is
+/// single-producer; <see cref="MpscQueueSink{T}"/> is multi-producer-safe via Interlocked CAS.
+/// Do NOT wrap <see cref="Enqueue"/> in an external lock without confirming the subclass
+/// topology — adding a monitor to a lock-free path costs ~1000 cycles per call with no benefit.</para>
 /// </remarks>
 public abstract class DispatchSink<T> : IDisposable where T : unmanaged
 {

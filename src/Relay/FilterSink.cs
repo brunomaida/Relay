@@ -12,6 +12,10 @@ namespace Relay;
 /// Returning true from <see cref="Accept"/> when the predicate fails prevents the fallback
 /// chain from receiving items that were intentionally filtered. If you need a "try next on
 /// filter miss" behaviour, compose two serial pipes instead.
+/// <para>Thread safety: as thread-safe as the downstream sink. The filter itself is stateless.
+/// Do NOT wrap <c>Enqueue</c> in an external lock — the predicate and downstream dispatch are
+/// both lock-free when downstream is a queue sink; adding a monitor costs ~1000 cycles per call
+/// with no benefit.</para>
 /// </remarks>
 public sealed class FilterSink<T> : DispatchSink<T> where T : unmanaged
 {

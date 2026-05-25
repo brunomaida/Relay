@@ -99,6 +99,27 @@ public sealed class RotatingFileSinkTests : IDisposable
     }
 
     [Fact]
+    public void Accept_PayloadLargerThanBuffer_BypassesBuffer()
+    {
+        // writeBufferCapacity=64 forces the bypass path for a 256-byte payload.
+        byte[] payload = new byte[256];
+        for (int i = 0; i < payload.Length; i++) payload[i] = (byte)(i & 0xFF);
+
+        using var sink = new RotatingFileSink(_dir, "log", maxBytes: 1_000_000,
+                                              writeBufferCapacity: 64, ringCapacity: 4_096,
+                                              flushIntervalMs: 50);
+        sink.Start();
+
+        sink.Enqueue(payload);
+        sink.Stop(drainTimeoutMs: 1_000);
+
+        sink.ConsumerException.Should().BeNull("consumer must not crash on oversized payload");
+        var files = Directory.GetFiles(_dir, "log-*.log");
+        files.Should().HaveCount(1);
+        File.ReadAllBytes(files[0]).Should().Equal(payload);
+    }
+
+    [Fact]
     public void Dispose_IsIdempotent()
     {
         var sink = new RotatingFileSink(_dir, "log", maxBytes: 1024);

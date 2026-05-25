@@ -18,6 +18,12 @@ namespace Relay.Sinks;
 /// a per-call bounds check and marshal) by caching the view's base pointer via
 /// <see cref="SafeBuffer.AcquirePointer"/>. The pointer is valid for the lifetime of the
 /// pipe; <see cref="SafeBuffer.ReleasePointer"/> is called from <see cref="DisposeBackend"/>.
+/// <para>Thread safety: <c>single-producer</c> — inherits <see cref="SpscQueueSink{T}"/> topology.
+/// Only one thread may call <c>Enqueue</c> at a time. MMF writes run on the internally-owned
+/// consumer thread. No IO recovery — failure mode is capacity exhaustion only; once full,
+/// <see cref="IsHealthy"/> returns false and new items fall through to <c>Next</c>. Do NOT
+/// wrap <c>Enqueue</c> in an external lock — adding a monitor costs ~1000 cycles per call
+/// with no benefit.</para>
 /// </remarks>
 public sealed class MmfSink<T> : SpscQueueSink<T> where T : unmanaged
 {

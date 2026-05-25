@@ -9,6 +9,33 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ---
 
+## [1.0.2] - 2026-05-25
+
+### Added
+
+- `SpscQueueSink<T>` / `MpscQueueSink<T>`: opt-in `threadPriority` and `affinityCpu` constructor parameters — enables consumer-thread priority control and CPU pinning for reduced scheduling jitter on shared/multi-tenant machines. Default: `BelowNormal`, no pinning. Best-effort: pin failure is silent.
+- `RotatingFileSink`: optional `fileNameFormat` constructor parameter — custom filename patterns with `{0}` (prefix), `{1}` (date), `{2}` (seq). Defaults to `DefaultFileNameFormat` (`{0}-{1:yyyyMMdd}.{2:D4}.log`).
+
+### Fixed
+
+- `RotatingFileSink`: inject `Func<DateTime>? utcNow` — removes `DateTime.UtcNow` from all production methods. Default factory `(static () => DateTime.UtcNow)` is a static lambda (no closure). Called only at construction and rotation events (cold path); `ShouldRotate` predicate unaffected.
+- `RotatingFileSink`: anchor day-boundary detection to absolute UTC date at rotation — prevents boundary drift when HfClock-tick estimate diverges from wall-clock over long uptimes.
+- `SinkConstraints.AssertCacheLineAligned<T>()`: enforce in Release builds (was DEBUG-only); fixes silent misalignment in production.
+- `SharedMemorySink`: enforce SPSC publish ordering — missing `Volatile.Write` before consumer copy corrected.
+- `TcpSink`: guard bypass path against unhealthy-but-open connection — `_stream != null` check was insufficient; now also checks `_healthy`.
+- Packet sinks (`TcpSink`, `NamedPipeSink`): loop `Send/Write` for partial-send correctness — single call was not guaranteed to write all bytes.
+- Fixed-buffer sinks: guard oversized payload — payload > buffer capacity no longer silently truncates.
+- `SinkChain.Packet` builder: wire `MpscQueueSink.Prev` — was not wired, causing recovery drain to never fire on MPSC packet chains.
+- `ThreadAffinity.PinLinux`: remove dead code path.
+- `SharedMemorySink` (packet, non-generic): add `[Obsolete]` shim → `SharedMemorySpscSink`; planned removal in 2.0.
+
+### Perf
+
+- `RotatingFileSink.ShouldRotate` predicate: **13.59 ns** (baseline 13.76 ns, Δ −0.17 ns within noise). `Func<DateTime>` cold-path delegate adds zero overhead to the per-record predicate. Allocation: 0 B.
+- Audit: `docs/reports/2026-05-25-hot-path-audit-relay.md` — 27/27 dimensions PASS, no regressions.
+
+---
+
 ## [1.0.1] - 2026-05-09
 
 ### Fixed

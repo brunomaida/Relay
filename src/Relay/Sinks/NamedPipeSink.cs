@@ -11,6 +11,13 @@ namespace Relay.Sinks;
 /// Compatible with Input2Log NamedPipe receiver. Acts as the client side; expects an existing
 /// server (e.g., Input2Log NamedPipeInput) to be listening.
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: <c>single-producer</c> — inherits <see cref="SpscQueueSink"/> topology.
+/// Only one thread may call <c>Enqueue</c> at a time. Pipe writes run on the internally-owned
+/// consumer thread; do not call <c>WriteToBackend</c> or <c>FlushBackend</c> directly.
+/// Do NOT wrap <c>Enqueue</c> in an external lock — this sink uses volatile/Interlocked
+/// primitives; adding a monitor costs ~1000 cycles per call with no benefit.</para>
+/// </remarks>
 public sealed class NamedPipeSink : SpscQueueSink
 {
     private const int MinBackoffMs = 1_000;
@@ -39,6 +46,31 @@ public sealed class NamedPipeSink : SpscQueueSink
     protected override void WriteToBackend(ReadOnlySpan<byte> payload)
     {
         int needed = 4 + payload.Length;
+
+        // Framed payload larger than the send buffer — bypass batching and write directly.
+        if (needed > _sendBuffer.Length)
+        {
+            if (_filled > 0) FlushBackend();
+            if (_client is null || !_client.IsConnected) return;
+            Span<byte> hdr = stackalloc byte[4];
+            BinaryPrimitives.WriteUInt32BigEndian(hdr, (uint)payload.Length);
+            // Stream.Write contract (blocking byte-mode PipeStream): writes all bytes or throws.
+            // No partial-write loop required — unlike sockets, PipeStream does not return a
+            // partial count; it either completes fully or raises an exception.
+            try
+            {
+                _client.Write(hdr);
+                _client.Write(payload);
+                _backoffMs = MinBackoffMs;
+            }
+            catch
+            {
+                _filled  = 0;
+                _healthy = false;
+            }
+            return;
+        }
+
         if (_filled + needed > _sendBuffer.Length) FlushBackend();
 
         BinaryPrimitives.WriteUInt32BigEndian(_sendBuffer.AsSpan(_filled), (uint)payload.Length);
@@ -50,6 +82,8 @@ public sealed class NamedPipeSink : SpscQueueSink
     protected override void FlushBackend()
     {
         if (_filled == 0 || _client is null || !_client.IsConnected) return;
+        // Stream.Write contract (blocking byte-mode PipeStream): writes all bytes or throws.
+        // No partial-write loop required.
         try
         {
             _client.Write(_sendBuffer.AsSpan(0, _filled));

@@ -1,0 +1,362 @@
+// Validating benchmarks:
+// ***** BenchmarkRunner: Start   *****
+// ***** Found 3 benchmark(s) in total *****
+// ***** Building 1 exe(s) in Parallel: Start   *****
+// start dotnet  restore /p:UseSharedCompilation=false /p:BuildInParallel=false /m:1 /p:Deterministic=true /p:Optimize=true in C:\Development\Libs\Relay\benchmarks\Relay.Benchmarks\bin\Release\net9.0\54972491-9a9c-4434-b006-851c0c0a1b78
+// command took 1.77 sec and exited with 0
+// start dotnet  build -c Release --no-restore /p:UseSharedCompilation=false /p:BuildInParallel=false /m:1 /p:Deterministic=true /p:Optimize=true in C:\Development\Libs\Relay\benchmarks\Relay.Benchmarks\bin\Release\net9.0\54972491-9a9c-4434-b006-851c0c0a1b78
+// command took 2.52 sec and exited with 0
+// ***** Done, took 00:00:04 (4.38 sec)   *****
+// Found 3 benchmarks:
+//   QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: Job-CPSXIE(InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3) [Scenario=Default]
+//   QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: Job-CPSXIE(InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3) [Scenario=NormalPriority]
+//   QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: Job-CPSXIE(InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3) [Scenario=NormalPinned]
+
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: Job-CPSXIE(InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3) [Scenario=Default]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet 54972491-9a9c-4434-b006-851c0c0a1b78.dll --anonymousPipes 2252 2280 --benchmarkName "Relay.Benchmarks.Internal.QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns(Scenario: Default)" --job "InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3" --benchmarkId 0 in C:\Development\Libs\Relay\benchmarks\Relay.Benchmarks\bin\Release\net9.0\54972491-9a9c-4434-b006-851c0c0a1b78\bin\Release\net9.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.13.12
+// Runtime=.NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2,AES,BMI1,BMI2,FMA,LZCNT,PCLMUL,POPCNT,AvxVnni,SERIALIZE VectorSize=256
+// Job: Job-YGIBVL(InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 483500.00 ns, 483.5000 us/op
+  [Default]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadJitting  1: 1 op, 155687500.00 ns, 155.6875 ms/op
+
+OverheadWarmup   1: 1 op, 500.00 ns, 500.0000 ns/op
+OverheadWarmup   2: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadWarmup   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   5: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   6: 1 op, 300.00 ns, 300.0000 ns/op
+
+OverheadActual   1: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   4: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   5: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   7: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual   8: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   9: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  10: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadActual  11: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  12: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  13: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  14: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  15: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  16: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  17: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  18: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  19: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+  [Default]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadWarmup   1: 1 op, 94417500.00 ns, 94.4175 ms/op
+  [Default]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadWarmup   2: 1 op, 94156400.00 ns, 94.1564 ms/op
+  [Default]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadWarmup   3: 1 op, 93330400.00 ns, 93.3304 ms/op
+
+// BeforeActualRun
+  [Default]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   1: 1 op, 93984300.00 ns, 93.9843 ms/op
+  [Default]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   2: 1 op, 95150500.00 ns, 95.1505 ms/op
+  [Default]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   3: 1 op, 94861500.00 ns, 94.8615 ms/op
+  [Default]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   4: 1 op, 94760500.00 ns, 94.7605 ms/op
+  [Default]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   5: 1 op, 93152100.00 ns, 93.1521 ms/op
+
+// AfterActualRun
+  [Default]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadResult   1: 1 op, 93984100.00 ns, 93.9841 ms/op
+WorkloadResult   2: 1 op, 95150300.00 ns, 95.1503 ms/op
+WorkloadResult   3: 1 op, 94861300.00 ns, 94.8613 ms/op
+WorkloadResult   4: 1 op, 94760300.00 ns, 94.7603 ms/op
+WorkloadResult   5: 1 op, 93151900.00 ns, 93.1519 ms/op
+// GC:  0 0 0 17736 1
+// Threading:  0 0 1
+
+// AfterAll
+// Benchmark Process 14652 has exited with code 0.
+
+Mean = 94.382 ms, StdErr = 0.363 ms (0.38%), N = 5, StdDev = 0.812 ms
+Min = 93.152 ms, Q1 = 93.984 ms, Median = 94.760 ms, Q3 = 94.861 ms, Max = 95.150 ms
+IQR = 0.877 ms, LowerFence = 92.668 ms, UpperFence = 96.177 ms
+ConfidenceInterval = [91.257 ms; 97.507 ms] (CI 99.9%), Margin = 3.125 ms (3.31% of Mean)
+Skewness = -0.49, Kurtosis = 1.26, MValue = 2
+
+// ** Remained 2 (66,7%) benchmark(s) to run. Estimated finish 2026-05-24 18:29 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: Job-CPSXIE(InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3) [Scenario=NormalPriority]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet 54972491-9a9c-4434-b006-851c0c0a1b78.dll --anonymousPipes 2232 1756 --benchmarkName "Relay.Benchmarks.Internal.QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns(Scenario: NormalPriority)" --job "InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3" --benchmarkId 1 in C:\Development\Libs\Relay\benchmarks\Relay.Benchmarks\bin\Release\net9.0\54972491-9a9c-4434-b006-851c0c0a1b78\bin\Release\net9.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.13.12
+// Runtime=.NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2,AES,BMI1,BMI2,FMA,LZCNT,PCLMUL,POPCNT,AvxVnni,SERIALIZE VectorSize=256
+// Job: Job-PVKKBL(InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 470600.00 ns, 470.6000 us/op
+  [NormalPriority]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadJitting  1: 1 op, 102718900.00 ns, 102.7189 ms/op
+
+OverheadWarmup   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   2: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   3: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadWarmup   4: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   7: 1 op, 200.00 ns, 200.0000 ns/op
+
+OverheadActual   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   2: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   3: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   5: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   7: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   8: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   9: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  10: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  11: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  12: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  13: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  14: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  15: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  16: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  17: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  18: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  19: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+  [NormalPriority]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadWarmup   1: 1 op, 96804800.00 ns, 96.8048 ms/op
+  [NormalPriority]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadWarmup   2: 1 op, 96796300.00 ns, 96.7963 ms/op
+  [NormalPriority]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadWarmup   3: 1 op, 99278400.00 ns, 99.2784 ms/op
+
+// BeforeActualRun
+  [NormalPriority]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   1: 1 op, 95425600.00 ns, 95.4256 ms/op
+  [NormalPriority]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   2: 1 op, 98292000.00 ns, 98.2920 ms/op
+  [NormalPriority]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   3: 1 op, 97775700.00 ns, 97.7757 ms/op
+  [NormalPriority]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   4: 1 op, 98373400.00 ns, 98.3734 ms/op
+  [NormalPriority]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   5: 1 op, 99176100.00 ns, 99.1761 ms/op
+
+// AfterActualRun
+  [NormalPriority]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadResult   1: 1 op, 95425400.00 ns, 95.4254 ms/op
+WorkloadResult   2: 1 op, 98291800.00 ns, 98.2918 ms/op
+WorkloadResult   3: 1 op, 97775500.00 ns, 97.7755 ms/op
+WorkloadResult   4: 1 op, 98373200.00 ns, 98.3732 ms/op
+WorkloadResult   5: 1 op, 99175900.00 ns, 99.1759 ms/op
+// GC:  0 0 0 17736 1
+// Threading:  0 0 1
+
+// AfterAll
+// Benchmark Process 57892 has exited with code 0.
+
+Mean = 97.808 ms, StdErr = 0.636 ms (0.65%), N = 5, StdDev = 1.423 ms
+Min = 95.425 ms, Q1 = 97.775 ms, Median = 98.292 ms, Q3 = 98.373 ms, Max = 99.176 ms
+IQR = 0.598 ms, LowerFence = 96.879 ms, UpperFence = 99.270 ms
+ConfidenceInterval = [92.328 ms; 103.289 ms] (CI 99.9%), Margin = 5.480 ms (5.60% of Mean)
+Skewness = -0.74, Kurtosis = 1.75, MValue = 2
+
+// ** Remained 1 (33,3%) benchmark(s) to run. Estimated finish 2026-05-24 18:29 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: Job-CPSXIE(InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3) [Scenario=NormalPinned]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet 54972491-9a9c-4434-b006-851c0c0a1b78.dll --anonymousPipes 2224 2452 --benchmarkName "Relay.Benchmarks.Internal.QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns(Scenario: NormalPinned)" --job "InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3" --benchmarkId 2 in C:\Development\Libs\Relay\benchmarks\Relay.Benchmarks\bin\Release\net9.0\54972491-9a9c-4434-b006-851c0c0a1b78\bin\Release\net9.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.13.12
+// Runtime=.NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX2,AES,BMI1,BMI2,FMA,LZCNT,PCLMUL,POPCNT,AvxVnni,SERIALIZE VectorSize=256
+// Job: Job-BVLZNI(InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3)
+
+OverheadJitting  1: 1 op, 490400.00 ns, 490.4000 us/op
+  [NormalPinned]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadJitting  1: 1 op, 106672700.00 ns, 106.6727 ms/op
+
+OverheadWarmup   1: 1 op, 400.00 ns, 400.0000 ns/op
+OverheadWarmup   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   3: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadWarmup   6: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadWarmup   7: 1 op, 300.00 ns, 300.0000 ns/op
+
+OverheadActual   1: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   2: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   3: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual   4: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   5: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   6: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   7: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   8: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual   9: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  10: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  11: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  12: 1 op, 600.00 ns, 600.0000 ns/op
+OverheadActual  13: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  14: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  15: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  16: 1 op, 200.00 ns, 200.0000 ns/op
+OverheadActual  17: 1 op, 100.00 ns, 100.0000 ns/op
+OverheadActual  18: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  19: 1 op, 300.00 ns, 300.0000 ns/op
+OverheadActual  20: 1 op, 200.00 ns, 200.0000 ns/op
+
+  [NormalPinned]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadWarmup   1: 1 op, 110032900.00 ns, 110.0329 ms/op
+  [NormalPinned]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadWarmup   2: 1 op, 98422400.00 ns, 98.4224 ms/op
+  [NormalPinned]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadWarmup   3: 1 op, 106247700.00 ns, 106.2477 ms/op
+
+// BeforeActualRun
+  [NormalPinned]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   1: 1 op, 96614400.00 ns, 96.6144 ms/op
+  [NormalPinned]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   2: 1 op, 110985600.00 ns, 110.9856 ms/op
+  [NormalPinned]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   3: 1 op, 95741300.00 ns, 95.7413 ms/op
+  [NormalPinned]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   4: 1 op, 92456700.00 ns, 92.4567 ms/op
+  [NormalPinned]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadActual   5: 1 op, 95100500.00 ns, 95.1005 ms/op
+
+// AfterActualRun
+  [NormalPinned]  p50=2097152ns  p99=0ns  p999=0ns
+WorkloadResult   1: 1 op, 96614100.00 ns, 96.6141 ms/op
+WorkloadResult   2: 1 op, 95741000.00 ns, 95.7410 ms/op
+WorkloadResult   3: 1 op, 92456400.00 ns, 92.4564 ms/op
+WorkloadResult   4: 1 op, 95100200.00 ns, 95.1002 ms/op
+// GC:  0 0 0 17736 1
+// Threading:  0 0 1
+
+// AfterAll
+// Benchmark Process 11480 has exited with code 0.
+
+Mean = 94.978 ms, StdErr = 0.896 ms (0.94%), N = 4, StdDev = 1.792 ms
+Min = 92.456 ms, Q1 = 94.439 ms, Median = 95.421 ms, Q3 = 95.959 ms, Max = 96.614 ms
+IQR = 1.520 ms, LowerFence = 92.159 ms, UpperFence = 98.239 ms
+ConfidenceInterval = [83.399 ms; 106.557 ms] (CI 99.9%), Margin = 11.579 ms (12.19% of Mean)
+Skewness = -0.49, Kurtosis = 1.16, MValue = 2
+
+// ** Remained 0 (0,0%) benchmark(s) to run. Estimated finish 2026-05-24 18:29 (0h 0m from now) **
+Successfully reverted power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// ***** BenchmarkRunner: Finish  *****
+
+// * Export *
+  benchmarks\artifacts\2026-05-24-s2.3-affinity\results\Relay.Benchmarks.Internal.QueueSinkLatencyBenchmark-report.csv
+  benchmarks\artifacts\2026-05-24-s2.3-affinity\results\Relay.Benchmarks.Internal.QueueSinkLatencyBenchmark-report-github.md
+  benchmarks\artifacts\2026-05-24-s2.3-affinity\results\Relay.Benchmarks.Internal.QueueSinkLatencyBenchmark-report.html
+
+// * Detailed results *
+QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: Job-CPSXIE(InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3) [Scenario=Default]
+Runtime = .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2; GC = Concurrent Workstation
+Mean = 94.382 ms, StdErr = 0.363 ms (0.38%), N = 5, StdDev = 0.812 ms
+Min = 93.152 ms, Q1 = 93.984 ms, Median = 94.760 ms, Q3 = 94.861 ms, Max = 95.150 ms
+IQR = 0.877 ms, LowerFence = 92.668 ms, UpperFence = 96.177 ms
+ConfidenceInterval = [91.257 ms; 97.507 ms] (CI 99.9%), Margin = 3.125 ms (3.31% of Mean)
+Skewness = -0.49, Kurtosis = 1.26, MValue = 2
+-------------------- Histogram --------------------
+[92.529 ms ; 95.513 ms) | @@@@@
+---------------------------------------------------
+
+QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: Job-CPSXIE(InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3) [Scenario=NormalPriority]
+Runtime = .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2; GC = Concurrent Workstation
+Mean = 97.808 ms, StdErr = 0.636 ms (0.65%), N = 5, StdDev = 1.423 ms
+Min = 95.425 ms, Q1 = 97.775 ms, Median = 98.292 ms, Q3 = 98.373 ms, Max = 99.176 ms
+IQR = 0.598 ms, LowerFence = 96.879 ms, UpperFence = 99.270 ms
+ConfidenceInterval = [92.328 ms; 103.289 ms] (CI 99.9%), Margin = 5.480 ms (5.60% of Mean)
+Skewness = -0.74, Kurtosis = 1.75, MValue = 2
+-------------------- Histogram --------------------
+[94.333 ms ; 96.518 ms) | @
+[96.518 ms ; 99.568 ms) | @@@@
+---------------------------------------------------
+
+QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: Job-CPSXIE(InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3) [Scenario=NormalPinned]
+Runtime = .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2; GC = Concurrent Workstation
+Mean = 94.978 ms, StdErr = 0.896 ms (0.94%), N = 4, StdDev = 1.792 ms
+Min = 92.456 ms, Q1 = 94.439 ms, Median = 95.421 ms, Q3 = 95.959 ms, Max = 96.614 ms
+IQR = 1.520 ms, LowerFence = 92.159 ms, UpperFence = 98.239 ms
+ConfidenceInterval = [83.399 ms; 106.557 ms] (CI 99.9%), Margin = 11.579 ms (12.19% of Mean)
+Skewness = -0.49, Kurtosis = 1.16, MValue = 2
+-------------------- Histogram --------------------
+[90.975 ms ; 94.376 ms) | @
+[94.376 ms ; 97.339 ms) | @@@
+---------------------------------------------------
+
+// * Summary *
+
+BenchmarkDotNet v0.13.12, Windows 11 (10.0.26200.8457)
+12th Gen Intel Core i7-12700, 1 CPU, 20 logical and 12 physical cores
+.NET SDK 9.0.312
+  [Host]     : .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+  Job-CPSXIE : .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+
+InvocationCount=1  IterationCount=5  LaunchCount=1  
+UnrollFactor=1  WarmupCount=3  
+
+| Method                  | Scenario       | Mean     | Error     | StdDev   | Allocated |
+|------------------------ |--------------- |---------:|----------:|---------:|----------:|
+| Measure_P999_Latency_Ns | Default        | 94.38 ms |  3.125 ms | 0.812 ms |  17.32 KB |
+| Measure_P999_Latency_Ns | NormalPriority | 97.81 ms |  5.480 ms | 1.423 ms |  17.32 KB |
+| Measure_P999_Latency_Ns | NormalPinned   | 94.98 ms | 11.579 ms | 1.792 ms |  17.32 KB |
+
+// * Warnings *
+MinIterationTime
+  QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3 -> The minimum observed iteration time is 93.1521 ms which is very small. It's recommended to increase it to at least 100.0000 ms using more operations.
+  QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3 -> The minimum observed iteration time is 95.4256 ms which is very small. It's recommended to increase it to at least 100.0000 ms using more operations.
+  QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3 -> The minimum observed iteration time is 92.4567 ms which is very small. It's recommended to increase it to at least 100.0000 ms using more operations.
+
+// * Hints *
+Outliers
+  QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3 -> 1 outlier  was  detected (95.43 ms)
+  QueueSinkLatencyBenchmark.Measure_P999_Latency_Ns: InvocationCount=1, IterationCount=5, LaunchCount=1, UnrollFactor=1, WarmupCount=3 -> 1 outlier  was  removed, 2 outliers were detected (92.46 ms, 110.99 ms)
+
+// * Legends *
+  Scenario  : Value of the 'Scenario' parameter
+  Mean      : Arithmetic mean of all measurements
+  Error     : Half of 99.9% confidence interval
+  StdDev    : Standard deviation of all measurements
+  Allocated : Allocated memory per single operation (managed only, inclusive, 1KB = 1024B)
+  1 ms      : 1 Millisecond (0.001 sec)
+
+// * Diagnostic Output - MemoryDiagnoser *
+
+
+// ***** BenchmarkRunner: End *****
+Run time: 00:00:04 (4.18 sec), executed benchmarks: 3
+
+Global total time: 00:00:08 (8.78 sec), executed benchmarks: 3
+// * Artifacts cleanup *
+Artifacts cleanup is finished
