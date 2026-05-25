@@ -11,6 +11,10 @@ namespace Relay;
 /// <remarks>
 /// Payload semantics: the <c>ReadOnlySpan&lt;byte&gt;</c> passed to <see cref="Accept"/> is valid
 /// for the duration of the call only. Implementations that buffer must copy before returning.
+/// <para>Thread safety: defined by the concrete subclass. <see cref="SpscQueueSink"/> is
+/// single-producer; <see cref="MpscQueueSink"/> is multi-producer-safe via Interlocked CAS.
+/// Do NOT wrap <see cref="Enqueue"/> in an external lock without confirming the subclass
+/// topology — adding a monitor to a lock-free path costs ~1000 cycles per call with no benefit.</para>
 /// </remarks>
 public abstract class PacketSink : IDisposable
 {

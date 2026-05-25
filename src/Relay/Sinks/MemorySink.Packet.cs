@@ -14,7 +14,9 @@ namespace Relay.Sinks;
 /// <para><b>Thread contract:</b> SPSC non-concurrent. <see cref="Accept"/> runs on the producer
 /// thread; <see cref="DrainTo"/> on the recovery thread. NEVER simultaneously. The caller
 /// guarantees producer quiescence before invoking <see cref="DrainTo"/>. No CAS —
-/// <c>Volatile.Write</c>/<c>Volatile.Read</c> on <c>_head</c>/<c>_tail</c> suffice.</para>
+/// <c>Volatile.Write</c>/<c>Volatile.Read</c> on <c>_head</c>/<c>_tail</c> suffice.
+/// Do NOT wrap <c>Enqueue</c> in an external lock — adding a monitor costs ~1000 cycles per
+/// call with no benefit.</para>
 /// <para><b>Layout:</b> Fill-once non-circular. Records fill <c>_buffer[0.._capacity]</c>
 /// linearly. Record = <c>[uint32 length (host order)][payload][padding to 4-byte multiple]</c>.
 /// <c>recordSize = 4 + ((payloadLen + 3) &amp; ~3)</c>. Length is host-order because the buffer

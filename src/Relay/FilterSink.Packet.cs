@@ -13,6 +13,12 @@ public delegate bool PacketPredicate(ReadOnlySpan<byte> payload);
 /// Conditional gate: payloads matching the predicate are forwarded to <paramref name="downstream"/>;
 /// non-matching payloads are silently consumed and do NOT propagate to <see cref="PacketSink.Next"/>.
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: as thread-safe as the downstream sink. The filter itself is stateless.
+/// Do NOT wrap <c>Enqueue</c> in an external lock — predicate evaluation and downstream dispatch
+/// are both lock-free when downstream is a queue sink; adding a monitor costs ~1000 cycles per
+/// call with no benefit.</para>
+/// </remarks>
 public sealed class FilterSink : PacketSink
 {
     private readonly PacketPredicate _predicate;

@@ -7,6 +7,15 @@ namespace Relay;
 /// Broadcasts every payload to all child <see cref="PacketSink"/> instances.
 /// <see cref="PacketSink.Next"/> is used only when all children are unhealthy.
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: inherits from children. The broadcast itself is synchronous on the
+/// calling thread. Do NOT wrap <c>Enqueue</c> in an external lock — any child sinks that
+/// require single-producer discipline must be respected individually; adding a monitor here
+/// costs ~1000 cycles per call with no benefit.
+/// Therefore <c>Enqueue</c> on this sink is safe for concurrent callers only when every child
+/// is itself multi-producer-safe (e.g. <see cref="MpscQueueSink"/>); mixing SPSC children
+/// with concurrent producers is undefined behaviour.</para>
+/// </remarks>
 public sealed class MultiSink : PacketSink
 {
     private readonly PacketSink[] _children;
@@ -54,6 +63,14 @@ public sealed class MultiSink : PacketSink
 /// <see cref="PacketSink.Enqueue"/> calls — saves 1-3 ns vs the array-based
 /// <see cref="MultiSink"/> at N=2.
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: inherits from children — same contract as <see cref="MultiSink"/>.
+/// Do NOT wrap <c>Enqueue</c> in an external lock; adding a monitor costs ~1000 cycles per call
+/// with no benefit.
+/// Therefore <c>Enqueue</c> on this sink is safe for concurrent callers only when every child
+/// is itself multi-producer-safe (e.g. <see cref="MpscQueueSink"/>); mixing SPSC children
+/// with concurrent producers is undefined behaviour.</para>
+/// </remarks>
 public sealed class Multi2PacketSink<TC1, TC2> : PacketSink
     where TC1 : PacketSink
     where TC2 : PacketSink

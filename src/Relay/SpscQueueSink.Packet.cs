@@ -12,6 +12,13 @@ namespace Relay;
 /// Abstract base for a <see cref="PacketSink"/> that buffers payloads in a lock-free SPSC ring
 /// and delivers them via a dedicated consumer thread. Subclasses implement the backend.
 /// </summary>
+/// <remarks>
+/// <para>Thread safety: <c>single-producer</c>. Only one thread may call
+/// <see cref="PacketSink.Enqueue"/> at a time. The consumer thread that drains the ring is
+/// owned internally by this base class. Do NOT wrap <c>Enqueue</c> in an external lock —
+/// this sink uses volatile/Interlocked primitives; adding a monitor costs ~1000 cycles per call
+/// with no benefit.</para>
+/// </remarks>
 public abstract class SpscQueueSink : PacketSink
 {
     private const int SpinIter  = 10;
@@ -47,14 +54,36 @@ public abstract class SpscQueueSink : PacketSink
     /// <summary>Non-null when the consumer thread crashed. Read on cold path only.</summary>
     public Exception? ConsumerException => _consumerException;
 
+    private readonly ThreadPriority _threadPriority;
+    private readonly int            _affinityCpu;
+
     /// <param name="ringCapacity">SPSC ring capacity in bytes. Must be a positive power of two.</param>
     /// <param name="flushIntervalMs">Max milliseconds between forced flushes.</param>
     /// <param name="pipeName">Optional thread-name suffix for debugger visibility.</param>
-    protected SpscQueueSink(int ringCapacity, int flushIntervalMs, string pipeName = "")
+    /// <param name="threadPriority">
+    /// Priority of the consumer thread. Defaults to <see cref="ThreadPriority.BelowNormal"/>.
+    /// Pass <see cref="ThreadPriority.Normal"/> (or higher) on shared machines where the consumer
+    /// competes with other workloads and scheduler migration cost matters.
+    /// </param>
+    /// <param name="affinityCpu">
+    /// Logical CPU index to pin the consumer thread to, or <c>-1</c> (default) for no pinning.
+    /// When set to ≥ 0, calls <see cref="Internal.ThreadAffinity.Pin"/> inside the consumer thread
+    /// before any work begins. Best-effort: if the pin fails the thread runs unpinned.
+    /// Pinning is most effective on shared/multi-tenant machines; on dedicated machines
+    /// the scheduler typically preserves core affinity without explicit pinning.
+    /// </param>
+    protected SpscQueueSink(
+        int            ringCapacity,
+        int            flushIntervalMs,
+        string         pipeName       = "",
+        ThreadPriority threadPriority = ThreadPriority.BelowNormal,
+        int            affinityCpu    = -1)
     {
         _ring               = new SpscByteRingBuffer(ringCapacity);
         _flushIntervalTicks = (long)flushIntervalMs * (Stopwatch.Frequency / 1_000);
         _pipeName           = pipeName;
+        _threadPriority     = threadPriority;
+        _affinityCpu        = affinityCpu;
     }
 
     /// <summary>Pre-faults the ring buffer and starts the consumer thread.</summary>
@@ -67,7 +96,7 @@ public abstract class SpscQueueSink : PacketSink
         {
             Name         = string.IsNullOrEmpty(_pipeName) ? "relay-packet" : $"relay-packet-{_pipeName}",
             IsBackground = true,
-            Priority     = ThreadPriority.BelowNormal
+            Priority     = _threadPriority
         };
         _thread.Start();
     }
@@ -109,6 +138,8 @@ public abstract class SpscQueueSink : PacketSink
 
     private void ConsumeLoop()
     {
+        if (_affinityCpu >= 0) ThreadAffinity.Pin(_affinityCpu);
+
         try
         {
             long flushDeadline = HfClock.NowTicks + _flushIntervalTicks;

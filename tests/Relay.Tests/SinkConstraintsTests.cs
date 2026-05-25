@@ -19,9 +19,8 @@ public sealed class SinkConstraintsTests
         act.Should().NotThrow();
     }
 
-#if DEBUG
     [Fact]
-    public void SpscQueueSink_Rejects_96B_Struct_In_Debug()
+    public void SpscQueueSink_Rejects_96B_Struct()
     {
         Action act = () => _ = new InMemoryPipe96(ringCapacity: 8, flushIntervalMs: 50);
         act.Should().Throw<InvalidOperationException>()
@@ -29,13 +28,12 @@ public sealed class SinkConstraintsTests
     }
 
     [Fact]
-    public void SpscQueueSink_Rejects_32B_Struct_In_Debug()
+    public void SpscQueueSink_Rejects_32B_Struct()
     {
         Action act = () => _ = new InMemoryPipe32(ringCapacity: 8, flushIntervalMs: 50);
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*positive multiple of 64B*");
     }
-#endif
 
     // --- payload structs ---
 
@@ -58,9 +56,8 @@ public sealed class SinkConstraintsTests
         act.Should().NotThrow();
     }
 
-#if DEBUG
     [Fact]
-    public void MpscQueueSink_Rejects_96B_Struct_In_Debug()
+    public void MpscQueueSink_Rejects_96B_Struct()
     {
         Action act = () => _ = new MpscInMemoryPipe96(ringCapacity: 8, flushIntervalMs: 50);
         act.Should().Throw<InvalidOperationException>()
@@ -68,13 +65,12 @@ public sealed class SinkConstraintsTests
     }
 
     [Fact]
-    public void MpscQueueSink_Rejects_32B_Struct_In_Debug()
+    public void MpscQueueSink_Rejects_32B_Struct()
     {
         Action act = () => _ = new MpscInMemoryPipe32(ringCapacity: 8, flushIntervalMs: 50);
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*positive multiple of 64B*");
     }
-#endif
 
     // --- minimal SpscQueueSink helpers, one per payload type ---
 
