@@ -11,6 +11,11 @@ obj/
 Thumbs.db
 .DS_Store
 
+# Local environment and runtime locks
+.env
+.env.*
+.claude/scheduled_tasks.lock
+
 # BenchmarkDotNet
 BenchmarkDotNet.Artifacts/
 
