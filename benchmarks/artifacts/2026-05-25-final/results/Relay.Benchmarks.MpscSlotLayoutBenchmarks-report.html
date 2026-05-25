@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>Relay.Benchmarks.MpscSlotLayoutBenchmarks-20260525-093212</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.13.12, Windows 11 (10.0.26200.8457)
+12th Gen Intel Core i7-12700, 1 CPU, 20 logical and 12 physical cores
+.NET SDK 9.0.312
+  [Host]     : .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+  Job-JJPVIH : .NET 9.0.14 (9.0.1426.11910), X64 RyuJIT AVX2
+</code></pre>
+<pre><code>InvocationCount=1  UnrollFactor=1  
+</code></pre>
+
+<table>
+<thead><tr><th>Method               </th><th>ProducerCount</th><th>Capacity</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Median</th><th>Ratio</th><th>RatioSD</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>StrideLayout_Throughput</td><td>1</td><td>1024</td><td>879.4 ms</td><td>154.53 ms</td><td>453.21 ms</td><td>877.1 ms</td><td>1.00</td><td>0.00</td><td>424 B</td><td>1.00</td>
+</tr><tr><td>LegacySlotLayout_Throughput</td><td>1</td><td>1024</td><td>1,265.3 ms</td><td>214.25 ms</td><td>631.73 ms</td><td>1,074.0 ms</td><td>2.35</td><td>2.93</td><td>88 B</td><td>0.21</td>
+</tr><tr><td>StrideLayout_Throughput</td><td>1</td><td>65536</td><td>196.9 ms</td><td>25.52 ms</td><td>75.24 ms</td><td>206.3 ms</td><td>1.00</td><td>0.00</td><td>424 B</td><td>1.00</td>
+</tr><tr><td>LegacySlotLayout_Throughput</td><td>1</td><td>65536</td><td>214.7 ms</td><td>22.72 ms</td><td>66.99 ms</td><td>216.9 ms</td><td>1.31</td><td>0.77</td><td>424 B</td><td>1.00</td>
+</tr><tr><td>StrideLayout_Throughput</td><td>2</td><td>1024</td><td>1,103.9 ms</td><td>135.16 ms</td><td>392.12 ms</td><td>1,057.5 ms</td><td>1.00</td><td>0.00</td><td>424 B</td><td>1.00</td>
+</tr><tr><td>LegacySlotLayout_Throughput</td><td>2</td><td>1024</td><td>1,207.8 ms</td><td>245.04 ms</td><td>722.52 ms</td><td>1,058.3 ms</td><td>1.23</td><td>1.01</td><td>424 B</td><td>1.00</td>
+</tr><tr><td>StrideLayout_Throughput</td><td>2</td><td>65536</td><td>227.6 ms</td><td>19.98 ms</td><td>56.99 ms</td><td>230.7 ms</td><td>1.00</td><td>0.00</td><td>424 B</td><td>1.00</td>
+</tr><tr><td>LegacySlotLayout_Throughput</td><td>2</td><td>65536</td><td>305.9 ms</td><td>22.89 ms</td><td>67.48 ms</td><td>291.8 ms</td><td>1.46</td><td>0.58</td><td>424 B</td><td>1.00</td>
+</tr><tr><td>StrideLayout_Throughput</td><td>4</td><td>1024</td><td>1,573.9 ms</td><td>133.54 ms</td><td>380.99 ms</td><td>1,550.6 ms</td><td>1.00</td><td>0.00</td><td>88 B</td><td>1.00</td>
+</tr><tr><td>LegacySlotLayout_Throughput</td><td>4</td><td>1024</td><td>1,738.5 ms</td><td>185.62 ms</td><td>544.39 ms</td><td>1,661.9 ms</td><td>1.19</td><td>0.46</td><td>424 B</td><td>4.82</td>
+</tr><tr><td>StrideLayout_Throughput</td><td>4</td><td>65536</td><td>384.8 ms</td><td>25.45 ms</td><td>74.63 ms</td><td>383.2 ms</td><td>1.00</td><td>0.00</td><td>424 B</td><td>1.00</td>
+</tr><tr><td>LegacySlotLayout_Throughput</td><td>4</td><td>65536</td><td>526.0 ms</td><td>17.97 ms</td><td>52.71 ms</td><td>524.0 ms</td><td>1.42</td><td>0.33</td><td>424 B</td><td>1.00</td>
+</tr><tr><td>StrideLayout_Throughput</td><td>8</td><td>1024</td><td>1,512.4 ms</td><td>129.01 ms</td><td>376.34 ms</td><td>1,499.3 ms</td><td>1.00</td><td>0.00</td><td>424 B</td><td>1.00</td>
+</tr><tr><td>LegacySlotLayout_Throughput</td><td>8</td><td>1024</td><td>1,573.5 ms</td><td>150.85 ms</td><td>444.79 ms</td><td>1,522.8 ms</td><td>1.12</td><td>0.45</td><td>136 B</td><td>0.32</td>
+</tr><tr><td>StrideLayout_Throughput</td><td>8</td><td>65536</td><td>631.5 ms</td><td>26.77 ms</td><td>78.93 ms</td><td>624.3 ms</td><td>1.00</td><td>0.00</td><td>424 B</td><td>1.00</td>
+</tr><tr><td>LegacySlotLayout_Throughput</td><td>8</td><td>65536</td><td>847.0 ms</td><td>17.53 ms</td><td>51.41 ms</td><td>840.4 ms</td><td>1.36</td><td>0.17</td><td>424 B</td><td>1.00</td>
+</tr></tbody></table>
+</body>
+</html>
