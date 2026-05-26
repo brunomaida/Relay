@@ -98,12 +98,19 @@ Full type hierarchy, ring-buffer internals, builder operators, and recommended t
 | `Sinks/TcpSink` | Length-framed TCP (packet hierarchy) |
 | `Sinks/MemorySink` | Native memory linear buffer, last-resort packet sink |
 | `Sinks/SharedMemorySink` | Synchronous MMF ring (Log2 wire protocol) |
+| `PacketCallback<TState>` | Zero-alloc delegate for `ReadOnlySpan<byte>` callbacks (TState avoids closure capture) |
+| `PacketReceiver` | Abstract receiver base — passive, driven by caller's `Poll()` loop; optional `Next` forward-chain |
+| `Receivers/UdpReceiver<TState>` | Non-blocking UDP receive (`Socket.Poll(0, SelectRead)` + `stackalloc 1432B`) — hot path |
+| `Receivers/TcpReceiver<TState>` | TCP frame receive — non-blocking at frame boundaries; management-plane (mid-frame may block on segmentation) |
+| `Receivers/NamedPipeReceiver<TState>` | Synchronous named-pipe receive — management-plane |
+| `Receivers/SharedMemorySpscReceiver<TState>` | Windows-only SPSC MMF ring consumer (Log2 wire protocol) — hot path |
 | `Buffers/SpscRingBuffer<T>` | Lock-free SPSC ring with 128-byte padded head/tail |
 | `Buffers/MpscRingBuffer<T>` | Lock-free MPSC ring (Log2 FIX #18 layout) |
 | `Buffers/SpscByteRingBuffer` | Length-prefixed SPSC byte ring |
 | `Buffers/MpscByteRingBuffer` | Length-prefixed MPSC byte ring with publish-bit header |
 | `Builder/RelayBuilder` + `SinkChain<T,THead>` | Fluent typed chain assembly |
 | `Builder/SinkChainBuilder` + `SinkChain<THead>` | Fluent packet chain assembly |
+| `Builder/RelayBuilder.From*` | Factories: `From` (UDP), `FromTcp`, `FromSharedMemory`, `FromNamedPipe` |
 | `Memory/RelayMemory` | `PreFault` + `VirtualLock` on ring buffer pages |
 | `Internal/HfClock` | `Stopwatch.GetTimestamp()` wrapper — never `DateTime.UtcNow` |
 | `Internal/SinkConstraints` | DEBUG assertion: `T` must be cache-line-aligned |
