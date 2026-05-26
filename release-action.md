@@ -1,84 +1,78 @@
-# Release Action — v1.0.2
+# Release Action — v1.0.3
 
-**Date:** 2026-05-25
-**Version:** 1.0.2
-**Branch:** develop -> master
-**Stack:** .NET 9 / C# 13 (Relay.sln)
-**Summary:** Bug fixes e melhorias de performance no pipeline de despacho.
+**Date:** 2026-05-26
+**Version:** 1.0.3
+**Branch:** develop → master
+**Stack:** .NET 9 / C# 13 (`Relay.sln`)
+**Summary:** Receiver hierarchy launch (UDP / TCP / NamedPipe / SharedMemorySpsc) + hot-path-audit hardening of frame-length validation (F0 / F0b / F1 / F3).
 
 ---
 
 ## Pre-merge Checklist
 
 | # | Gate | Status | Notes |
-|---|------|--------|-------|
-| 2a | Correct branch | PASS | On `develop` |
-| 2b | Working tree clean | PASS | `.claude/settings.local.json` modified (tool settings — not release-relevant; intentionally excluded from release commit) |
-| 2c | Synced with remote | PASS | No diff vs `origin/develop` |
-| 2d | No pending branches | PASS | `refactor/260524-batch-hook` force-deleted (rejected; BDN artifacts only) |
-| 2e | Commit log reviewed | PASS | 27 commits (incl. fix + prep) |
-| 2f | CI green on develop | PASS | [Run #26406216104](https://github.com/brunomaida/Relay/actions/runs/26406216104) — conclusion: success |
-| 3a | Build succeeds (zero warnings) | PASS | `dotnet build -c Release -warnaserror` — 0 warnings, 0 errors |
-| 3b | No banned patterns | PASS | `DateTime.UtcNow` removed from all `RotatingFileSink` methods. Remaining occurrence on line 67 is the default `Func<DateTime>` factory definition — structurally required, cold-path only. Commit `a9c8e17`. |
-| 4 | Tests pass | PASS | 209 passed, 6 skipped, 0 failed |
-| 5a | CHANGELOG versioned | PASS | `[1.0.2] - 2026-05-25` entry added with Added / Fixed / Perf sections |
-| 5b | Project docs up-to-date | N/A | No specific doc requirement in CLAUDE.md beyond XML docs |
-| 5c | CLAUDE.md consistent | PASS | Last modified 2026-05-12 (13 days ago) |
-| 5d | README.md current | PASS | Exists; table lists all projects |
-| 5e | TOPOLOGY.md updated | N/A | Not required by CLAUDE.md |
-| 5f | Benchmark report present | PASS | `docs/reports/2026-05-25-hot-path-audit-relay.md` (today) |
-| 5g | README API references valid | PASS | All `Relay.*` type refs in README resolve to actual source types |
-| 5h | Hot-path reports staleness | PASS | Audit run today: `docs/reports/2026-05-25-hot-path-audit-relay.md` — 27/27 PASS, no regressions |
-| 5i | Bench history fresh | N/A | No `docs/perf/bench-history.csv` |
-| 5j | README baseline drift | N/A | No `<!-- bench-baseline -->` markers in README |
-| 5k | Bench refs inventory | N/A | No `docs/perf/bench-history.csv` |
-| 5l | README auto-update | N/A | Gate 5j did not trigger |
-| 6 | Version tags set | PASS | `Directory.Build.props`: `1.0.1` → `1.0.2`. Commit `874392e`. |
-| 7 | No sensitive files | PASS | No sensitive files in `master..develop` diff. `.env` untracked but now in `.gitignore`. |
+|---|---|---|---|
+| 2a | Correct branch | **PASS** | on `develop` |
+| 2b | Working tree clean | **WARN** | dirty by design — release prep edits (CHANGELOG, README, archived fragments) staged for the next commit; plus untracked `.claude/settings.local.json` (local user state, exclude) |
+| 2c | Synced with remote | **PASS** | `origin/develop` matches `develop` |
+| 2d | No pending branches | **WARN** | local `feature/260525-4-relay-receivers` still exists (already merged via PR #13). Safe to delete: `git branch -D feature/260525-4-relay-receivers` |
+| 2e | Commit log reviewed | **PASS** | 5 commits since v1.0.2 (see below) |
+| 2f | CI green on `develop` | **PASS** | run 26464262517 — conclusion `success`, head `3c30845` |
+| 3a | Build succeeds (zero warnings, `-warnaserror`) | **PASS** | `dotnet build Relay.sln -c Release -warnaserror` — 0 warnings, 0 errors |
+| 3b | No banned patterns | **WARN** | `src/Relay/Sinks/RotatingFileSink.cs:67` uses `DateTime.UtcNow` as the default factory for an injectable `Func<DateTime>`. Established convention (clock injection point exists); not a domain rule using `DateTime` directly. Per `banned-api-enforce` skill: warning, not blocking |
+| 4 | Tests pass | **PASS** | 228 / 228 passed, 10 skipped (pre-existing Windows-only / Linux-only); commit-gate filter `Category!=Endurance&Category!=Stress&Category!=Perf` |
+| 5.0 | Changelog fragments consolidated | **PASS** | 4 fragments found in `changelog.d/`. One pair was a slug-rename duplicate (`260525-4-receivers.md` ≡ `feature-260525-4-relay-receivers.md`); kept the `feature-…` form per project convention (commit a5768e8) and removed the slug-only file. 3 unique fragments consolidated into `CHANGELOG.md` § `[1.0.3] - 2026-05-26`; originals moved to `changelog.d/archived/1.0.3/` |
+| 5a | CHANGELOG versioned | **PASS** | `## [1.0.3] - 2026-05-26` populated; new empty `## [Unreleased]` preserved above |
+| 5b | Project docs up-to-date | **PASS** | `docs/reports/2026-05-26-hot-path-audit-receivers.md` + `docs/reports/2026-05-26-resource-cost-map-receivers.md` cover the receiver delta. `docs/topology.md` not strictly required by CLAUDE.md gate but **consider updating** (PacketReceiver hierarchy is currently undocumented there) |
+| 5c | CLAUDE.md consistent | **PASS** | last modified 2026-05-12 (14 days ago); no references to removed/renamed projects |
+| 5d | README.md current | **PASS** | source-layout table patched to add `PacketCallback` / `PacketReceiver` / `Receivers/Udp\|Tcp\|NamedPipe\|SharedMemorySpsc` rows + `Builder/RelayBuilder.From*` factories row. (Full `/create-readme` rebuild deferred — surgical patch sufficed to bring the table current) |
+| 5e | TOPOLOGY.md updated | **N/A** | CLAUDE.md does not mandate `TOPOLOGY.md` as a release gate. `docs/topology.md` exists and lowercased; lib-internal — see note under 5b |
+| 5f | Benchmark report present | **WARN** | no `docs/reports/*bdn*\|*bench*\|*perf*` file within last 30 days. New BDN data ships in `docs/reports/2026-05-26-hot-path-audit-receivers.md` § Cycle budget — but its filename matches `*hot-path-audit*` not the gate's glob. Substantively satisfied |
+| 5g | README public API references valid | **N/A** | no `<RootNamespace>` declared in `Directory.Build.props`; gate skipped per skill |
+| 5h | Hot-path reports staleness | **PASS** | `docs/reports/2026-05-26-hot-path-audit-receivers.md` + `docs/reports/2026-05-26-resource-cost-map-receivers.md` cover this release's scope; scope last touched 2026-05-26 = report date |
+| 5i | Bench history fresh | **N/A** | `docs/perf/bench-history.csv` does not exist |
+| 5j | README baseline drift | **N/A** | no `<!-- bench-baseline:start/end -->` markers in README |
+| 5k | Bench refs inventory | **N/A** | depends on bench-history.csv |
+| 5l | README auto-update | **N/A** | gate 5j N/A |
+| 6 | Version tags set | **NEEDS UPDATE** | `Directory.Build.props` has `<Version>1.0.2</Version>` / `<AssemblyVersion>1.0.2</AssemblyVersion>` / `<FileVersion>1.0.2</FileVersion>` — bump all three to `1.0.3` |
+| 7 | No sensitive files | **PASS** | `git diff master..develop --name-only` — 0 matches against env / credentials / secrets / key / pem |
 
----
-
-## Commits in this Release (develop → master)
+## Commits in this Release (v1.0.2 → develop)
 
 ```
-874392e chore: prepare release v1.0.2 w/Claude
-a9c8e17 fix: inject Func<DateTime> in RotatingFileSink; remove DateTime.UtcNow from methods
-f6b437f bench: archive 2026-05-25 final validation BDN run
-925acac revert: restore HfClock-tick rotation check in RotatingFileSink (perf)
-68a9dda revert: drop oversized-payload bypass from TcpSink.Packet (perf regression)
-902df81 docs: add 2026-05-24 external-audit triage source + plans
-192392d chore: archive §2.1 zero-fill rejection artifacts
-ea2f553 bench: freeze baseline before external-audit triage
-7555a76 fix: remove dead code in PinLinux; tighten ThreadAffinity pin test
-da425c1 feat: add opt-in threadPriority and affinityCpu params to queue sink ctors
-878fa95 docs: tighten MultiSink/ForkSink thread-safety remarks
-e720b73 docs: annotate sink thread-safety topology in XML <remarks>
-e8b8c42 chore: rename benchmark artifact dir to ASCII
-3be513d fix: anchor RotatingFileSink rotation in absolute UTC date
-5ec6cce fix: enforce cache-line alignment in Release + fix DispatchSink XML doc
-8ccc600 test: skip MMF test on Linux + tighten reader loop coverage
-cb598bb refactor: add [Obsolete] SharedMemorySink shim + update benchmark
-15face0 fix: enforce SPSC publish ordering in SharedMemorySink
-1321d6c fix: also guard bypass path against unhealthy-but-open connection
-ec2d019 fix: loop Send/Write in packet sinks for partial-send correctness
-a29c69f fix: guard oversized payload in fixed-buffer sinks
-dee59d4 test: dispose POH-pinned rings in MpscPacket prev-wire test
-94b5b5b fix: wire MpscQueueSink Prev in SinkChain.Packet builder
-133e6ff chore: add tier declarations to Relay and RelayStream
-ac608b3 feat: add optional fileNameFormat to RotatingFileSink constructor
-665402e chore: bump GitHub Actions to Node.js 24 compatible versions
-3b715a2 chore: back-merge v1.0.1 release w/Claude
+3c30845 fix: receivers — F0/F0b correctness + F1 doc + F3 stackalloc (#16)
+b7e2477 feat: add SharedMemorySpscReceiver and NamedPipeReceiver (#15)
+852b386 Merge pull request #13 from brunomaida/feature/260525-4-relay-receivers
+a5768e8 chore: rename changelog fragment to match branch slug convention w/Claude
+58dfed1 feat: Issue #4 slice 4b — PacketCallback + Receiver hierarchy (UDP + TCP) w/Claude
 ```
 
----
+## Audit Findings (post v1.0.2)
+
+| ID | Sev | Status |
+|---|---|---|
+| F0 — Tcp/Pipe wire desync on bogus frameLen | HIGH | **CLOSED** (PR #16) |
+| F0b — SharedMemorySpsc consumer stall on bogus frameLen | HIGH | **CLOSED** (PR #16) |
+| F1 — TcpReceiver "non-blocking" doc lie | HIGH (doc) | **CLOSED** (PR #16) |
+| F3 — NamedPipeReceiver `_header` POH waste | MEDIUM | **CLOSED** (PR #16) |
+| F2 — SHM zero-copy fast path | — | **WITHDRAWN** (unsafe without F-SHM gate) |
+| F-SHM — SharedMemorySpscSink lacks producer-side overrun gate | MEDIUM (adjacent, pre-existing) | tracked separately |
 
 ## Next Step
 
-**All gates PASS or N/A.** Pronto para merge.
+All non-N/A gates either PASS, WARN-acceptable, or have explicit follow-up:
 
-Run `/release-2-merge-master`.
+1. **Delete** stale local branch: `git branch -D feature/260525-4-relay-receivers`.
+2. **Bump version** in `Directory.Build.props` — `<Version>`, `<AssemblyVersion>`, `<FileVersion>` from `1.0.2` to `1.0.3`.
+3. **Stage + commit** release prep (CHANGELOG, README, archived fragments, version bump):
+   `git add CHANGELOG.md README.md changelog.d/ Directory.Build.props release-action.md`
+   `git commit -m "chore: prepare release v1.0.3 w/Claude"`
+4. **Run** `/release-2-merge-master` to merge `develop` → `master`, tag `v1.0.3`, and trigger `/release-3-execute`.
+
+Optional (recommended): update `docs/topology.md` to add the `PacketReceiver` hierarchy section before tagging (not blocking).
 
 ## Post-release
 
-- [ ] Verify CI/CD pipeline on master after merge
-- [ ] Notify stakeholders
+- [ ] Verify GitHub Actions release workflow on tag push.
+- [ ] Confirm GitHub Release notes generated from `CHANGELOG.md` § `[1.0.3]`.
+- [ ] Back-merge `master` → `develop` to bring the version-bump commit back (per project release-3 convention).

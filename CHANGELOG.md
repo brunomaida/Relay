@@ -9,6 +9,38 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ---
 
+## [1.0.3] - 2026-05-26
+
+### Added
+
+- `PacketCallback<TState>` delegate — zero-alloc span-compatible callback; sidesteps `Action<ReadOnlySpan<byte>>` C# restriction; static-lambda dispatch eliminates closure allocation.
+- `PacketReceiver` abstract base — passive receiver hierarchy (caller's loop drives via `Poll()`); optional `Next: PacketSink?` forward-chain.
+- `UdpReceiver<TState>` (hot path) — non-blocking `Poll()` via `Socket.Poll(0, SelectRead)`; `stackalloc byte[1432]` per call (MTU-safe, cache-hot, zero GC); configurable kernel RX buffer (default 1 MB).
+- `TcpReceiver<TState>` (management-plane) — blocking `Accept()`; non-blocking at frame boundaries, may block mid-frame on TCP segmentation; POH-pinned buffer pre-touched per fTL TcpGateway; wire format `[4B BE length][payload]` matching `TcpSink`/`NamedPipeSink`.
+- `SharedMemorySpscReceiver<TState>` (hot path) — Windows-only SPSC ring consumer; matches `SharedMemorySpscSink` wire format (Log2 protocol: 128-byte header, BE length-prefixed frames, ring-wrapped); `Volatile.Read/Write` on indices.
+- `NamedPipeReceiver<TState>` (management-plane) — synchronous named-pipe reader compatible with `NamedPipeSink`; `WaitForConnection()` once, then `Poll()` from management thread.
+- `RelayBuilder.From<TState>` / `FromTcp<TState>` / `FromSharedMemory<TState>` / `FromNamedPipe<TState>` factory methods.
+
+### Fixed
+
+- `TcpReceiver<TState>.Poll` / `NamedPipeReceiver<TState>.Poll`: on invalid frame length (≤0 or > buffer), tear down the underlying stream/pipe and throw `InvalidDataException` instead of silently leaving the wire mid-frame. Subsequent `Poll()` returns `false`; the caller restarts the session. (Audit F0.)
+- `SharedMemorySpscReceiver<TState>` ctor: validate `SHM_MAGIC` (`0x4C473200`); throw `InvalidDataException` on mismatch instead of accepting a foreign/uninitialised MMF. (Audit F0b.)
+- `SharedMemorySpscReceiver<TState>.Poll`: throw `InvalidDataException` on invalid frame length instead of returning `false` without advancing `_readIndex` (which caused an infinite re-read stall). (Audit F0b.)
+- `TcpReceiver<TState>` XML doc: removed misleading "non-blocking poll" wording; documents non-blocking at frame boundaries + possible mid-frame block on TCP segmentation (matches `NamedPipeReceiver` management-plane wording). No behavioural change. (Audit F1.)
+- `NamedPipeReceiver<TState>`: removed POH-pinned 4-byte `_header` field; `Poll` uses `Span<byte> header = stackalloc byte[4]` instead, mirroring `TcpReceiver`. One fewer per-instance pinned object. (Audit F3.)
+
+### Perf
+
+- Hot-path audit (post v1.0.2 back-merge) — 27 dimensions across the receiver delta. Report: `docs/reports/2026-05-26-hot-path-audit-receivers.md`. Resource cost map: `docs/reports/2026-05-26-resource-cost-map-receivers.md`. Verdict: PASS — zero allocations on the hot path; correctness bugs F0/F0b/F1/F3 closed in the same release.
+- First BDN harness for receivers (`benchmarks/Relay.Benchmarks/Receivers/`). Measured on Intel i7-12700 / .NET 9.0.14:
+  - `SharedMemorySpscReceiver.Poll_Empty`: 0.66 ns / 0 B.
+  - `SharedMemorySpscReceiver.Roundtrip_PerFrame` (sink Enqueue + receiver Poll): 20.7 ns @ 64 B, 24.3 ns @ 256 B, 38.4 ns @ 1 KiB / 0 B.
+  - `UdpReceiver.Poll_Empty`: 858 ns (syscall-bound, `Socket.Poll(0, SelectRead)`) / 0 B.
+  - `UdpReceiver.Roundtrip_PerFrame` (loopback send + receive, 128 B): 4.69 µs / 0 B receiver path (72 B sender-side `UdpClient.Send` alloc).
+- Receiver fast paths preserve project invariants: `[AggressiveInlining]` on `Poll`; `stackalloc` for ephemeral spans; POH-pinned buffers pre-touched in ctor; no LINQ, no `async`, no `lock`.
+
+---
+
 ## [1.0.2] - 2026-05-25
 
 ### Added
