@@ -15,7 +15,7 @@ namespace Relay.Builder;
 /// head.Enqueue(in entry);
 /// </code>
 /// </example>
-public static class RelayBuilder
+public static partial class RelayBuilder
 {
     /// <summary>
     /// Begins a new pipe chain with <paramref name="head"/> as the first pipe. Generic entry —
