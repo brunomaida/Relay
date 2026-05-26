@@ -55,7 +55,10 @@ if (frameLen <= 0 || frameLen > _frameBuffer.Length) return false;
 
 Fix: validate magic + frameLen at receive; on rejection, mark receiver `_disposed` (or expose `IsHealthy`) and throw at next `Poll`. Either way, do not silently stall.
 
-### F1 — TcpReceiver / NamedPipeReceiver: `Poll` can block mid-frame  [HIGH]
+### F1 — TcpReceiver / NamedPipeReceiver: `Poll` can block mid-frame  [HIGH] · **RESOLVED 2026-05-26 (doc)**
+
+> **Fix:** `fix/260526-receiver-desync-stall`. `TcpReceiver` XML rewritten — removed the misleading "non-blocking poll" claim; documents non-blocking at frame boundaries + possible mid-frame block on TCP segmentation; matches the `NamedPipeReceiver` management-plane wording. No behavioural change.
+
 
 **Dim:** D23 (Syscall), D17 (Exception/blocking semantics).
 **Files:** `TcpReceiver.cs:79-95`, `NamedPipeReceiver.cs:65-82`.
@@ -91,7 +94,10 @@ The copy is **the safety mechanism**, not an oversight. Keep as-is. Adjacent fin
 
 Out of scope for this audit (sink is pre-v1.0.2 code). Flagged because F2's zero-copy depends on adding this gate or a per-slot publish bit. Track separately.
 
-### F3 — NamedPipeReceiver: POH-pinned 4-byte `_header` field  [MEDIUM]
+### F3 — NamedPipeReceiver: POH-pinned 4-byte `_header` field  [MEDIUM] · **RESOLVED 2026-05-26**
+
+> **Fix:** `fix/260526-receiver-desync-stall`. Removed `_header` field and its POH allocation; `Poll` now uses `Span<byte> header = stackalloc byte[4]`, mirroring `TcpReceiver`. One less per-instance pinned object on the LOH/POH; cache-resident span on the hot path.
+
 
 **Dim:** D9 (Zero-allocation), D5 (Cache locality).
 **File:** `NamedPipeReceiver.cs:24, 42, 70`.
@@ -265,6 +271,6 @@ The numbers above are the v1.0.3 baseline. Add CI gate when F-SHM (protocol over
 
 ## Verdict — final
 
-**CONDITIONAL PASS for v1.0.3 — F0 + F0b resolved 2026-05-26 on `fix/260526-receiver-desync-stall`. Remaining: F1 doc update, F3 stackalloc, F-SHM protocol gate (separate ticket).**
+**PASS for v1.0.3 — F0, F0b, F1, F3 all resolved 2026-05-26 on `fix/260526-receiver-desync-stall`. F-SHM (sink producer-side overrun gate) tracked separately as adjacent, pre-existing.**
 
-Numbers are good (zero-alloc holds, sub-100 ns roundtrip for SHM). Correctness bugs closed; perf baseline held.
+Numbers are good (zero-alloc holds, sub-100 ns roundtrip for SHM). Correctness bugs closed; perf baseline held; documentation aligned with behavior.
