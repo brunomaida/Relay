@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -8,10 +9,11 @@ namespace Relay.Receivers;
 
 /// <summary>
 /// Management-plane TCP receiver. Accepts exactly one connection per session via blocking
-/// <see cref="Accept"/>; subsequent <see cref="Poll"/> calls are non-blocking.
+/// <see cref="Accept"/>; subsequent <see cref="Poll"/> calls are non-blocking at frame
+/// boundaries but may block mid-frame on TCP segmentation — see <see cref="Poll"/> remarks.
 /// Wire format: <c>[frameLen:4 BE][frame:N]</c> — matches Relay's <c>TcpSink</c> / <c>NamedPipeSink</c>.
 /// </summary>
-/// <remarks>// [management-plane] — blocking Accept; non-blocking Poll after connection.</remarks>
+/// <remarks>// [management-plane] — blocking acceptable on a dedicated management thread.</remarks>
 /// <typeparam name="TState">
 /// Caller state threaded into <paramref name="callback"/> on each frame — avoids closure allocation.
 /// </typeparam>
@@ -68,12 +70,17 @@ public sealed class TcpReceiver<TState> : PacketReceiver
     }
 
     /// <summary>
-    /// Non-blocking poll. Reads at most one length-prefixed frame per call.
-    /// Returns <c>false</c> when no frame is available or <see cref="Accept"/> has not been called.
+    /// Reads at most one length-prefixed frame per call. Returns <c>false</c> when no frame
+    /// is available or <see cref="Accept"/> has not been called.
     /// </summary>
     /// <remarks>
-    /// <see cref="NetworkStream.DataAvailable"/> reports kernel buffer state (not full-frame
-    /// availability); <see cref="ReadExact"/> handles TCP segmentation correctly.
+    /// Non-blocking at frame boundaries: <see cref="NetworkStream.DataAvailable"/> gates entry,
+    /// so a call with an empty kernel buffer returns immediately. After the 4-byte length
+    /// header is consumed, <see cref="ReadExact"/> may block until the payload arrives —
+    /// TCP segmentation can split a frame across packets, and the underlying stream is in
+    /// blocking mode by default. Acceptable on a dedicated management thread; do not use
+    /// from a latency-critical coordination loop. Throws <see cref="InvalidDataException"/>
+    /// on invalid length (connection torn down before the throw).
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public override bool Poll()
@@ -84,7 +91,14 @@ public sealed class TcpReceiver<TState> : PacketReceiver
         if (!ReadExact(header)) return false;
 
         int frameLen = BinaryPrimitives.ReadInt32BigEndian(header);
-        if (frameLen <= 0 || frameLen > _buffer.Length) return false;
+        if (frameLen <= 0 || frameLen > _buffer.Length)
+        {
+            // Header consumed but payload was never delivered — the wire is now mid-frame.
+            // Tear down so the next Poll returns false; caller must restart the session.
+            TearDown();
+            throw new InvalidDataException(
+                $"TcpReceiver: invalid frame length {frameLen} (buffer={_buffer.Length}). Connection torn down.");
+        }
 
         var payload = _buffer.AsSpan(0, frameLen);
         if (!ReadExact(payload)) return false;
@@ -92,6 +106,14 @@ public sealed class TcpReceiver<TState> : PacketReceiver
         _callback(_state, payload);
         Next?.Enqueue(payload);
         return true;
+    }
+
+    private void TearDown()
+    {
+        _stream?.Dispose();
+        _stream = null;
+        _client?.Dispose();
+        _client = null;
     }
 
     private bool ReadExact(Span<byte> target)

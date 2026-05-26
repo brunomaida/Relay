@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
@@ -26,10 +27,12 @@ namespace Relay.Receivers;
 [SupportedOSPlatform("windows")]
 public sealed unsafe class SharedMemorySpscReceiver<TState> : PacketReceiver
 {
-    private const int HEADER_SIZE   = 128;
-    private const int DATA_CAP_OFF  = 4;
-    private const int WRITE_IDX_OFF = 8;
-    private const int READ_IDX_OFF  = 64;
+    private const uint SHM_MAGIC     = 0x4C473200u; // "LG2\0" — must match SharedMemorySpscSink
+    private const int  HEADER_SIZE   = 128;
+    private const int  MAGIC_OFF     = 0;
+    private const int  DATA_CAP_OFF  = 4;
+    private const int  WRITE_IDX_OFF = 8;
+    private const int  READ_IDX_OFF  = 64;
 
     private readonly MemoryMappedFile         _mmf;
     private readonly MemoryMappedViewAccessor _view;
@@ -67,6 +70,17 @@ public sealed unsafe class SharedMemorySpscReceiver<TState> : PacketReceiver
         _view.SafeMemoryMappedViewHandle.AcquirePointer(ref ptr);
         _ptr = ptr;
 
+        // Magic gate — reject foreign or uninitialised mappings before reading capacity.
+        uint magic = (uint)*(int*)(_ptr + MAGIC_OFF);
+        if (magic != SHM_MAGIC)
+        {
+            _view.SafeMemoryMappedViewHandle.ReleasePointer();
+            _view.Dispose();
+            _mmf.Dispose();
+            throw new InvalidDataException(
+                $"SharedMemorySpscReceiver: invalid MMF magic 0x{magic:X8}, expected 0x{SHM_MAGIC:X8}.");
+        }
+
         // DataCapacity is stored by the sink at header offset 4
         _dataCapacity = *(int*)(_ptr + DATA_CAP_OFF);
 
@@ -91,7 +105,13 @@ public sealed unsafe class SharedMemorySpscReceiver<TState> : PacketReceiver
         ReadRing(data, _dataCapacity, _readIndex, lenBuf);
         int frameLen = BinaryPrimitives.ReadInt32BigEndian(lenBuf);
 
-        if (frameLen <= 0 || frameLen > _frameBuffer.Length) return false;
+        if (frameLen <= 0 || frameLen > _frameBuffer.Length)
+        {
+            // Bogus length means the producer corrupted the ring or the protocol is misaligned.
+            // Advancing _readIndex would compound the corruption; fail-fast instead of stalling.
+            throw new InvalidDataException(
+                $"SharedMemorySpscReceiver: invalid frame length {frameLen} (max={_frameBuffer.Length}).");
+        }
 
         // Read payload (ring-wrap safe)
         int payloadStart = (_readIndex + 4) % _dataCapacity;
