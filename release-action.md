@@ -13,7 +13,7 @@
 | # | Gate | Status | Notes |
 |---|---|---|---|
 | 2a | Correct branch | **PASS** | on `develop` |
-| 2b | Working tree clean | **WARN** | dirty by design — release prep edits (CHANGELOG, README, archived fragments) staged for the next commit; plus untracked `.claude/settings.local.json` (local user state, exclude) |
+| 2b | Working tree clean | **PASS** | release prep committed in `30b14de`; `.claude/settings.local.json` excluded (local user state) |
 | 2c | Synced with remote | **PASS** | `origin/develop` matches `develop` |
 | 2d | No pending branches | **WARN** | local `feature/260525-4-relay-receivers` still exists (already merged via PR #13). Safe to delete: `git branch -D feature/260525-4-relay-receivers` |
 | 2e | Commit log reviewed | **PASS** | 5 commits since v1.0.2 (see below) |
@@ -34,7 +34,7 @@
 | 5j | README baseline drift | **N/A** | no `<!-- bench-baseline:start/end -->` markers in README |
 | 5k | Bench refs inventory | **N/A** | depends on bench-history.csv |
 | 5l | README auto-update | **N/A** | gate 5j N/A |
-| 6 | Version tags set | **NEEDS UPDATE** | `Directory.Build.props` has `<Version>1.0.2</Version>` / `<AssemblyVersion>1.0.2</AssemblyVersion>` / `<FileVersion>1.0.2</FileVersion>` — bump all three to `1.0.3` |
+| 6 | Version tags set | **PASS** | `Directory.Build.props` bumped to `1.0.3` — `Version`, `AssemblyVersion`, `FileVersion` all `1.0.3` (commit `30b14de`) |
 | 7 | No sensitive files | **PASS** | `git diff master..develop --name-only` — 0 matches against env / credentials / secrets / key / pem |
 
 ## Commits in this Release (v1.0.2 → develop)
