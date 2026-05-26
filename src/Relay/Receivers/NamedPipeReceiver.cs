@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.IO;
 using System.IO.Pipes;
 using System.Runtime.CompilerServices;
 
@@ -70,7 +71,14 @@ public sealed class NamedPipeReceiver<TState> : PacketReceiver
         if (!ReadExact(_header.AsSpan())) return false;
 
         int frameLen = BinaryPrimitives.ReadInt32BigEndian(_header);
-        if (frameLen <= 0 || frameLen > _buffer.Length) return false;
+        if (frameLen <= 0 || frameLen > _buffer.Length)
+        {
+            // Header consumed but payload was never drained — the wire is now mid-frame.
+            // Disconnect so subsequent Poll returns false (IsConnected becomes false).
+            _pipe.Disconnect();
+            throw new InvalidDataException(
+                $"NamedPipeReceiver: invalid frame length {frameLen} (buffer={_buffer.Length}). Pipe disconnected.");
+        }
 
         // Payload
         var payload = _buffer.AsSpan(0, frameLen);

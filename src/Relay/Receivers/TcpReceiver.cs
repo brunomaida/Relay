@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -84,7 +85,14 @@ public sealed class TcpReceiver<TState> : PacketReceiver
         if (!ReadExact(header)) return false;
 
         int frameLen = BinaryPrimitives.ReadInt32BigEndian(header);
-        if (frameLen <= 0 || frameLen > _buffer.Length) return false;
+        if (frameLen <= 0 || frameLen > _buffer.Length)
+        {
+            // Header consumed but payload was never delivered — the wire is now mid-frame.
+            // Tear down so the next Poll returns false; caller must restart the session.
+            TearDown();
+            throw new InvalidDataException(
+                $"TcpReceiver: invalid frame length {frameLen} (buffer={_buffer.Length}). Connection torn down.");
+        }
 
         var payload = _buffer.AsSpan(0, frameLen);
         if (!ReadExact(payload)) return false;
@@ -92,6 +100,14 @@ public sealed class TcpReceiver<TState> : PacketReceiver
         _callback(_state, payload);
         Next?.Enqueue(payload);
         return true;
+    }
+
+    private void TearDown()
+    {
+        _stream?.Dispose();
+        _stream = null;
+        _client?.Dispose();
+        _client = null;
     }
 
     private bool ReadExact(Span<byte> target)
