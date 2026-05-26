@@ -1,4 +1,5 @@
 using System.Net;
+using System.Runtime.Versioning;
 using Relay.Receivers;
 
 namespace Relay.Builder;
@@ -39,4 +40,33 @@ public static partial class RelayBuilder
         int                    bufferSize       = 65_536,
         int                    kernelBufferSize = 1 << 20)
         => new(local, state, callback, next, bufferSize, kernelBufferSize);
+
+    /// <summary>
+    /// Creates a <see cref="SharedMemorySpscReceiver{TState}"/> reading from the named MMF ring
+    /// written by <see cref="Relay.Sinks.SharedMemorySpscSink"/>.
+    /// Call <see cref="SharedMemorySpscReceiver{TState}.Poll"/> from the coordination loop.
+    /// </summary>
+    /// <typeparam name="TState">Caller state threaded into <paramref name="callback"/> — avoids closure allocation.</typeparam>
+    [SupportedOSPlatform("windows")]
+    public static SharedMemorySpscReceiver<TState> FromSharedMemory<TState>(
+        string                 name,
+        TState                 state,
+        PacketCallback<TState> callback,
+        PacketSink?            next         = null,
+        int                    maxFrameSize = 65_536)
+        => new(name, state, callback, next, maxFrameSize);
+
+    /// <summary>
+    /// Creates a <see cref="NamedPipeReceiver{TState}"/> listening on <paramref name="pipeName"/>.
+    /// Call <see cref="NamedPipeReceiver{TState}.WaitForConnection"/> once from the management thread,
+    /// then <see cref="NamedPipeReceiver{TState}.Poll"/> from the management loop.
+    /// </summary>
+    /// <typeparam name="TState">Caller state threaded into <paramref name="callback"/> — avoids closure allocation.</typeparam>
+    public static NamedPipeReceiver<TState> FromNamedPipe<TState>(
+        string                 pipeName,
+        TState                 state,
+        PacketCallback<TState> callback,
+        PacketSink?            next       = null,
+        int                    bufferSize = 65_536)
+        => new(pipeName, state, callback, next, bufferSize);
 }

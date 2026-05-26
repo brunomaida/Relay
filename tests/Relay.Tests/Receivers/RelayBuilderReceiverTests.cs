@@ -33,4 +33,16 @@ public sealed class RelayBuilderReceiverTests
         recv.Should().BeOfType<TcpReceiver<int>>();
         recv.LocalEndPoint.Port.Should().BeGreaterThan(0);
     }
+
+    [Fact]
+    public void RelayBuilder_FromNamedPipe_ReturnsNamedPipeReceiver()
+    {
+        string pipeName = "relay-builder-test-" + Guid.NewGuid().ToString("N");
+        using var recv = RelayBuilder.FromNamedPipe(
+            pipeName,
+            state: 0,
+            callback: static (_, _) => { });
+
+        recv.Should().BeOfType<NamedPipeReceiver<int>>();
+    }
 }
