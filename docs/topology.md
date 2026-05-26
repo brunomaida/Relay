@@ -94,6 +94,28 @@
        │  Named MemoryMappedFile ring (128-byte header + data area)
        │  No consumer thread — writes synchronously on producer thread
 
+  ─────────────────────────────────────────────────────────────────────────────
+  PacketCallback<TState>  (delegate, namespace Relay)
+       delegate void PacketCallback<TState>(TState state, ReadOnlySpan<byte> frame)
+       Zero-alloc span callback. Sidesteps the C# restriction on Action<ReadOnlySpan<byte>>.
+       Static-lambda dispatch eliminates closure allocation.
+
+  PacketReceiver  (abstract, namespace Relay)
+       │  Next: PacketSink?     ← optional forward-chain; item forwarded after callback
+       │  Poll(): bool          ← caller-driven; true = frame delivered to callback
+       │  Dispose()
+       │  No consumer thread — the caller's loop drives Poll()
+       │
+       ├── UdpReceiver<TState>              (sealed)  ← non-blocking Poll() via Socket.Poll(0);
+       │                                              stackalloc byte[1432] per call (MTU-safe)
+       ├── TcpReceiver<TState>              (sealed)  ← Accept() once; Poll() per frame;
+       │                                              length-framed [4B BE][payload]
+       ├── SharedMemorySpscReceiver<TState> (sealed, unsafe, Windows-only)
+       │                                             SPSC ring consumer matching SharedMemorySpscSink
+       │                                             wire format; SHM_MAGIC validation on ctor
+       └── NamedPipeReceiver<TState>        (sealed)  ← WaitForConnection() once; Poll() per frame;
+                                                       same wire format as TcpReceiver
+
 
 ================================================================================
                          ASSEMBLY GRAPH
@@ -105,16 +127,21 @@
   │                            FilterSink<T>, NullSink<T>, SerializeSink<T>,
   │                            PacketSink, SpscQueueSink, MpscQueueSink,
   │                            ForkSink, MultiSink, Multi2PacketSink<TC1,TC2>,
-  │                            FilterSink, NullSink, BatchSink
+  │                            FilterSink, NullSink, BatchSink,
+  │                            PacketCallback<TState>, PacketReceiver
   ├── namespace Relay.Buffers  SpscRingBuffer<T>, MpscRingBuffer<T>,
   │                            SpscByteRingBuffer, MpscByteRingBuffer    [internal]
   ├── namespace Relay.Sinks    FileStreamSink<T>, MmfSink<T>, TcpSink<T>, MemorySink<T>
   │                            FileSink, RotatingFileSink, NamedPipeSink,
   │                            UdpSink, TcpSink, MemorySink, SharedMemorySink
+  ├── namespace Relay.Receivers UdpReceiver<TState>, TcpReceiver<TState>,
+  │                            SharedMemorySpscReceiver<TState>, NamedPipeReceiver<TState>
   ├── namespace Relay.Builder  RelayBuilder, SinkChain<T,THead>, MultiBuilder<T>,
   │                            FilterBinding<T,THead>                    [typed chain]
   │                            SinkChainBuilder, SinkChain<THead>,
   │                            FilterBinding<THead>                      [packet chain]
+  │                            RelayBuilder.From<TState>, FromTcp<TState>,
+  │                            FromSharedMemory<TState>, FromNamedPipe<TState>
   ├── namespace Relay.Memory   RelayMemory                               [internal]
   └── namespace Relay.Internal HfClock, SinkConstraints                 [internal]
 
@@ -366,6 +393,10 @@
   RelayBuilder.Start<T, THead>(head)          ← generic entry
   RelayBuilder.StartSpsc<T, THead>(head)      ← THead : SpscQueueSink<T>
   RelayBuilder.StartMpsc<T, THead>(head)      ← THead : MpscQueueSink<T>
+  RelayBuilder.From<TState>(ep, cb, state)    ← UdpReceiver factory
+  RelayBuilder.FromTcp<TState>(ep, cb, state) ← TcpReceiver factory
+  RelayBuilder.FromSharedMemory<TState>(...)  ← SharedMemorySpscReceiver factory (Windows-only)
+  RelayBuilder.FromNamedPipe<TState>(...)     ← NamedPipeReceiver factory
        │
        └─▶ SinkChain<T, THead> { _head = head, _tail = head }
 
