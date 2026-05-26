@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.IO;
 using System.IO.Pipes;
 using System.Runtime.CompilerServices;
 
@@ -21,7 +22,6 @@ public sealed class NamedPipeReceiver<TState> : PacketReceiver
     private readonly NamedPipeServerStream   _pipe;
     private readonly TState                  _state;
     private readonly PacketCallback<TState>  _callback;
-    private readonly byte[]                  _header;  // 4-byte length prefix; POH-pinned
     private readonly byte[]                  _buffer;  // payload buffer; POH-pinned, pre-touched
 
     /// <param name="pipeName">Named pipe identifier — must match the <see cref="Relay.Sinks.NamedPipeSink"/> producer.</param>
@@ -39,7 +39,6 @@ public sealed class NamedPipeReceiver<TState> : PacketReceiver
         _state    = state;
         _callback = callback;
         Next      = next;
-        _header   = GC.AllocateUninitializedArray<byte>(4, pinned: true);
         _buffer   = GC.AllocateUninitializedArray<byte>(bufferSize, pinned: true);
         for (int i = 0; i < bufferSize; i += 4096) _buffer[i] = 0;
 
@@ -67,10 +66,18 @@ public sealed class NamedPipeReceiver<TState> : PacketReceiver
         if (!_pipe.IsConnected) return false;
 
         // Header: [4B BE payload_length]
-        if (!ReadExact(_header.AsSpan())) return false;
+        Span<byte> header = stackalloc byte[4];
+        if (!ReadExact(header)) return false;
 
-        int frameLen = BinaryPrimitives.ReadInt32BigEndian(_header);
-        if (frameLen <= 0 || frameLen > _buffer.Length) return false;
+        int frameLen = BinaryPrimitives.ReadInt32BigEndian(header);
+        if (frameLen <= 0 || frameLen > _buffer.Length)
+        {
+            // Header consumed but payload was never drained — the wire is now mid-frame.
+            // Disconnect so subsequent Poll returns false (IsConnected becomes false).
+            _pipe.Disconnect();
+            throw new InvalidDataException(
+                $"NamedPipeReceiver: invalid frame length {frameLen} (buffer={_buffer.Length}). Pipe disconnected.");
+        }
 
         // Payload
         var payload = _buffer.AsSpan(0, frameLen);

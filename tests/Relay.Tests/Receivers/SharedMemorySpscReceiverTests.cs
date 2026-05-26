@@ -58,7 +58,6 @@ public sealed class SharedMemorySpscReceiverTests
     {
         string name  = "Local\\relay-recv-" + Guid.NewGuid().ToString("N");
         int    total = 4096;
-        const int HeaderSize    = 128;
         const int ReadIdxOffset = 64;
         byte[] payload = new byte[16];
 
