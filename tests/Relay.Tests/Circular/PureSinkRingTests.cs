@@ -173,7 +173,7 @@ public class PureSinkRingTests
         Thread.Sleep(5_000);
 
         var report = new RingTestReport(_output);
-        report.Start();
+        report.Start(ring.TotalCount());
 
         for (int s = 0; s < snapshots; s++)
         {
@@ -206,7 +206,7 @@ public class PureSinkRingTests
         Thread.Sleep(5_000);
 
         var report = new RingTestReport(_output);
-        report.Start();
+        report.Start(ring.TotalCount());
 
         for (int s = 0; s < snapshots; s++)
         {
@@ -239,7 +239,7 @@ public class PureSinkRingTests
         Thread.Sleep(5_000);
 
         var report = new RingTestReport(_output);
-        report.Start();
+        report.Start(ring.TotalCount());
 
         for (int s = 0; s < snapshots; s++)
         {
@@ -272,7 +272,7 @@ public class PureSinkRingTests
         Thread.Sleep(5_000);
 
         var report = new RingTestReport(_output);
-        report.Start();
+        report.Start(ring.TotalCount());
 
         for (int s = 0; s < snapshots; s++)
         {
