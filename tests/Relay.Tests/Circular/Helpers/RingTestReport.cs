@@ -36,10 +36,12 @@ internal sealed class RingTestReport
     /// Captures baseline GC and allocation counters, and initialises the timing state.
     /// Must be called immediately before the ring starts producing.
     /// </summary>
-    public void Start()
+    /// <param name="initialCount">Seeds the delta baseline — pass <c>ring.TotalCount()</c> after
+    /// a warmup phase so the first snapshot measures only post-warmup throughput.</param>
+    public void Start(long initialCount = 0)
     {
         _lastTicks = Stopwatch.GetTimestamp();
-        _lastCount = 0;
+        _lastCount = initialCount;
         _snapshotCount = 0;
         _gen0Before = GC.CollectionCount(0);
         _gen1Before = GC.CollectionCount(1);

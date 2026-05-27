@@ -164,13 +164,13 @@ public class BackendSinkRingTests
 
     [Fact]
     [Trait("Category", "Stress")]
-    public void Ring3_FileStreamSink_Packet64_Infinite_5s_Throughput()
+    public void Ring3_FileStreamSink_Packet64_Infinite_30s_Throughput()
     {
         string path = Path.GetTempFileName();
         try
         {
             const int seedItems = 256;
-            const int snapshots = 5;
+            const int snapshots = 30;
 
             var fileSink = new FileStreamSink<Packet64>(path, ringCapacity: 8192, flushInterval: 1);
             fileSink.Start();
@@ -186,8 +186,11 @@ public class BackendSinkRingTests
             for (int i = 0; i < seedItems; i++)
                 n0.Enqueue(new Packet64 { HopCount = 0, Id = i });
 
+            // Warmup: allow JIT and ring threads to reach steady-state before measurement.
+            Thread.Sleep(5_000);
+
             var report = new RingTestReport(_output);
-            report.Start();
+            report.Start(n0.Count + n1.Count + n2.Count);
 
             for (int s = 0; s < snapshots; s++)
             {
@@ -197,7 +200,7 @@ public class BackendSinkRingTests
 
             n2.Stop(2_000); n1.Stop(2_000); n0.Stop(2_000);
             report.Stop();
-            report.Print("Ring3_FileStreamSink_Infinite_5s", n0.Count + n1.Count + n2.Count);
+            report.Print("Ring3_FileStreamSink_Infinite_30s", n0.Count + n1.Count + n2.Count);
 
             n1.Count.Should().BeGreaterThan(0);
             new FileInfo(path).Length.Should().BeGreaterThan(0);
