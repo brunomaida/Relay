@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Relay.Tests.Circular.Helpers;
@@ -68,12 +69,12 @@ internal static class PacketLayout
     public static long ReadId(ReadOnlySpan<byte> p) => BitConverter.ToInt64(p[8..16]);
 
     /// <summary>
-    /// Write HopCount to packet header bytes [0..7].
+    /// Write HopCount to packet header bytes [0..7]. Uses unaligned write — no branch, no bool capture.
     /// </summary>
-    public static void WriteHop(Span<byte> p, long v) => BitConverter.TryWriteBytes(p[..8], v);
+    public static void WriteHop(Span<byte> p, long v) => Unsafe.WriteUnaligned(ref p[0], v);
 
     /// <summary>
-    /// Write Id to packet header bytes [8..15].
+    /// Write Id to packet header bytes [8..15]. Uses unaligned write — no branch, no bool capture.
     /// </summary>
-    public static void WriteId(Span<byte> p, long v) => BitConverter.TryWriteBytes(p[8..16], v);
+    public static void WriteId(Span<byte> p, long v) => Unsafe.WriteUnaligned(ref p[8], v);
 }
