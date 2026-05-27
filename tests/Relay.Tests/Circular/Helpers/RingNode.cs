@@ -123,49 +123,6 @@ internal sealed class BackendRingNode<T> : SpscQueueSink<T> where T : unmanaged
 }
 
 /// <summary>
-/// Synchronous ring node — no consumer thread. Forwards immediately in <see cref="Accept"/> on the
-/// calling thread. Use at most 2 non-adjacent in large rings to avoid stack depth issues.
-/// </summary>
-internal sealed class SyncRingNode<T> : DispatchSink<T> where T : unmanaged
-{
-    private readonly MemorySink<T>? _memory;
-    private long _count;
-    private long _dropped;
-
-    internal DispatchSink<T>? RingNext { get; set; }
-
-    public override bool IsHealthy => _memory?.IsHealthy ?? true;
-    public long Count   => Volatile.Read(ref _count);
-    public long Dropped => Volatile.Read(ref _dropped);
-
-    public SyncRingNode(MemorySink<T>? memory = null)
-    {
-        _memory = memory;
-    }
-
-    protected override bool Accept(in T item)
-    {
-        Interlocked.Increment(ref _count);
-
-        if (_memory is not null)
-        {
-            if (!_memory.IsHealthy)
-            {
-                Interlocked.Increment(ref _dropped);
-                return false;
-            }
-            _memory.Enqueue(in item);
-        }
-
-        RingNext?.Enqueue(in item);
-        return true;
-    }
-
-    public override void Flush()   { }
-    public override void Dispose() => _memory?.Dispose();
-}
-
-/// <summary>
 /// SPSC ring node for the packet hierarchy (variable-length <see cref="ReadOnlySpan{T}"/> payloads).
 /// Decrements HopCount in a POH-pinned scratch buffer before forwarding to <see cref="RingNext"/>.
 /// </summary>

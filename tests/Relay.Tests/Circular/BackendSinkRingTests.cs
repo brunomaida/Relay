@@ -82,7 +82,8 @@ public class BackendSinkRingTests
             // which flushes and closes the file. No separate fileSink.Stop() needed.
             n2.Stop(); n1.Stop(); n0.Stop();
 
-            n1.Count.Should().BeGreaterThan(0);
+            // hopCount=5 (odd): each of the 3 nodes is visited 3 times per item.
+            n1.Count.Should().Be(itemCount * 3);
             new FileInfo(path).Length.Should().BeGreaterThan(0);
         }
         finally
@@ -119,7 +120,8 @@ public class BackendSinkRingTests
 
             n2.Stop(); n1.Stop(); n0.Stop();
 
-            n1.Count.Should().BeGreaterThan(0);
+            // hopCount=5 (odd): each of the 3 nodes is visited 3 times per item.
+            n1.Count.Should().Be(itemCount * 3);
         }
         finally
         {
@@ -152,7 +154,8 @@ public class BackendSinkRingTests
         // Do not call mem.Dispose() again after this.
         n2.Stop(); n1.Stop(); n0.Stop();
 
-        n1.Count.Should().BeGreaterThan(0);
+        // hopCount=5 (odd): each of the 3 nodes is visited 3 times per item.
+        n1.Count.Should().Be(itemCount * 3);
     }
 
     // -------------------------------------------------------------------------
