@@ -217,7 +217,7 @@ cleaner and costs nothing at runtime.
 | Zero-copy fixed-layout matters (Struct-of-arrays, SIMD) | Payload is already a serialized/encoded byte blob |
 | `SinkConstraints.AssertCacheLineAligned<T>()` applies | You need a byte-oriented backend (text log, framed protocol) |
 
-### Status (current)
+### Status (current — Phase 1: no ETA set; create GitHub milestone before starting Phase 2)
 - SPSC-only concrete sinks. `MpscQueueSink` abstract base exists; no concrete MPSC
   backends yet — add if multi-producer contention is demonstrated by BDN.
 - `PacketSink.PropagateAfterAccept` is defined and documented — concrete tee/fork sinks
@@ -267,3 +267,9 @@ cleaner and costs nothing at runtime.
 # Model Routing
 - **Sonnet** — implementation, refactor, tests
 - **Opus** — architectural decisions, new concrete pipes, performance analysis, scope review
+
+# Release Process
+1. Merge `develop` → `master` via PR (no direct push to master)
+2. Tag: `vX.Y.Z` on master
+3. NuGet package published on tag push via CI
+4. Invoke `/release-1-checklist` before merging
