@@ -144,13 +144,13 @@ public class ReceiverSinkRingTests
     [Fact]
     [Trait("Category", "Stress")]
     [SupportedOSPlatform("windows")]
-    public void Ring3_SharedMemorySpscSink_Packet_Infinite_5s_Throughput()
+    public void Ring3_SharedMemorySpscSink_Packet_Infinite_30s_Throughput()
     {
         if (!OperatingSystem.IsWindows()) return; // Named MMF: Windows only
 
         const string mmfName   = "Local\\relay-ring-rcv-stress";
         const int    seedItems = 128;
-        const int    snapshots = 5;
+        const int    snapshots = 30;
 
         var counter = new long[1];
 
@@ -191,8 +191,11 @@ public class ReceiverSinkRingTests
             n0.Enqueue(buf);
         }
 
+        // Warmup: allow JIT and ring threads to reach steady-state before measurement.
+        Thread.Sleep(5_000);
+
         var report = new RingTestReport(_output);
-        report.Start();
+        report.Start(n0.Count + n1.Count + n2.Count);
 
         for (int s = 0; s < snapshots; s++)
         {
@@ -202,7 +205,7 @@ public class ReceiverSinkRingTests
 
         n2.Stop(2_000); n1.Stop(2_000); n0.Stop(2_000);
         report.Stop();
-        report.Print("Ring3_SharedMemorySpscSink_Infinite_5s", n0.Count + n1.Count + n2.Count);
+        report.Print("Ring3_SharedMemorySpscSink_Infinite_30s", n0.Count + n1.Count + n2.Count);
 
         // Give poller time to drain remaining frames from the shared ring.
         Thread.Sleep(200);
@@ -212,6 +215,6 @@ public class ReceiverSinkRingTests
         long totalReceived = Volatile.Read(ref counter[0]);
         _output.WriteLine($"n1.Count={n1.Count} received={totalReceived}");
 
-        totalReceived.Should().BeGreaterThan(0, "receiver must consume frames during the 5s window");
+        totalReceived.Should().BeGreaterThan(0, "receiver must consume frames during the 30s window");
     }
 }

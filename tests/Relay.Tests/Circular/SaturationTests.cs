@@ -166,17 +166,17 @@ public class SaturationTests
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Runs an <see cref="InfiniteRingTopology{T}"/> with small ring buffers for 5 seconds,
+    /// Runs an <see cref="InfiniteRingTopology{T}"/> with small ring buffers for 30 seconds,
     /// seeding a burst of 512 items and measuring throughput under ring saturation.
     /// Prints a <see cref="RingTestReport"/> with min/avg/max msg/s and GC impact.
     /// </summary>
     [Fact]
     [Trait("Category", "Stress")]
-    public void Ring3_Packet64_SmallBuffer_5s_SaturationRateMeasured()
+    public void Ring3_Packet64_SmallBuffer_30s_SaturationRateMeasured()
     {
         const int seedItems = 512;
         const int ringCap   = 256; // small buffer to provoke saturation
-        const int snapshots = 5;
+        const int snapshots = 30;
 
         using var ring = new InfiniteRingTopology<Packet64>(
             new RingNodeConfig(NodeCount: 3, RingCapacity: ringCap, DecrementHops: false));
@@ -186,7 +186,11 @@ public class SaturationTests
             ring.Entry.Enqueue(new Packet64 { HopCount = 0, Id = i });
 
         var report = new RingTestReport(_output, maxSnapshots: snapshots);
-        report.Start();
+
+        // Warmup: allow JIT and ring threads to reach steady-state before measurement.
+        Thread.Sleep(5_000);
+
+        report.Start(ring.TotalCount());
 
         for (int s = 0; s < snapshots; s++)
         {
