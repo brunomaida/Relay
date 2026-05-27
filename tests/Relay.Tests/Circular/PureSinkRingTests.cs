@@ -157,10 +157,10 @@ public class PureSinkRingTests
 
     [Fact]
     [Trait("Category", "Stress")]
-    public void Ring3_Packet64_Infinite_5s_Throughput()
+    public void Ring3_Packet64_Infinite_30s_Throughput()
     {
         const int seedItems = 512;
-        const int snapshots = 5;
+        const int snapshots = 30;
 
         using var ring = new InfiniteRingTopology<Packet64>(
             new RingNodeConfig(NodeCount: 3, RingCapacity: 8192, DecrementHops: false));
@@ -168,6 +168,9 @@ public class PureSinkRingTests
 
         for (int i = 0; i < seedItems; i++)
             ring.Entry.Enqueue(new Packet64 { HopCount = 0, Id = i });
+
+        // Warmup: allow JIT and ring threads to reach steady-state before measurement.
+        Thread.Sleep(5_000);
 
         var report = new RingTestReport(_output);
         report.Start();
@@ -187,10 +190,10 @@ public class PureSinkRingTests
 
     [Fact]
     [Trait("Category", "Stress")]
-    public void Ring5_Packet128_Infinite_5s_Throughput()
+    public void Ring5_Packet128_Infinite_30s_Throughput()
     {
         const int seedItems = 512;
-        const int snapshots = 5;
+        const int snapshots = 30;
 
         using var ring = new InfiniteRingTopology<Packet128>(
             new RingNodeConfig(NodeCount: 5, RingCapacity: 8192, DecrementHops: false));
@@ -198,6 +201,9 @@ public class PureSinkRingTests
 
         for (int i = 0; i < seedItems; i++)
             ring.Entry.Enqueue(new Packet128 { HopCount = 0, Id = i });
+
+        // Warmup: allow JIT and ring threads to reach steady-state before measurement.
+        Thread.Sleep(5_000);
 
         var report = new RingTestReport(_output);
         report.Start();
@@ -217,10 +223,10 @@ public class PureSinkRingTests
 
     [Fact]
     [Trait("Category", "Stress")]
-    public void Ring8_Packet256_Infinite_10s_Throughput()
+    public void Ring8_Packet256_Infinite_30s_Throughput()
     {
         const int seedItems = 512;
-        const int snapshots = 10;
+        const int snapshots = 30;
 
         using var ring = new InfiniteRingTopology<Packet256>(
             new RingNodeConfig(NodeCount: 8, RingCapacity: 8192, DecrementHops: false));
@@ -228,6 +234,9 @@ public class PureSinkRingTests
 
         for (int i = 0; i < seedItems; i++)
             ring.Entry.Enqueue(new Packet256 { HopCount = 0, Id = i });
+
+        // Warmup: allow JIT and ring threads to reach steady-state before measurement.
+        Thread.Sleep(5_000);
 
         var report = new RingTestReport(_output);
         report.Start();
@@ -247,10 +256,10 @@ public class PureSinkRingTests
 
     [Fact]
     [Trait("Category", "Stress")]
-    public void Ring13_Packet320_Infinite_10s_Throughput()
+    public void Ring13_Packet320_Infinite_30s_Throughput()
     {
         const int seedItems = 512;
-        const int snapshots = 10;
+        const int snapshots = 30;
 
         using var ring = new InfiniteRingTopology<Packet320>(
             new RingNodeConfig(NodeCount: 13, RingCapacity: 8192, DecrementHops: false));
@@ -258,6 +267,9 @@ public class PureSinkRingTests
 
         for (int i = 0; i < seedItems; i++)
             ring.Entry.Enqueue(new Packet320 { HopCount = 0, Id = i });
+
+        // Warmup: allow JIT and ring threads to reach steady-state before measurement.
+        Thread.Sleep(5_000);
 
         var report = new RingTestReport(_output);
         report.Start();
