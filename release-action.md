@@ -22,7 +22,7 @@
 | 3b | No banned patterns | PASS | `Thread.Sleep` hits are all in test fixtures (documented exception); no `DateTime.Now` |
 | 4 | Tests pass | PASS | 241 passed, 0 failed, 10 skipped (45s) |
 | 5.0 | changelog.d/ consolidation | N/A | No fragments |
-| 5a | CHANGELOG versioned | NEEDS ACTION | `[1.0.4]` entry missing — add before committing |
+| 5a | CHANGELOG versioned | PASS | `[1.0.4] - 2026-05-28` entry added |
 | 5b | Project docs up-to-date | N/A | No project-specific doc requirements |
 | 5c | CLAUDE.md consistent | PASS | Updated 2026-05-26 (2 days ago, well under 90-day threshold) |
 | 5d | README.md current | PASS | Exists; all 5 solution projects listed |
@@ -35,7 +35,7 @@
 | 5k | Bench refs inventory | N/A | No bench-history.csv |
 | 5l | README auto-update | N/A | Gate 5j not triggered |
 | 5m | Declared docs freshness | N/A | No `doc-scopes:` block in CLAUDE.md |
-| 6 | Version tags set | NEEDS UPDATE | `Directory.Build.props` has `1.0.3`; must be updated to `1.0.4` |
+| 6 | Version tags set | PASS | `Directory.Build.props` updated to `1.0.4` |
 | 7 | No sensitive files | PASS | No .env, credentials, secrets, or keys in diff |
 
 ---
@@ -71,12 +71,7 @@ e037c0c test: add CircularPayloads structs for ring topology tests w/Claude
 
 ## Next Step
 
-Two NEEDS ACTION items before proceeding:
-
-1. **5a — CHANGELOG.md:** rename `[Unreleased]` → `[1.0.4] - 2026-05-28`, insert new empty `[Unreleased]` above
-2. **6 — Version:** update `Directory.Build.props` — `<Version>`, `<AssemblyVersion>`, `<FileVersion>` all `1.0.3` → `1.0.4`
-3. Commit: `chore: prepare release v1.0.4 w/Claude`
-4. Run `/release-2-merge-master`
+All gates PASS or N/A. Run `/release-2-merge-master`.
 
 ---
 
