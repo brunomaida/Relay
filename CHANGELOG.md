@@ -9,6 +9,17 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ---
 
+## [1.0.4] - 2026-05-28
+
+### Added
+
+- Circular ring topology test suite (`PureSinkRingTests`, `BackendSinkRingTests`, `SaturationTests`, `ReceiverSinkRingTests`) — multi-hop ring scenarios with 30s stress + 5s warmup windows.
+- `CircularThroughputPerfTests` — steady-state throughput benchmarks for circular ring topologies.
+- `MpscThroughputHarness` — JIT warmup run before MPSC perf measurements.
+- `RingTopology`, `RingNode`, `RingTestReport` — shared helpers for ring test infrastructure.
+
+---
+
 ## [1.0.3] - 2026-05-26
 
 ### Added
