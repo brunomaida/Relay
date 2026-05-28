@@ -36,6 +36,8 @@ public sealed class MpscThroughputHarness
         _output.WriteLine("ring capacity = 1_048_576 slots, items per producer = 1_000_000");
         _output.WriteLine("");
 
+        RunOneTyped(1, 200_000, capacity: 1 << 20); // warmup: JIT-compile hot path, discard result
+        _output.WriteLine("warmup done");
         double baseline = 0;
         foreach (int producers in new[] { 1, 2, 4, 8 })
         {
@@ -55,6 +57,8 @@ public sealed class MpscThroughputHarness
         _output.WriteLine("ring capacity = 4 MiB bytes, payload = 64 B, items per producer = 500_000");
         _output.WriteLine("");
 
+        RunOneByte(1, 100_000, capacity: 1 << 22, payloadSize: 64); // warmup: JIT-compile hot path, discard result
+        _output.WriteLine("warmup done");
         double baseline = 0;
         foreach (int producers in new[] { 1, 2, 4, 8 })
         {
