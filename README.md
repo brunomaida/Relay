@@ -1,8 +1,8 @@
 # Relay
 
-**Composable fallback dispatch pipeline for `unmanaged` structs — .NET 9 / C# 13**
+**Composable fallback dispatch sinkline for `unmanaged` structs — .NET 9 / C# 13**
 
-Zero allocation on the hot path. No locks. No LINQ. No `async`. Each item is delivered to the first healthy backend in the chain; on failure, it falls through to the next pipe automatically.
+Zero allocation on the hot path. No locks. No LINQ. No `async`. Each item is delivered to the first healthy backend in the chain; on failure, it falls through to the next sink automatically.
 
 - **Automatic fallback chain** — `DispatchSink<T>` delivers to the first healthy backend; on any failure it forwards to `Next` automatically, no producer involvement
 - **Zero allocation steady state** — POH buffers allocated once at construction; `Enqueue` costs ~32 cycles, no heap allocation on the hot path
@@ -17,8 +17,7 @@ Zero allocation on the hot path. No locks. No LINQ. No `async`. Each item is del
 
 ## Overview
 
-Relay is an infrastructure library for building composable, resilient dispatch pipelines over blittable (`T : unmanaged`) data. The core abstraction is `DispatchSink<T>`: a node that tries to deliver an item to its local backend, and on any failure — including transient I/O errors, connection drops, or capacity limits — forwards the item to the next sink in the chain.
-
+Relay is an infrastructure library for building composable, resilient dispatch sinklines over blittable (`T : unmanaged`) data. The core abstraction is `DispatchSink<T>`: a node that tries to deliver an item to its local backend, and on any failure — including transient I/O errors, connection drops, or capacity limits — forwards the item to the next sink in the chain.
 A parallel hierarchy, `PacketSink`, handles variable-length `ReadOnlySpan<byte>` payloads with the same fallback semantics. `SerializeSink<T>` bridges the two trees zero-copy via `MemoryMarshal.AsBytes`.
 
 Pipelines are assembled with a fluent builder (`RelayBuilder` for typed chains, `SinkChainBuilder` for packet chains) and require no external orchestrator. Each sink manages its own health, recovery, and backpressure. The producer calls a single method (`Enqueue`) at whatever rate it needs; the library handles the rest.
@@ -64,7 +63,7 @@ Full type hierarchy, ring-buffer internals, builder operators, and recommended t
 
 | Project | Layer | Description |
 |---|---|---|
-| `src/Relay` | Library | Core pipeline: typed + packet sinks, builders, ring buffers, native memory |
+| `src/Relay` | Library | Core sinkline: typed + packet sinks, builders, ring buffers, native memory |
 | `src/Relay.Sinks.Http` | Library | `HttpBatchSink` — HTTP POST with circuit breaker, built on `BatchSink` |
 | `src/Relay.Sinks.Observability` | Library | `SeqSink` — CLEF-over-HTTP to Seq, built on `HttpBatchSink` |
 | `tests/Relay.Tests` | Tests | xUnit tests per concern (chain, SPSC, MPSC, multi-broadcast, recovery drain, HTTP batch) |
@@ -627,7 +626,7 @@ var head = RelayBuilder
 
 ---
 
-#### 11. Full production pipeline
+#### 11. Full production sinkline
 
 Gate → audit → broadcast with per-branch fallback. Build inside-out: branches first,
 then multi, then fork, then filter.
@@ -875,7 +874,7 @@ Base all branches off `develop`. Merge back to `develop` when stable.
 
 ## Resumo (PT-BR)
 
-**Relay** é uma biblioteca de infraestrutura para construir pipelines de despacho com fallback automático em .NET 9. Duas hierarquias paralelas cobrem os casos de uso principais:
+**Relay** é uma biblioteca de infraestrutura para construir sinklines de despacho com fallback automático em .NET 9. Duas hierarquias paralelas cobrem os casos de uso principais:
 
 - **`DispatchSink<T>`** — payloads tipados (`T : unmanaged`). Zero alocação no estado estável. `Enqueue(in item)` custa ~32 ciclos em um i9-12900K com caches quentes.
 - **`PacketSink`** — payloads de comprimento variável (`ReadOnlySpan<byte>`). Mesma semântica de fallback. `SerializeSink<T>` faz a ponte entre as duas árvores via `MemoryMarshal.AsBytes` sem cópia.
