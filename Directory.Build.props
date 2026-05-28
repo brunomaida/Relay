@@ -5,6 +5,7 @@
     <FileVersion>1.0.4</FileVersion>
     <Authors>Bruno Maida</Authors>
     <Company>Bruno Maida</Company>
+    <Description>Structured dispatch pipeline for high-performance logging systems.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/brunomaida/Relay</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
