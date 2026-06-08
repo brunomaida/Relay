@@ -2,7 +2,7 @@
 Relay — infrastructure library for composable fallback dispatch pipelines over `T : unmanaged`.
 Single responsibility: receive `T`, deliver to the configured backend, and if delivery fails, forward to the next sink in the chain. No logging. No telemetry. No orchestration.
 
-> Global tenets (HFT, code format, response format, base git workflow) defined in `~/.claude/CLAUDE.md`.
+> Commits must not include "w/Claude" or any AI-attribution suffix in the message.
 
 ## Tier
 `tier: ultra-low-latency` — all `.cs` files are hot-path; no cold-path exceptions. Enforced globally by `banned-api-enforce`.
