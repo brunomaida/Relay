@@ -1,0 +1,56 @@
+{
+  "timestamp_utc": "2026-06-10T15:53:34Z",
+  "suite": "Relay.Benchmarks.MultiIsHealthyBenchmarks",
+  "tag": "micro",
+  "env_key": "3417dcbf",
+  "env": {
+    "bdn_version": "0.13.12",
+    "os": "Windows 11 (10.0.26200.8655)",
+    "cpu": "12th Gen Intel Core i7-12700",
+    "cores": 12,
+    "runtime": ".NET 9.0.14"
+  },
+  "git_sha": "92a7fc4",
+  "git_dirty": true,
+  "source": "backfill",
+  "confidence": "low",
+  "baseline": false,
+  "records": [
+    {
+      "bench_id": "Relay.Benchmarks.MultiIsHealthyBenchmarks.Multi_IsHealthy",
+      "suite": "Relay.Benchmarks.MultiIsHealthyBenchmarks",
+      "unit": "ns",
+      "mean": 0.4114,
+      "median": null,
+      "stddev": 0.0106,
+      "min": null,
+      "max": null,
+      "p95": null,
+      "p99": null,
+      "alloc_bytes": null,
+      "gen0": null,
+      "gen1": null,
+      "gen2": null,
+      "extra": {}
+    },
+    {
+      "bench_id": "Relay.Benchmarks.MultiIsHealthyBenchmarks.Multi2_IsHealthy",
+      "suite": "Relay.Benchmarks.MultiIsHealthyBenchmarks",
+      "unit": "ns",
+      "mean": 0.4453,
+      "median": null,
+      "stddev": 0.0008,
+      "min": null,
+      "max": null,
+      "p95": null,
+      "p99": null,
+      "alloc_bytes": null,
+      "gen0": null,
+      "gen1": null,
+      "gen2": null,
+      "extra": {}
+    }
+  ],
+  "run_id": "cce2a76cbca92d55",
+  "methodology_version": "1"
+}
