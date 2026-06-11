@@ -909,11 +909,12 @@ O produtor chama um único método — `Enqueue` — e a biblioteca cuida do rot
 
 
 <!-- BENCH:BEGIN -->
-### Performance (latest run: 2026-06-11, env 3417dcbf)
+### Performance (latest run: 2026-06-11, env 8e045e34)
 
 | benchId | Mean | Alloc B/op | Δ |
 |---|---|---|---|
-| `Relay.Benchmarks.Sinks.RotatingFileSinkBenchmarks.ShouldRotate_Predicate` | 0.03 ns | — | new |
+| `Relay.Benchmarks.Sinks.UnixSocketSinkBenchmarks.Push_Single(ItemCount: 1000000)` | 20.79 ms | 135.94 KB | new |
+| `Relay.Benchmarks.Sinks.UnixSocketSinkBenchmarks.Push_Single(ItemCount: 100000)` | 3.08 ms | 135.93 KB | new |
 
 _Full history: [docs/reports/bench-history/bench-history.md](docs/reports/bench-history/bench-history.md)_
 <!-- BENCH:END -->
