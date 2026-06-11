@@ -1,3 +1,10 @@
+---
+title: "Relay Library — Topology"
+type: topology
+solution: Relay
+created: 2026-06-11
+---
+
 # Relay Library — Topology
 
 ```
@@ -809,3 +816,8 @@
     - MemorySink as last resort adds ~0c on success path, ~6c on all-children-fail path.
     - Multi2Sink (CRTP) saves ~6c over MultiSink when children are sealed types.
 ```
+
+<!-- doc-links:auto -->
+## Related
+
+- [Architecture decisions](architecture-decisions.md)
