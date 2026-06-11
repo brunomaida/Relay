@@ -906,3 +906,14 @@ O produtor chama um único método — `Enqueue` — e a biblioteca cuida do rot
 ## Related
 
 - [Docs index](docs/_index.md)
+
+
+<!-- BENCH:BEGIN -->
+### Performance (latest run: 2026-06-11, env 3417dcbf)
+
+| benchId | Mean | Alloc B/op | Δ |
+|---|---|---|---|
+| `Relay.Benchmarks.Sinks.RotatingFileSinkBenchmarks.ShouldRotate_Predicate` | 0.03 ns | — | new |
+
+_Full history: [docs/reports/bench-history/bench-history.md](docs/reports/bench-history/bench-history.md)_
+<!-- BENCH:END -->
