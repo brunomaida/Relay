@@ -1,3 +1,10 @@
+---
+title: "Relay"
+type: readme
+solution: Relay
+created: 2026-04-23
+---
+
 # Relay
 
 **Composable fallback dispatch sinkline for `unmanaged` structs — .NET 9 / C# 13**
@@ -894,3 +901,8 @@ O produtor chama um único método — `Enqueue` — e a biblioteca cuida do rot
 - Envio batch de eventos CLEF para Seq com circuit breaker (`SeqSink`)
 
 **Garantias de desempenho:** zero alocação em steady state, sem `lock`/`Monitor`, sem `async`/`await` no caminho quente.
+
+<!-- doc-links:auto -->
+## Related
+
+- [Docs index](docs/_index.md)
