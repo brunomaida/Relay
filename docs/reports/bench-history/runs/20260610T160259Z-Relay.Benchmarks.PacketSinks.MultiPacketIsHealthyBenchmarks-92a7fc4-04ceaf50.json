@@ -1,0 +1,39 @@
+{
+  "timestamp_utc": "2026-06-10T16:02:59Z",
+  "suite": "Relay.Benchmarks.PacketSinks.MultiPacketIsHealthyBenchmarks",
+  "tag": "micro",
+  "env_key": "3417dcbf",
+  "env": {
+    "bdn_version": "0.13.12",
+    "os": "Windows 11 (10.0.26200.8655)",
+    "cpu": "12th Gen Intel Core i7-12700",
+    "cores": 12,
+    "runtime": ".NET 9.0.14"
+  },
+  "git_sha": "92a7fc4",
+  "git_dirty": true,
+  "source": "backfill",
+  "confidence": "low",
+  "baseline": false,
+  "records": [
+    {
+      "bench_id": "Relay.Benchmarks.PacketSinks.MultiPacketIsHealthyBenchmarks.Multi_Packet_IsHealthy",
+      "suite": "Relay.Benchmarks.PacketSinks.MultiPacketIsHealthyBenchmarks",
+      "unit": "ns",
+      "mean": 0.4318,
+      "median": null,
+      "stddev": 0.0196,
+      "min": null,
+      "max": null,
+      "p95": null,
+      "p99": null,
+      "alloc_bytes": null,
+      "gen0": null,
+      "gen1": null,
+      "gen2": null,
+      "extra": {}
+    }
+  ],
+  "run_id": "04ceaf508d8c246a",
+  "methodology_version": "1"
+}
