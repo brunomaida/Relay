@@ -13,9 +13,11 @@ namespace Relay.Sinks;
 /// <remarks>
 /// <para>Thread safety: <c>single-producer per instance</c>. Only one thread may call
 /// <see cref="DispatchSink{T}.Enqueue"/> at a time. <see cref="DrainTo"/> must be called from
-/// a single recovery thread and never concurrently with <c>Enqueue</c>. No CAS — volatile
-/// reads/writes on head and tail suffice for the SPSC invariant. Do NOT wrap <c>Enqueue</c> in
-/// an external lock — adding a monitor costs ~1000 cycles per call with no benefit.</para>
+/// a single recovery thread and never concurrently with <c>Enqueue</c>. No CAS — plain
+/// reads/writes on <c>_head</c> and <c>_tail</c> suffice under x86/x64 TSO with a single
+/// producer. <see cref="DrainTo"/> callers must establish happens-before externally before
+/// the first <see cref="DrainTo"/> call. Do NOT wrap <c>Enqueue</c> in an external lock — adding a
+/// monitor costs ~1000 cycles per call with no benefit.</para>
 /// </remarks>
 // unsealed to allow [Obsolete] RamSink compat shim in _Compat/
 public unsafe class MemorySink<T> : DispatchSink<T> where T : unmanaged
@@ -69,10 +71,17 @@ public unsafe class MemorySink<T> : DispatchSink<T> where T : unmanaged
 
     public override void Flush() { }
 
+    ~MemorySink()
+    {
+        if (!_disposed)
+            NativeMemory.Free(_buffer);
+    }
+
     public override void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
         NativeMemory.Free(_buffer);
+        GC.SuppressFinalize(this);
     }
 }

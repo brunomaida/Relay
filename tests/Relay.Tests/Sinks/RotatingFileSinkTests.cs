@@ -82,8 +82,10 @@ public sealed class RotatingFileSinkTests : IDisposable
     [Fact]
     public void Enqueue_DayBoundaryCrossed_RotatesToNextFile()
     {
+        // ShouldRotate samples RDTSC every 256 records to keep the hot path allocation-free.
+        // Send 256 records after the boundary is moved so the throttle window is reached.
         using var sink = new RotatingFileSink(_dir, "log", maxBytes: 1_000_000,
-                                              ringCapacity: 4096, flushIntervalMs: 50);
+                                              ringCapacity: 65_536, flushIntervalMs: 50);
         sink.Start();
 
         sink.Enqueue(new byte[100]);
@@ -91,11 +93,11 @@ public sealed class RotatingFileSinkTests : IDisposable
 
         sink.SetDayBoundaryForTest(Relay.Internal.HfClock.NowTicks - 1); // simulate "yesterday ended"
 
-        sink.Enqueue(new byte[100]);
-        sink.Stop(drainTimeoutMs: 1_000);
+        for (int i = 0; i < 256; i++) sink.Enqueue(new byte[100]);
+        sink.Stop(drainTimeoutMs: 2_000);
 
         var files = Directory.GetFiles(_dir, "log-*.log");
-        files.Should().HaveCountGreaterThan(1, "day boundary crossed -> rotated");
+        files.Should().HaveCountGreaterThan(1, "day boundary crossed -> rotated after 256-record throttle window");
     }
 
     [Fact]

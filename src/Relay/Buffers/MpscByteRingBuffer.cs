@@ -169,35 +169,38 @@ internal sealed class MpscByteRingBuffer : IDisposable
     /// into the backing buffer; caller must pass <paramref name="advanceBytes"/> to
     /// <see cref="Advance"/> after consuming. Consumer thread only.
     /// </summary>
-    /// <remarks>Transparently skips padding markers by self-recursing.</remarks>
+    /// <remarks>Transparently skips padding markers via an iterative loop.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryPeek(out ReadOnlySpan<byte> payload, out int advanceBytes)
     {
-        long pos = _head.Value;
-        int  idx = (int)(pos & _mask);
-        uint hdr = ReadHeaderVolatile(idx);
-
-        if ((hdr & HighBit) == 0)
+        while (true)
         {
-            payload      = default;
-            advanceBytes = 0;
-            return false;
-        }
+            long pos = _head.Value;
+            int  idx = (int)(pos & _mask);
+            uint hdr = ReadHeaderVolatile(idx);
 
-        uint lenField = hdr & LengthMask;
-        if (lenField == PaddingLowBits)
-        {
-            int skip = Capacity - idx;
-            PublishHeader(idx, 0);
-            Volatile.Write(ref _head.Value, pos + skip);
-            return TryPeek(out payload, out advanceBytes);
-        }
+            if ((hdr & HighBit) == 0)
+            {
+                payload      = default;
+                advanceBytes = 0;
+                return false;
+            }
 
-        int len       = (int)lenField;
-        int paddedLen = (len + 3) & ~3;
-        payload       = _buffer.AsSpan(idx + HeaderSize, len);
-        advanceBytes  = HeaderSize + paddedLen;
-        return true;
+            uint lenField = hdr & LengthMask;
+            if (lenField == PaddingLowBits)
+            {
+                int skip = Capacity - idx;
+                PublishHeader(idx, 0);
+                Volatile.Write(ref _head.Value, pos + skip);
+                continue;
+            }
+
+            int len       = (int)lenField;
+            int paddedLen = (len + 3) & ~3;
+            payload       = _buffer.AsSpan(idx + HeaderSize, len);
+            advanceBytes  = HeaderSize + paddedLen;
+            return true;
+        }
     }
 
     /// <summary>
