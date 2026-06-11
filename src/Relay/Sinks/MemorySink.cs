@@ -71,10 +71,17 @@ public unsafe class MemorySink<T> : DispatchSink<T> where T : unmanaged
 
     public override void Flush() { }
 
+    ~MemorySink()
+    {
+        if (!_disposed)
+            NativeMemory.Free(_buffer);
+    }
+
     public override void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
         NativeMemory.Free(_buffer);
+        GC.SuppressFinalize(this);
     }
 }
