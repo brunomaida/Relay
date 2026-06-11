@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace Relay;
@@ -38,14 +39,20 @@ public abstract class PacketSink : IDisposable
     /// <param name="propagateAfterAccept">When true, Enqueue propagates to Next after a successful Accept.</param>
     protected PacketSink(bool propagateAfterAccept = false) => PropagateAfterAccept = propagateAfterAccept;
 
-    private long _dropCount;
+    [StructLayout(LayoutKind.Explicit, Size = 128)]
+    private struct PaddedDropCount
+    {
+        [FieldOffset(64)] public long Value;
+    }
+
+    private PaddedDropCount _dropCount;
 
     /// <summary>
     /// Cumulative count of payloads dropped at this terminal sink — observed when Next is null
     /// and either IsHealthy is false or Accept returned false. Read on cold path only;
     /// Volatile.Read for atomic 8-byte read on x64/arm64.
     /// </summary>
-    public long DropCount => Volatile.Read(ref _dropCount);
+    public long DropCount => Volatile.Read(ref _dropCount.Value);
 
     /// <summary>
     /// Delivers <paramref name="payload"/> to this sink only — does not fall through to
@@ -78,7 +85,7 @@ public abstract class PacketSink : IDisposable
         }
 
         // Terminal drop — Next is null and either IsHealthy is false or Accept returned false.
-        Interlocked.Increment(ref _dropCount);
+        Interlocked.Increment(ref _dropCount.Value);
     }
 
     /// <summary>
