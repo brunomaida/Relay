@@ -39,6 +39,7 @@ public sealed class RotatingFileSink : SpscQueueSink
     private long        _nextDayBoundaryTicks;          // HfClock ticks at the next UTC midnight
     private int         _backoffMs      = MinBackoffMs;
     private long        _nextRetryTicks;
+    private int         _shouldRotateCounter;
 
     /// <param name="fileNameFormat">
     /// Optional file name format string. Placeholders: <c>{0}</c> = prefix, <c>{1}</c> = date,
@@ -122,7 +123,8 @@ public sealed class RotatingFileSink : SpscQueueSink
     private bool ShouldRotate(int incomingBytes)
     {
         if (_currentFileBytes + incomingBytes > _maxBytes) return true;
-        if (HfClock.NowTicks >= _nextDayBoundaryTicks) return true;
+        if ((++_shouldRotateCounter & 0xFF) == 0)      // sample RDTSC every 256 records (~1 s precision is sufficient)
+            if (HfClock.NowTicks >= _nextDayBoundaryTicks) return true;
         return false;
     }
 
@@ -235,8 +237,9 @@ public sealed class RotatingFileSink : SpscQueueSink
     /// Benchmark-only accessor: invokes <see cref="ShouldRotate"/> in isolation, so BDN can
     /// measure the predicate cost without the surrounding buffer copy in
     /// <see cref="WriteToBackend"/>. Used as the regression gate for the
-    /// injected-clock → <c>HfClock</c>-tick fix. Visible to
-    /// <c>Relay.Benchmarks</c> via <c>InternalsVisibleTo</c>; never call from production.
+    /// injected-clock → <c>HfClock</c>-tick fix and the RDTSC throttle (counter mod 256).
+    /// Expected: ≤2 ns on the 255-of-256 fast path (no RDTSC); ~13–15 ns on the sampled call.
+    /// Visible to <c>Relay.Benchmarks</c> via <c>InternalsVisibleTo</c>; never call from production.
     /// </summary>
     internal bool BenchInvokeShouldRotate(int incomingBytes) => ShouldRotate(incomingBytes);
 }
