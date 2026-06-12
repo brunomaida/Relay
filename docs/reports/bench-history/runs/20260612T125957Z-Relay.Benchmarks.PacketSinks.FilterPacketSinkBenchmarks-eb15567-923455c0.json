@@ -1,0 +1,57 @@
+{
+  "timestamp_utc": "2026-06-12T12:59:57Z",
+  "suite": "Relay.Benchmarks.PacketSinks.FilterPacketSinkBenchmarks",
+  "tag": "micro",
+  "env_key": "c15f4501",
+  "env": {
+    "cpu": "12th Gen Intel Core i7-12700",
+    "cores": 12,
+    "os": "Windows 11 (10.0.26200.8655)",
+    "runtime": ".NET 9.0.14 (9.0.1426.11910)",
+    "bdn_version": "0.13.12",
+    "arch": "X64"
+  },
+  "git_sha": "eb15567",
+  "git_dirty": true,
+  "source": "ingest",
+  "confidence": "high",
+  "baseline": true,
+  "records": [
+    {
+      "bench_id": "Relay.Benchmarks.PacketSinks.FilterPacketSinkBenchmarks.Filter_Packet_Pass",
+      "suite": "Relay.Benchmarks.PacketSinks.FilterPacketSinkBenchmarks",
+      "unit": "ns",
+      "mean": 6.335842112700145,
+      "median": 6.361661851406097,
+      "stddev": 0.04728350104619729,
+      "min": 6.281270086765289,
+      "max": 6.364594399929047,
+      "p95": 6.364301145076752,
+      "p99": 6.364301145076752,
+      "alloc_bytes": 0,
+      "gen0": 0,
+      "gen1": 0,
+      "gen2": 0,
+      "extra": {}
+    },
+    {
+      "bench_id": "Relay.Benchmarks.PacketSinks.FilterPacketSinkBenchmarks.Filter_Packet_Reject",
+      "suite": "Relay.Benchmarks.PacketSinks.FilterPacketSinkBenchmarks",
+      "unit": "ns",
+      "mean": 0.2472622940937678,
+      "median": 0.24614334106445312,
+      "stddev": 0.006017581427621896,
+      "min": 0.24188272655010223,
+      "max": 0.25376081466674805,
+      "p95": 0.25299906730651855,
+      "p99": 0.25299906730651855,
+      "alloc_bytes": 0,
+      "gen0": 0,
+      "gen1": 0,
+      "gen2": 0,
+      "extra": {}
+    }
+  ],
+  "run_id": "923455c0b0829ea9",
+  "methodology_version": "1"
+}
