@@ -1,0 +1,57 @@
+{
+  "timestamp_utc": "2026-06-12T13:04:37Z",
+  "suite": "Relay.Benchmarks.Receivers.UdpReceiverBenchmark",
+  "tag": "micro",
+  "env_key": "c15f4501",
+  "env": {
+    "cpu": "12th Gen Intel Core i7-12700",
+    "cores": 12,
+    "os": "Windows 11 (10.0.26200.8655)",
+    "runtime": ".NET 9.0.14 (9.0.1426.11910)",
+    "bdn_version": "0.13.12",
+    "arch": "X64"
+  },
+  "git_sha": "eb15567",
+  "git_dirty": true,
+  "source": "ingest",
+  "confidence": "high",
+  "baseline": true,
+  "records": [
+    {
+      "bench_id": "Relay.Benchmarks.Receivers.UdpReceiverBenchmark.Poll_Empty",
+      "suite": "Relay.Benchmarks.Receivers.UdpReceiverBenchmark",
+      "unit": "ns",
+      "mean": 882.9498052597046,
+      "median": 882.3305130004883,
+      "stddev": 4.552690087282037,
+      "min": 878.5470962524414,
+      "max": 888.5910987854004,
+      "p95": 887.9908561706543,
+      "p99": 887.9908561706543,
+      "alloc_bytes": 0,
+      "gen0": 0,
+      "gen1": 0,
+      "gen2": 0,
+      "extra": {}
+    },
+    {
+      "bench_id": "Relay.Benchmarks.Receivers.UdpReceiverBenchmark.Roundtrip_PerFrame",
+      "suite": "Relay.Benchmarks.Receivers.UdpReceiverBenchmark",
+      "unit": "ns",
+      "mean": 5072.250061035156,
+      "median": 5056.8267822265625,
+      "stddev": 32.92786873688859,
+      "min": 5035.83984375,
+      "max": 5110.095977783203,
+      "p95": 5108.912048339844,
+      "p99": 5108.912048339844,
+      "alloc_bytes": 72,
+      "gen0": 0,
+      "gen1": 0,
+      "gen2": 0,
+      "extra": {}
+    }
+  ],
+  "run_id": "3b4edf2b11b0a4d2",
+  "methodology_version": "1"
+}

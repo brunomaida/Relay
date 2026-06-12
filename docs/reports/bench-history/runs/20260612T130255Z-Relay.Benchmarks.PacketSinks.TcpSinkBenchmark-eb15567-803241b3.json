@@ -1,0 +1,40 @@
+{
+  "timestamp_utc": "2026-06-12T13:02:55Z",
+  "suite": "Relay.Benchmarks.PacketSinks.TcpSinkBenchmark",
+  "tag": "micro",
+  "env_key": "c15f4501",
+  "env": {
+    "cpu": "12th Gen Intel Core i7-12700",
+    "cores": 12,
+    "os": "Windows 11 (10.0.26200.8655)",
+    "runtime": ".NET 9.0.14 (9.0.1426.11910)",
+    "bdn_version": "0.13.12",
+    "arch": "X64"
+  },
+  "git_sha": "eb15567",
+  "git_dirty": true,
+  "source": "ingest",
+  "confidence": "high",
+  "baseline": true,
+  "records": [
+    {
+      "bench_id": "Relay.Benchmarks.PacketSinks.TcpSinkBenchmark.TcpSink_Enqueue_128B",
+      "suite": "Relay.Benchmarks.PacketSinks.TcpSinkBenchmark",
+      "unit": "ns",
+      "mean": 9.829905927181244,
+      "median": 10.751326382160187,
+      "stddev": 1.4292820808187108,
+      "min": 7.8841522336006165,
+      "max": 10.979840159416199,
+      "p95": 10.94734936952591,
+      "p99": 10.94734936952591,
+      "alloc_bytes": 0,
+      "gen0": 0,
+      "gen1": 0,
+      "gen2": 0,
+      "extra": {}
+    }
+  ],
+  "run_id": "803241b3d1dca776",
+  "methodology_version": "1"
+}
