@@ -1,0 +1,40 @@
+{
+  "timestamp_utc": "2026-06-12T13:04:50Z",
+  "suite": "Relay.Benchmarks.Sinks.BatchSinkBenchmarks",
+  "tag": "micro",
+  "env_key": "c15f4501",
+  "env": {
+    "cpu": "12th Gen Intel Core i7-12700",
+    "cores": 12,
+    "os": "Windows 11 (10.0.26200.8655)",
+    "runtime": ".NET 9.0.14 (9.0.1426.11910)",
+    "bdn_version": "0.13.12",
+    "arch": "X64"
+  },
+  "git_sha": "eb15567",
+  "git_dirty": true,
+  "source": "ingest",
+  "confidence": "high",
+  "baseline": true,
+  "records": [
+    {
+      "bench_id": "Relay.Benchmarks.Sinks.BatchSinkBenchmarks.Enqueue_RingPublish",
+      "suite": "Relay.Benchmarks.Sinks.BatchSinkBenchmarks",
+      "unit": "ns",
+      "mean": 13.636550803979238,
+      "median": 13.55787068605423,
+      "stddev": 1.3892681316932138,
+      "min": 12.288294732570648,
+      "max": 15.063486993312836,
+      "p95": 14.912925362586975,
+      "p99": 14.912925362586975,
+      "alloc_bytes": 0,
+      "gen0": 0,
+      "gen1": 0,
+      "gen2": 0,
+      "extra": {}
+    }
+  ],
+  "run_id": "bbe9810133e821ac",
+  "methodology_version": "1"
+}

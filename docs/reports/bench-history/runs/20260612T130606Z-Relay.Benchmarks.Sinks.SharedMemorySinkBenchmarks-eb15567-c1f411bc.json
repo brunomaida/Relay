@@ -1,0 +1,57 @@
+{
+  "timestamp_utc": "2026-06-12T13:06:06Z",
+  "suite": "Relay.Benchmarks.Sinks.SharedMemorySinkBenchmarks",
+  "tag": "micro",
+  "env_key": "c15f4501",
+  "env": {
+    "cpu": "12th Gen Intel Core i7-12700",
+    "cores": 12,
+    "os": "Windows 11 (10.0.26200.8655)",
+    "runtime": ".NET 9.0.14 (9.0.1426.11910)",
+    "bdn_version": "0.13.12",
+    "arch": "X64"
+  },
+  "git_sha": "eb15567",
+  "git_dirty": true,
+  "source": "ingest",
+  "confidence": "high",
+  "baseline": true,
+  "records": [
+    {
+      "bench_id": "Relay.Benchmarks.Sinks.SharedMemorySinkBenchmarks.Accept_Single(PayloadSize: 64)",
+      "suite": "Relay.Benchmarks.Sinks.SharedMemorySinkBenchmarks",
+      "unit": "ns",
+      "mean": 7.2317734360694885,
+      "median": 7.245896756649017,
+      "stddev": 0.057374081778526216,
+      "min": 7.168656587600708,
+      "max": 7.28076696395874,
+      "p95": 7.277279943227768,
+      "p99": 7.277279943227768,
+      "alloc_bytes": 0,
+      "gen0": 0,
+      "gen1": 0,
+      "gen2": 0,
+      "extra": {}
+    },
+    {
+      "bench_id": "Relay.Benchmarks.Sinks.SharedMemorySinkBenchmarks.Accept_Single(PayloadSize: 256)",
+      "suite": "Relay.Benchmarks.Sinks.SharedMemorySinkBenchmarks",
+      "unit": "ns",
+      "mean": 10.351438323656717,
+      "median": 10.293947160243988,
+      "stddev": 0.20022259632975087,
+      "min": 10.186250507831573,
+      "max": 10.574117302894592,
+      "p95": 10.546100288629532,
+      "p99": 10.546100288629532,
+      "alloc_bytes": 0,
+      "gen0": 0,
+      "gen1": 0,
+      "gen2": 0,
+      "extra": {}
+    }
+  ],
+  "run_id": "c1f411bcd92a447b",
+  "methodology_version": "1"
+}
