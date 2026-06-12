@@ -1,0 +1,57 @@
+{
+  "timestamp_utc": "2026-06-12T13:05:48Z",
+  "suite": "Relay.Benchmarks.Sinks.RotatingFileSinkBenchmarks",
+  "tag": "micro",
+  "env_key": "c15f4501",
+  "env": {
+    "cpu": "12th Gen Intel Core i7-12700",
+    "cores": 12,
+    "os": "Windows 11 (10.0.26200.8655)",
+    "runtime": ".NET 9.0.14 (9.0.1426.11910)",
+    "bdn_version": "0.13.12",
+    "arch": "X64"
+  },
+  "git_sha": "eb15567",
+  "git_dirty": true,
+  "source": "ingest",
+  "confidence": "high",
+  "baseline": true,
+  "records": [
+    {
+      "bench_id": "Relay.Benchmarks.Sinks.RotatingFileSinkBenchmarks.ShouldRotate_Predicate",
+      "suite": "Relay.Benchmarks.Sinks.RotatingFileSinkBenchmarks",
+      "unit": "ns",
+      "mean": 0.2480184038480123,
+      "median": 0.23653022944927216,
+      "stddev": 0.028244385594813598,
+      "min": 0.22732838988304138,
+      "max": 0.2801965922117233,
+      "p95": 0.2758299559354782,
+      "p99": 0.2758299559354782,
+      "alloc_bytes": 0,
+      "gen0": 0,
+      "gen1": 0,
+      "gen2": 0,
+      "extra": {}
+    },
+    {
+      "bench_id": "Relay.Benchmarks.Sinks.RotatingFileSinkBenchmarks.ShouldRotate_HotPath",
+      "suite": "Relay.Benchmarks.Sinks.RotatingFileSinkBenchmarks",
+      "unit": "ns",
+      "mean": 24.307239055633545,
+      "median": 21.75227403640747,
+      "stddev": 6.080922934302271,
+      "min": 19.920647144317627,
+      "max": 31.248795986175537,
+      "p95": 30.29914379119873,
+      "p99": 30.29914379119873,
+      "alloc_bytes": 0,
+      "gen0": 0,
+      "gen1": 0,
+      "gen2": 0,
+      "extra": {}
+    }
+  ],
+  "run_id": "a5be39a4409d49d5",
+  "methodology_version": "1"
+}
