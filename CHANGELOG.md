@@ -9,6 +9,25 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ---
 
+## [1.0.5] - 2026-07-02
+
+### Fixed
+
+- `FileStreamSink<T>`: prevent consumer thread crash on sustained backend failure — reset `_bufferPos` on `IOException` in `FlushBuffer`; null the disposed `_stream` reference in `TryRecoverBackend` after a failed reopen.
+- `MemorySink<T>`: add a finalizer as a safety net against native-memory leaks when `Dispose()` is omitted; `Dispose()` remains the primary release path via `GC.SuppressFinalize`.
+
+### Perf
+
+- `PacketSink._dropCount` moved to a 128-byte explicit-layout padded struct, removing false sharing between the Interlocked-incremented counter and adjacent `Next`/`PropagateAfterAccept` fields.
+- `RotatingFileSink.ShouldRotate`: RDTSC sampling (`HfClock.NowTicks`) throttled from every record to 1-in-256 via a counter mask.
+- `MpscByteRingBuffer.TryPeek`: wrap-padding skip rewritten from a recursive call to an iterative loop, restoring JIT inlining eligibility at call sites.
+
+### Docs
+
+- Doc-taxonomy: frontmatter on primordials, `docs/_index.md` hub, relative cross-links (fact-doc-structure).
+
+---
+
 ## [1.0.4] - 2026-05-28
 
 ### Added
