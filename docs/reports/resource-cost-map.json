@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "generated": "2026-07-02",
+  "model": "x64-goldenCove-v1",
+  "scope": "src/Relay/**/*.cs",
+  "mode": "library",
+  "cpuRefGhz": 3.5,
+  "bdnBaseline": "ddf2f0b",
+  "supersedes": "2026-06-10-resource-cost-map-relay.md",
+  "offenders": [
+    {
+      "severity": "warn",
+      "rule": "rdtsc-per-hot-record",
+      "symbol": "RotatingFileSink.ShouldRotate",
+      "file": "src/Relay/Sinks/RotatingFileSink.cs",
+      "line": 126,
+      "cyclesPerCall": 1.2,
+      "bdnNs": null,
+      "evidence": "downgraded from every-call (47c/13.38ns) to 1-in-256 sampled via (++_shouldRotateCounter & 0xFF) == 0; residual warn: sampled call still 47c and day-boundary detection has ~256-record granularity"
+    },
+    {
+      "severity": "info",
+      "rule": "doc-measurement-mismatch",
+      "symbol": "Multi2Sink<T,TC1,TC2>",
+      "file": "src/Relay/MultiSink.cs",
+      "line": null,
+      "cyclesPerCall": 12,
+      "bdnNs": 3.31,
+      "evidence": "CLAUDE.md claims ~6c saving vs MultiSink; BDN: Multi2=3.31ns Multi=3.18ns at N=2; no advantage reproduced; unchanged since prior report, CLAUDE.md already carries the caveat"
+    },
+    {
+      "severity": "info",
+      "rule": "datetime-utcnow-injected-default",
+      "symbol": "RotatingFileSink._utcNow",
+      "file": "src/Relay/Sinks/RotatingFileSink.cs",
+      "line": 68,
+      "cyclesPerCall": null,
+      "evidence": "default lambda () => DateTime.UtcNow violates CLAUDE.md; acceptable on COLD rotation path only; sanctioned injection-seam default"
+    }
+  ],
+  "resolvedSince": [
+    {
+      "severity": "block",
+      "rule": "crash-no-reset-on-IOException",
+      "symbol": "FileStreamSink.FlushBuffer",
+      "file": "src/Relay/Sinks/FileStreamSink.cs",
+      "line": 105,
+      "commit": "65b6cf1",
+      "evidence": "_bufferPos = 0 now set on IOException before returning"
+    },
+    {
+      "severity": "block",
+      "rule": "crash-disposed-stream-reuse",
+      "symbol": "FileStreamSink.TryRecoverBackend",
+      "file": "src/Relay/Sinks/FileStreamSink.cs",
+      "line": 84,
+      "commit": "65b6cf1",
+      "evidence": "_stream = null now set in catch block after failed OpenStream retry"
+    },
+    {
+      "severity": "warn",
+      "rule": "interlocked-on-unpadded-field",
+      "symbol": "PacketSink._dropCount",
+      "file": "src/Relay/PacketSink.cs",
+      "line": 42,
+      "commit": "c1818fa",
+      "evidence": "field now PaddedDropCount, [StructLayout(Explicit, Size=128)], Value at offset 64"
+    },
+    {
+      "severity": "warn",
+      "rule": "recursive-non-inlineable",
+      "symbol": "MpscByteRingBuffer.TryPeek",
+      "file": "src/Relay/Buffers/MpscByteRingBuffer.cs",
+      "line": 174,
+      "commit": "9aae152",
+      "evidence": "rewritten as iterative while(true) loop; no recursive call"
+    },
+    {
+      "severity": "warn",
+      "rule": "no-finalizer-native-leak",
+      "symbol": "MemorySink<T>",
+      "file": "src/Relay/Sinks/MemorySink.cs",
+      "line": 74,
+      "commit": "c1818fa",
+      "evidence": "~MemorySink() finalizer added, calls NativeMemory.Free when Dispose was not called"
+    },
+    {
+      "severity": "warn",
+      "rule": "doc-code-mismatch-volatile",
+      "symbol": "MemorySink<T>._head/_tail",
+      "file": "src/Relay/Sinks/MemorySink.cs",
+      "line": 16,
+      "commit": "c1818fa",
+      "evidence": "remarks corrected to describe plain reads/writes under x86/x64 TSO with a single producer"
+    }
+  ],
+  "nodes": [
+    { "symbol": "DispatchSink<T>.Enqueue", "file": "src/Relay/DispatchSink.cs", "line": 49, "cyclesPerCall": 1, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": 0.20 },
+    { "symbol": "SpscRingBuffer<T>.TryPublish", "file": "src/Relay/Buffers/SpscRingBuffer.cs", "line": 48, "cyclesPerCall": 3, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": 0.95 },
+    { "symbol": "MpscRingBuffer<T>.TryPublish", "file": "src/Relay/Buffers/MpscRingBuffer.cs", "line": 93, "cyclesPerCall": 22, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": 6.35 },
+    { "symbol": "MpscRingBuffer<T>.TryConsume", "file": "src/Relay/Buffers/MpscRingBuffer.cs", "line": 125, "cyclesPerCall": 12, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": null },
+    { "symbol": "FilterSink<T>.Accept (pass)", "file": "src/Relay/FilterSink.cs", "line": null, "cyclesPerCall": 4, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": 1.08 },
+    { "symbol": "MultiSink<T>.Accept (N=2)", "file": "src/Relay/MultiSink.cs", "line": null, "cyclesPerCall": 11, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": 3.18 },
+    { "symbol": "Multi2Sink<T,TC1,TC2>.Accept (N=2)", "file": "src/Relay/MultiSink.cs", "line": null, "cyclesPerCall": 12, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": 3.31 },
+    { "symbol": "PacketSink.Enqueue (drop path)", "file": "src/Relay/PacketSink.cs", "line": 88, "cyclesPerCall": 13, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": 3.77 },
+    { "symbol": "RotatingFileSink.ShouldRotate (amortized)", "file": "src/Relay/Sinks/RotatingFileSink.cs", "line": 123, "cyclesPerCall": 1.2, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": null },
+    { "symbol": "RotatingFileSink.WriteToBackend (amortized)", "file": "src/Relay/Sinks/RotatingFileSink.cs", "line": 73, "cyclesPerCall": 74, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": null },
+    { "symbol": "MemorySink<T>.Accept", "file": "src/Relay/Sinks/MemorySink.cs", "line": 49, "cyclesPerCall": 8, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": null },
+    { "symbol": "HfClock.NowTicks", "file": "src/Relay/Internal/HfClock.cs", "line": null, "cyclesPerCall": 20, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": null },
+    { "symbol": "MpscByteRingBuffer.TryPublish (no wrap)", "file": "src/Relay/Buffers/MpscByteRingBuffer.cs", "line": 112, "cyclesPerCall": 30, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": null },
+    { "symbol": "MpscByteRingBuffer.TryPublish (wrap)", "file": "src/Relay/Buffers/MpscByteRingBuffer.cs", "line": 112, "cyclesPerCall": 40, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": null },
+    { "symbol": "MpscByteRingBuffer.TryPeek (wrap-skip, iterative)", "file": "src/Relay/Buffers/MpscByteRingBuffer.cs", "line": 174, "cyclesPerCall": 25, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": null },
+    { "symbol": "SpscQueueSink.ConsumeLoop batch (per item)", "file": "src/Relay/SpscQueueSink.cs", "line": 196, "cyclesPerCall": 3, "bytesPerCall": 0, "tier": "declared-hot", "bdnNs": null }
+  ]
+}

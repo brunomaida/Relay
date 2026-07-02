@@ -62,7 +62,7 @@ Producer
 
 **Recovery drain:** when a failed sink recovers, items accumulated in the downstream fallback sink are drained back upstream automatically on the next flush interval.
 
-Full type hierarchy, ring-buffer internals, builder operators, and recommended topologies: [`docs/topology.md`](docs/topology.md).
+Full type hierarchy, ring-buffer internals, builder operators, and recommended topologies: [`docs/TOPOLOGY.md`](docs/TOPOLOGY.md).
 
 ---
 
@@ -827,6 +827,133 @@ while (running) { udpRecv.Poll(); shmRecv.Poll(); }
 | **`HfClock`** | All timestamps use `Stopwatch.GetTimestamp()`. `DateTime.UtcNow` is never used on any hot path. |
 | **Cache-line alignment** | `sizeof(T)` must be a positive multiple of 64B so adjacent ring slots never share a cache line. Enforced in DEBUG by `SinkConstraints.AssertCacheLineAligned<T>()`. |
 | **Zero production dependencies** | `src/Relay` has no NuGet references. `Relay.Sinks.Http` / `Relay.Sinks.Observability` use `System.Net.Http` only (inbox). Tests use xUnit 2.9.2 and FluentAssertions 6.12.1. |
+
+---
+
+## Architecture
+
+Two parallel, type-safe hierarchies share the same fallback semantics: `DispatchSink<T>` for fixed-layout `T : unmanaged` payloads, and `PacketSink` for variable-length `ReadOnlySpan<byte>` payloads. `SerializeSink<T>` bridges the two zero-copy. Concrete pipes (`FileStreamSink<T>`, `TcpSink<T>`, `MmfSink<T>`, `MemorySink<T>` and their `PacketSink` counterparts) plug into either tree; `RelayBuilder` / `SinkChainBuilder` wire them into a chain.
+
+<!-- Source: docs/TOPOLOGY.md, section "# Relay Library — Topology" (fenced block at line 10, "TYPE HIERARCHY") -->
+
+```
+================================================================================
+                         TYPE HIERARCHY
+================================================================================
+
+  DispatchSink<T>  (abstract, T : unmanaged)
+       │
+       │  Next: DispatchSink<T>?      ← set by SinkChain.To()
+       │  IsHealthy: bool             ← abstract; consumer thread writes, producer reads
+       │  PropagateAfterAccept: bool  ← protected readonly field (ctor param, default false)
+       │  Enqueue(in T)               ← sealed hot path: (IsHealthy && Accept) then Next or return
+       │  Accept(in T): bool          ← abstract; returns false to trigger fallback
+       │  Flush() / Dispose()         ← abstract lifecycle
+       │
+       ├── SpscQueueSink<T>  (abstract)
+       │       │  _ring: SpscRingBuffer<T>       ← SPSC lock-free, POH pinned
+       │       │  _healthy: volatile bool        ← consumer thread only
+       │       │  Prev: DispatchSink<T>?         ← set by SinkChain.To() on fallback nodes
+       │       │  IsHealthy => _healthy && !_ring.IsFull
+       │       │  Accept   => _ring.TryPublish(item)
+       │       │  Start() / Stop(ms)             ← spawns / joins consumer thread
+       │       │  IsConsuming / ConsumerException
+       │       │
+       │       ├── FileStreamSink<T>  (sealed)  ← FileStream + POH write buffer
+       │       ├── TcpSink<T>         (sealed)  ← TcpClient + POH send buffer
+       │       └── MmfSink<T>         (sealed)  ← MemoryMappedViewAccessor
+       │
+       ├── MpscQueueSink<T>  (abstract)
+       │       │  _ring: MpscRingBuffer<T>       ← MPSC lock-free (Log2 FIX #18 layout)
+       │       │  Prev: DispatchSink<T>?
+       │       │  (same lifecycle API as SpscQueueSink<T>)
+       │
+       ├── MultiSink<T>      (sealed)  ← broadcast to DispatchSink<T>[] children
+       ├── Multi2Sink<T, TC1, TC2>  (sealed)  ← CRTP 2-child, JIT devirtualizes
+       ├── ForkSink<T>       (sealed)  ← primary + Next propagation (propagate-after-accept)
+       ├── FilterSink<T>     (sealed)  ← conditional gate + downstream sink
+       ├── NullSink<T>       (sealed)  ← singleton no-op sink
+       └── SerializeSink<T>  (sealed)  ← bridge: typed T → PacketSink (MemoryMarshal.AsBytes)
+
+  MemorySink<T>  (unsealed)  ← direct subclass of DispatchSink<T>
+       │  _buffer: T* (NativeMemory.AllocZeroed)
+       │  _head / _tail: long  ← single-threaded, not SPSC ring
+       │  IsHealthy => _tail - _head < _capacity
+       │  Accept   => native pointer write
+       │  DrainTo(DispatchSink<T>) ← called externally on recovery
+
+  ─────────────────────────────────────────────────────────────────────────────
+  PacketSink  (abstract, byte payloads)
+       │
+       │  Next: PacketSink?
+       │  IsHealthy: bool
+       │  Enqueue(ReadOnlySpan<byte>)  ← hot path: IsHealthy && Accept || Next?.Enqueue
+       │  Accept(ReadOnlySpan<byte>): bool
+       │  Flush() / Dispose()
+       │
+       ├── SpscQueueSink  (abstract, non-generic)
+       │       │  _ring: SpscByteRingBuffer      ← lock-free length-prefixed SPSC ring
+       │       │  _healthy: volatile bool
+       │       │  Prev: PacketSink?              ← drain-to-prev on recovery
+       │       │
+       │       ├── FileSink          (sealed)  ← byte append to FileStream, POH buffer
+       │       ├── RotatingFileSink  (sealed)  ← size + date rotation, max-file cleanup
+       │       ├── NamedPipeSink     (sealed)  ← length-prefixed named-pipe client
+       │       ├── UdpSink           (sealed)  ← UDP datagrams
+       │       ├── TcpSink           (sealed)  ← length-framed TCP, POH send buffer
+       │       └── BatchSink  (abstract)
+       │               │  _scratch: byte[] POH  ← accumulates payloads per batch
+       │               │  OversizedDropCount    ← observable counter
+       │               │  OnFlush(ReadOnlySpan<byte>)  ← abstract; receives full batch
+       │               │
+       │               └── HttpBatchSink  (abstract)
+       │                       │  circuit breaker (cbFailures + cbOpenDurationMs)
+       │                       │  HttpFailureCount / BreakerOpenCount / DroppedBatchCount
+       │                       │
+       │                       └── SeqSink  (sealed)  ← CLEF/HTTP → Seq /api/events/raw
+       │
+       ├── MpscQueueSink  (abstract, non-generic)
+       │       │  _ring: MpscByteRingBuffer
+       │       │  (same lifecycle API as SpscQueueSink)
+       │
+       ├── ForkSink    (sealed, non-generic)  ← primary + Next propagation
+       ├── MultiSink   (sealed, non-generic)  ← broadcast to PacketSink[] children
+       ├── Multi2PacketSink<TC1, TC2>  (sealed)  ← CRTP 2-child broadcast, JIT devirtualizes
+       ├── FilterSink  (sealed, non-generic)  ← conditional gate
+       └── NullSink    (singleton)            ← NullSink.Instance
+
+  MemorySink  (unsealed, non-generic)  ← direct subclass of PacketSink
+       │  Native memory fill-once buffer, linear layout with 4-byte BE headers
+       │  DrainTo(PacketSink) ← called externally on recovery
+
+  SharedMemorySink  (sealed)  ← synchronous PacketSink, Log2 MMF wire protocol
+       │  Named MemoryMappedFile ring (128-byte header + data area)
+       │  No consumer thread — writes synchronously on producer thread
+
+  ─────────────────────────────────────────────────────────────────────────────
+  PacketCallback<TState>  (delegate, namespace Relay)
+       delegate void PacketCallback<TState>(TState state, ReadOnlySpan<byte> frame)
+       Zero-alloc span callback. Sidesteps the C# restriction on Action<ReadOnlySpan<byte>>.
+       Static-lambda dispatch eliminates closure allocation.
+
+  PacketReceiver  (abstract, namespace Relay)
+       │  Next: PacketSink?     ← optional forward-chain; item forwarded after callback
+       │  Poll(): bool          ← caller-driven; true = frame delivered to callback
+       │  Dispose()
+       │  No consumer thread — the caller's loop drives Poll()
+       │
+       ├── UdpReceiver<TState>              (sealed)  ← non-blocking Poll() via Socket.Poll(0);
+       │                                              stackalloc byte[1432] per call (MTU-safe)
+       ├── TcpReceiver<TState>              (sealed)  ← Accept() once; Poll() per frame;
+       │                                              length-framed [4B BE][payload]
+       ├── SharedMemorySpscReceiver<TState> (sealed, unsafe, Windows-only)
+       │                                             SPSC ring consumer matching SharedMemorySpscSink
+       │                                             wire format; SHM_MAGIC validation on ctor
+       └── NamedPipeReceiver<TState>        (sealed)  ← WaitForConnection() once; Poll() per frame;
+                                                       same wire format as TcpReceiver
+```
+
+See [`docs/TOPOLOGY.md`](docs/TOPOLOGY.md) for the full dependency graph, thread model, assembly graph, and additional diagrams.
 
 ---
 
