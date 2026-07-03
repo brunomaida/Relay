@@ -65,7 +65,9 @@
       "Bash(dotnet pack *)",
       "Bash(gh release *)",
       "Bash(Remove-Item -Recurse -Force artifacts)",
-      "Bash(grep -E \"\\\\.cs$|\\\\.csproj$|\\\\.sln$\")"
+      "Bash(grep -E \"\\\\.cs$|\\\\.csproj$|\\\\.sln$\")",
+      "Bash(grep -v \"//\")",
+      "Bash(Start-Sleep -Seconds 15)"
     ]
   }
 }

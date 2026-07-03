@@ -81,7 +81,8 @@ public sealed class FileStreamSink<T> : SpscQueueSink<T> where T : unmanaged
         }
         catch (Exception)
         {
-            _retryDelayMs = Math.Min(_retryDelayMs * 2, RetryMaxDelayMs);
+            _stream          = null; // drop disposed reference — FlushBuffer null-guards above
+            _retryDelayMs    = Math.Min(_retryDelayMs * 2, RetryMaxDelayMs);
             _retryAfterTicks = HfClock.NowTicks + (long)_retryDelayMs * TicksPerMs;
         }
     }
@@ -93,13 +94,15 @@ public sealed class FileStreamSink<T> : SpscQueueSink<T> where T : unmanaged
 
     private void FlushBuffer()
     {
+        if (_stream is null) { _bufferPos = 0; return; }
         try
         {
-            _stream!.Write(_writeBuffer.AsSpan(0, _bufferPos));
+            _stream.Write(_writeBuffer.AsSpan(0, _bufferPos));
             _bufferPos = 0;
         }
         catch (IOException)
         {
+            _bufferPos       = 0; // prevent OOB on next WriteToBackend
             _healthy         = false;
             _retryAfterTicks = HfClock.NowTicks + (long)_retryDelayMs * TicksPerMs;
         }

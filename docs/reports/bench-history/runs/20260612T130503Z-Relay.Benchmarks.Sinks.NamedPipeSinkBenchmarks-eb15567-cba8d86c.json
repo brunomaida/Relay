@@ -1,0 +1,57 @@
+{
+  "timestamp_utc": "2026-06-12T13:05:03Z",
+  "suite": "Relay.Benchmarks.Sinks.NamedPipeSinkBenchmarks",
+  "tag": "micro",
+  "env_key": "c15f4501",
+  "env": {
+    "cpu": "12th Gen Intel Core i7-12700",
+    "cores": 12,
+    "os": "Windows 11 (10.0.26200.8655)",
+    "runtime": ".NET 9.0.14 (9.0.1426.11910)",
+    "bdn_version": "0.13.12",
+    "arch": "X64"
+  },
+  "git_sha": "eb15567",
+  "git_dirty": true,
+  "source": "ingest",
+  "confidence": "high",
+  "baseline": true,
+  "records": [
+    {
+      "bench_id": "Relay.Benchmarks.Sinks.NamedPipeSinkBenchmarks.Push_Single(ItemCount: 10000)",
+      "suite": "Relay.Benchmarks.Sinks.NamedPipeSinkBenchmarks",
+      "unit": "ns",
+      "mean": 548778.4830729166,
+      "median": 555069.3359375,
+      "stddev": 13876.196133831738,
+      "min": 532871.09375,
+      "max": 558395.01953125,
+      "p95": 558062.451171875,
+      "p99": 558062.451171875,
+      "alloc_bytes": 137802,
+      "gen0": 42,
+      "gen1": 42,
+      "gen2": 42,
+      "extra": {}
+    },
+    {
+      "bench_id": "Relay.Benchmarks.Sinks.NamedPipeSinkBenchmarks.Push_Single(ItemCount: 100000)",
+      "suite": "Relay.Benchmarks.Sinks.NamedPipeSinkBenchmarks",
+      "unit": "ns",
+      "mean": 1198787.3046875,
+      "median": 1193405.6640625,
+      "stddev": 36186.544197386436,
+      "min": 1165592.96875,
+      "max": 1237363.28125,
+      "p95": 1232967.51953125,
+      "p99": 1232967.51953125,
+      "alloc_bytes": 137802,
+      "gen0": 21,
+      "gen1": 21,
+      "gen2": 21,
+      "extra": {}
+    }
+  ],
+  "run_id": "cba8d86cf4b48d3d",
+  "methodology_version": "1"
+}
