@@ -9,6 +9,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ---
 
+## [1.1.0] - 2026-07-03
+
+### Changed
+- Version alignment release across the `libs` solution (Relay, Log2, Reddy, Schedule, KStream) — no functional changes since v1.0.5.
+
+---
+
 ## [1.0.5] - 2026-07-02
 
 ### Fixed
