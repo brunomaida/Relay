@@ -49,7 +49,11 @@ public sealed class RecoveryDrainToPrevTests
         const int Count = 600;
 
         var prev     = new CountingPrev();
-        var fallback = new InjectableSpscPipe(flushIntervalMs: 0);
+        // writeDelayMs slows the first consumed batch so Stop() reliably flips _running=false
+        // before the ring drains via the normal WriteToBackend path — without it, this is a bare
+        // race between thread-start speed and Stop()'s volatile write (flaky on fast/CI hardware,
+        // since WriteToBackend here is a single Interlocked.Increment with no real cost).
+        var fallback = new InjectableSpscPipe(flushIntervalMs: 0, writeDelayMs: 1);
         fallback.Prev = prev;
 
         // Inject before Start so ring is pre-loaded; no consumer thread yet.
@@ -92,16 +96,27 @@ public sealed class RecoveryDrainToPrevTests
 
     private sealed class InjectableSpscPipe : SpscQueueSink<Entry64>
     {
+        private readonly int _writeDelayMs;
+        private int  _delayed;
         private long _written;
         public long WrittenToBackend => Volatile.Read(ref _written);
 
-        public InjectableSpscPipe(int flushIntervalMs)
-            : base(ringCapacity: 1024, flushIntervalMs, "drain-test") { }
+        public InjectableSpscPipe(int flushIntervalMs, int writeDelayMs = 0)
+            : base(ringCapacity: 1024, flushIntervalMs, "drain-test") => _writeDelayMs = writeDelayMs;
 
         // Bypasses IsHealthy gate — lets the test inject items directly into the ring.
         public void Inject(in Entry64 item) => Accept(in item);
 
-        protected override void WriteToBackend(in Entry64 item) => Interlocked.Increment(ref _written);
+        protected override void WriteToBackend(in Entry64 item)
+        {
+            // Delay only the very first item: gives the caller's Stop() (a couple of volatile
+            // writes) a wide window to flip _running=false before this batch finishes, without
+            // risking Windows' ~15ms Sleep granularity blowing past Stop()'s drain timeout if
+            // applied per-item across a whole (up to 256-item) batch.
+            if (_writeDelayMs > 0 && Interlocked.Exchange(ref _delayed, 1) == 0)
+                Thread.Sleep(_writeDelayMs);
+            Interlocked.Increment(ref _written);
+        }
         protected override void FlushBackend()      { }
         protected override void TryRecoverBackend() { }
         protected override void DisposeBackend()    { }
