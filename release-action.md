@@ -1,10 +1,30 @@
-# Release Action — v1.0.4
+# Release Action — v1.0.5 (PROVISIONAL)
 
-**Date:** 2026-05-28
-**Version:** 1.0.4
-**Branch:** develop → master
-**Stack:** .NET 9 / C# 13 (`Relay.sln`)
-**Summary:** Circular ring topology tests, throughput benchmarks, and JIT warmup harness for MPSC perf testing.
+**Date:** 2026-07-02
+**Version:** 1.0.5 — **PROVISIONAL, NOT CONFIRMED.** Proposed by the `version-bump` skill in an unattended run; a human must confirm before touching any version source (see Version Proposal below).
+**Branch:** develop -> master
+**Stack:** .NET 9.0 / C# 13 (`Relay.sln`)
+**Summary:** Robustness/perf fixes since v1.0.4 — `MemorySink<T>` finalizer safety net, `PacketSink._dropCount` false-sharing padding, `MpscByteRingBuffer.TryPeek` recursion removal, `RotatingFileSink` RDTSC sampling throttle, `FileStreamSink` consumer-crash-on-sustained-failure fix — plus a doc-taxonomy pass (frontmatter, `docs/_index.md` hub, `topology.md`→`TOPOLOGY.md` rename), bench-history baseline seeding + `docs/bench-methodology.md`, a GitHub Packages publishing workflow, and a roadmap manifest bootstrap.
+
+---
+
+## Version Proposal (from `version-bump`, unattended — needs human confirmation)
+
+```
+Proposed bump: 1.0.4 → 1.0.5
+Reason: PATCH — the only unconsolidated changelog.d fragment (260611-doc-taxonomy.md)
+carries `### Docs` / `### Perf` headings, no `### Added`; no `#### Added`-equivalent
+signal anywhere in changelog.d. Public-API diff check (src/ files changed: PacketSink.cs,
+FileStreamSink.cs, MemorySink.cs, RotatingFileSink.cs, Buffers/MpscByteRingBuffer.cs) found
+no breaking signature changes — DropCount stays `public long DropCount`; MemorySink<T> only
+gains a finalizer (non-breaking); RotatingFileSink/FileStreamSink changes are internal-only.
+MAJOR is not signaled by changelog headings and the API diff found nothing breaking, so MAJOR
+is not raised even provisionally here. Re-confirm at release-3's dotnet-api-compat gate anyway.
+```
+
+**Finding — release-quality gap (not a version-blocker):** the 5 code-changing commits since v1.0.4 (`c1818fa`, `9aae152`, `ab33f86`, `65b6cf1`, part of merge `230a14c` "fix/260611-robustness-perf-fixes") have **no corresponding `changelog.d/` fragment**. The only fragment present (`260611-doc-taxonomy.md`) documents an unrelated docs-only change. If v1.0.5 ships as-is, `CHANGELOG.md` will describe a docs release while the actual diff is mostly production-code fixes. Recommend a human add a fragment for the robustness/perf fixes (via `/changelog-draft`) before running Step 5.0 consolidation.
+
+**Git-hygiene note on commit range:** `git log master..develop --oneline` returns 250 commits spanning the project's entire history — not real unmerged work. `git merge-base --is-ancestor master develop` confirms master's tip (`708e32b`, tag `v1.0.4`) *is* an ancestor of develop, but many older develop-side commits are not reachable from that squashed/back-merged tip, so the two-dot range is misleading here. The "Commits in this Release" section below uses `git log master..develop --first-parent`, which correctly isolates the 11 topical merges/commits since the v1.0.4 back-merge — that is the basis for the Summary above, not the raw 250-commit range.
 
 ---
 
@@ -13,69 +33,98 @@
 | # | Gate | Status | Notes |
 |---|------|--------|-------|
 | 2a | Correct branch | PASS | On `develop` |
-| 2b | Working tree clean | WARN | `.claude/settings.local.json` modified; 3 untracked `docs/superpowers/plans/` files — tooling/editor artifacts, not source |
-| 2c | Synced with remote | PASS | `origin/develop` == `develop` |
-| 2d | No pending branches | PASS | `feature/260525-4-relay-receivers` was fully merged (PR #13); deleted locally and remotely |
-| 2e | Commit log reviewed | PASS | 22 commits |
-| 2f | CI green on develop | PASS | [Run f546136](https://github.com/brunomaida/Relay/actions/runs/26573789052) — `success` |
-| 3a | Build succeeds (zero warnings) | PASS | 0 warnings, 0 errors |
-| 3b | No banned patterns | PASS | `Thread.Sleep` hits are all in test fixtures (documented exception); no `DateTime.Now` |
-| 4 | Tests pass | PASS | 241 passed, 0 failed, 10 skipped (45s) |
-| 5.0 | changelog.d/ consolidation | N/A | No fragments |
-| 5a | CHANGELOG versioned | PASS | `[1.0.4] - 2026-05-28` entry added |
-| 5b | Project docs up-to-date | N/A | No project-specific doc requirements |
-| 5c | CLAUDE.md consistent | PASS | Updated 2026-05-26 (2 days ago, well under 90-day threshold) |
-| 5d | README.md current | PASS | Exists; all 5 solution projects listed |
-| 5e | TOPOLOGY.md updated | N/A | No `src/` files touched in this release |
-| 5f | Benchmark report present | PASS | `2026-04-30-hot-path-performance-memory-relay.md` (28 days ago, within 30-day window) |
-| 5g | README API references valid | PASS | No fully-qualified `Relay.*.Type.Method()` calls in README code blocks |
-| 5h | Hot-path reports staleness | N/A | No `src/` files touched in this release |
-| 5i | Bench history fresh | N/A | `docs/perf/bench-history.csv` not present |
-| 5j | README baseline drift | N/A | No `<!-- bench-baseline -->` markers in README |
-| 5k | Bench refs inventory | N/A | No bench-history.csv |
+| 2b | Working tree clean | WARN (partially resolved) | Resolved on `chore/260702-v105-release-prep`: `docs/_index.md` is now regenerated by the doc-frontmatter tooling and staged alongside all other gate-5 fixes below; the stale `docs/reports/2026-06-10-resource-cost-map-relay.md` was deleted as part of gate 5h. Still untracked by design (pre-existing, unrelated editor/tooling artifacts, left as instructed): `.obsidian/`, `docs/roadmap.html`, 2 files under `docs/superpowers/plans/`. Human should commit or discard those before release; not blocking. |
+| 2c | Synced with remote | PASS | `origin/develop` == `develop` (no diff) |
+| 2d | No pending branches | WARN | Merged-but-not-deleted (safe to prune): `chore/260611-bench-baseline`, `chore/260611-bench-history-init`, `feature/260611-doc-taxonomy`, `feature/gh-packages`. **Unmerged, needs a decision:** `feature/260610-0-bench-history-seed` (1 commit) and `feature/260610-bench-methodology` (4 commits) — both appear to be superseded drafts of the later `chore/260611-bench-*` work that *is* merged (same subject matter, one day earlier). Recommend confirming they're superseded, then deleting; do not merge them as-is (would reintroduce an earlier, less-complete bench-history seed). |
+| 2e | Commit log reviewed | PASS | 11 first-parent commits/merges since v1.0.4 back-merge (see below); 250 in the raw two-dot range — see git-hygiene note above |
+| 2f | CI green on develop | PASS | [Run 28612093299](https://github.com/brunomaida/Relay/actions/runs/28612093299) — `success`, head `a502594` (current develop tip) |
+| 3a | Build succeeds (zero warnings) | PASS | `dotnet build Relay.sln -c Release -warnaserror` — 0 Warning(s), 0 Error(s) |
+| 3b | No banned patterns | PASS | Only `DateTime.UtcNow` hit is `RotatingFileSink.cs:68`, the sanctioned `Func<DateTime> utcNow ?? (static () => DateTime.UtcNow)` injection-seam default (matches CLAUDE.md's "inject reference time" pattern, not a hot-path call) — no `Console.Write` hits |
+| 4 | Tests pass | PASS | 244 passed, 0 failed, 10 skipped (Windows-only SharedMemory/UnixSocket tests), 254 total, 46s — filter `Category!=Endurance&Category!=Stress&Category!=Perf` |
+| 5.0 | changelog.d/ consolidation | PASS | Resolved on `chore/260702-v105-release-prep`: authored `changelog.d/260611-robustness-perf-fixes.md` by hand (the `/changelog-draft` skill's `origin/develop..HEAD` range is empty on this branch — those 4 commits are already in `develop`; content sourced directly from `git show` on `c1818fa`/`9aae152`/`ab33f86`/`65b6cf1`, includes `### Perf` and `Root-cause: #NA · Regression-test:` lines on both `### Fixed` entries). Consolidated both fragments (`260611-doc-taxonomy.md` + the new one) into `## [1.0.5] - 2026-07-02` in `CHANGELOG.md`; moved both to `changelog.d/archived/1.0.5/`. |
+| 5a | CHANGELOG versioned | PASS | Resolved on `chore/260702-v105-release-prep`: `## [Unreleased]` renamed to `## [1.0.5] - 2026-07-02` with folded-in Fixed/Perf/Docs content (matches the `[1.0.3]` precedent — not a bare rename); new empty `## [Unreleased]` inserted above it. |
+| 5b | Project docs up-to-date | N/A | No project-specific doc requirements declared beyond what 5e/5m cover |
+| 5c | CLAUDE.md consistent | PASS | Last modified 2026-06-11 (21 days ago, well under 90-day threshold); spot-checked project layout / namespace tables against `src/` — consistent |
+| 5d | README.md current | PASS | Project Structure table lists all 5 `.sln` projects (`src/Relay`, `src/Relay.Sinks.Http`, `src/Relay.Sinks.Observability`, `tests/Relay.Tests`, `benchmarks/Relay.Benchmarks`) |
+| 5e | TOPOLOGY.md updated | N/A | Relay's `CLAUDE.md` does not mention `TOPOLOGY.md`/`topology.md` as a required doc (gate is scoped strictly to that mention). Note: the file exists, was renamed `topology.md`→`TOPOLOGY.md` and updated in this release's diff regardless. |
+| 5f | Benchmark report present | PASS | `docs/reports/bench-history/bench-history.md` committed 2026-06-12 (20 days ago, within 30-day window) |
+| 5g | README API references valid | NEEDS ACTION (dismissible) | One fully-qualified hit: `Relay.Benchmarks.Sinks.UnixSocketSinkBenchmarks.Push_Single(...)` (README.md:916-917, BDN results table). Gate script only searches `src/` for the type; `UnixSocketSinkBenchmarks` genuinely exists at `benchmarks/Relay.Benchmarks/Sinks/UnixSocketSinkBenchmarks.cs:20` — false positive from the gate's `src/`-only scope, not real API drift. No action needed beyond acknowledging. |
+| 5h | Hot-path reports staleness | PASS | Resolved on `chore/260702-v105-release-prep`: ran `/resource-cost-mapping` and `/hot-path-audit` scoped to the 5 touched files, wrote `docs/reports/2026-07-02-resource-cost-map-relay.md` (+ sibling `.json`) and `docs/reports/2026-07-02-hot-path-audit-relay.md`, both dated after the 2026-06-11 src changes. Deleted the two stale reports the prior run flagged (`2026-06-10-resource-cost-map-relay.md`, `2026-05-25-hot-path-audit-relay.md`) so the newest report per scope/type is current. (The prior checklist run itself only flagged the newest report of each type — the older `2026-04-23/26/30-*-relay.md` reports it left unflagged are untouched here; out of scope, not re-triggered.) |
+| 5i | Bench history fresh | N/A | `docs/perf/bench-history.csv` not present (project uses `docs/reports/bench-history/bench-history.md` / `.json` instead — covered by Gate 5f) |
+| 5j | README baseline drift | N/A | No `<!-- bench-baseline:start/end -->` markers in README.md |
+| 5k | Bench refs inventory | N/A | No `docs/perf/bench-history.csv` |
 | 5l | README auto-update | N/A | Gate 5j not triggered |
-| 5m | Declared docs freshness | N/A | No `doc-scopes:` block in CLAUDE.md |
-| 6 | Version tags set | PASS | `Directory.Build.props` updated to `1.0.4` |
-| 7 | No sensitive files | PASS | No .env, credentials, secrets, or keys in diff |
+| 5m | Declared docs freshness | N/A | No `doc-scopes:` block in Relay's `CLAUDE.md` |
+| 5n | README quality audit | PASS | Resolved on `chore/260702-v105-release-prep`: added `## Architecture` H2, placed per the API-library README skeleton (after API sections, immediately before `## Performance`, replacing the earlier draft placement right after "How It Works"). Pasted the verbatim `docs/TOPOLOGY.md:10` "TYPE HIERARCHY" fenced block with the source-attribution comment from the 5n.2 template. Also fixed an adjacent stale link in the same file (`docs/topology.md` → `docs/TOPOLOGY.md`, case-correct). 5n.3 remains PASS (unchanged). |
+| 5o | Doc-taxonomy completeness | PASS | Resolved on `chore/260702-v105-release-prep`: created `docs/architecture-decisions.md` (6 dated `## YYYY-MM-DD — Title` entries per `fact-git-conventions`), grounded in `CLAUDE.md`/`docs/TOPOLOGY.md`/commit history — parallel type hierarchies, MPSC padded-counter ("Log2 FIX #18") layout, `PropagateAfterAccept` as a readonly field, 64B cache-line struct rule, `MemorySink<T>` native-memory ownership (incl. the 2026-06-11 finalizer), and the `Multi2Sink` CRTP no-measured-gain decision. `docs-doctor.py`'s `lib-hotpath` required-file set is now complete. |
+| 5p | Doc-index freshness | PASS | `retrofit_docs.py --check` → "PASS: docs/_index.md is current (Relay)", exit 0 |
+| 5q | External lib DLL freshness | N/A | No `.claude/config/libs-manifest.json` — gate not opted in |
+| 6 | Version tags set | PASS | Resolved on `chore/260702-v105-release-prep`: `<Version>`/`<AssemblyVersion>`/`<FileVersion>` bumped to `1.0.5` in `Directory.Build.props` (sole version source in this solution — `bin/`/`obj/` artifacts and `release-notes.md` regenerate at build/release time and were left untouched). |
+| 7 | No sensitive files | PASS | No `.env`, credentials, secrets, keys, or `appsettings.Development/Local` in `master..develop` diff |
+
+## 5n.1 — Missing "Architecture" section (ready-to-paste template)
+
+```
+## Architecture
+
+<High-level description of major components and interactions.>
+
+See [`docs/TOPOLOGY.md`](docs/TOPOLOGY.md) for the full dependency graph and thread model.
+```
+
+## 5n.2 — README has no diagram; source for extraction
+
+```
+<!-- Source: docs/TOPOLOGY.md, section "# Relay Library — Topology" (fenced block at line 10, "TYPE HIERARCHY") -->
+```
+See `docs/TOPOLOGY.md:10` onward for the verbatim block to copy into the README Architecture section.
 
 ---
 
 ## Commits in this Release
 
+`git log master..develop --first-parent --oneline` (topical commits/merges since the v1.0.4 back-merge; excludes the boundary marker `fe8b405` itself):
+
 ```
-f546136 test: add JIT warmup run to MpscThroughputHarness perf tests w/Claude
-51aa865 feat: extend Circular stress tests to 30s with warmup + add Perf throughput benchmarks w/Claude
-b830b92 test: add CircularThroughputPerfTests.cs steady-stage throughput benchmarks w/Claude
-ef87500 test: extend Circular stress tests to 30s with 5s warmup (ReceiverSinkRingTests) w/Claude
-d78f39f test: extend Circular stress tests to 30s with 5s warmup (SaturationTests) w/Claude
-ec0815d test: extend Circular stress tests to 30s with 5s warmup (BackendSinkRingTests) w/Claude
-8d01b45 test: fix RingTestReport.Start baseline seeding after warmup w/Claude
-365f11d test: extend Circular stress tests to 30s with 5s warmup (PureSinkRingTests) w/Claude
-5f2ea38 docs: add hot-path audit report for circular ring tests (Gate 2 PASS) w/Claude
-08dacdc feat: add Circular ring topology tests w/Claude
-2601d33 test: remove dead code and strengthen BackendSinkRingTests assertions w/Claude
-5921a5b test: add Circular/ReceiverSinkRingTests.cs SharedMemory receiver ring tests w/Claude
-36011bc test: add Circular/SaturationTests.cs saturation and backpressure tests w/Claude
-0a25d3c test: add Circular/BackendSinkRingTests.cs backend ring tests w/Claude
-ff70b39 test: add Circular/PureSinkRingTests.cs pure ring tests w/Claude
-ccf47be test: add Circular/Helpers/RingTestReport.cs telemetry helper w/Claude
-43f454e test: add Circular/Helpers/RingTopology.cs ring topology builders w/Claude
-d73bb7e test: add Circular/Helpers/RingNode.cs ring node types w/Claude
-928352a test: fix WriteHop/WriteId to use Unsafe.WriteUnaligned (no silent bool discard) w/Claude
-e037c0c test: add CircularPayloads structs for ring topology tests w/Claude
-2fb350c docs: update CLAUDE.md with quality audit improvements
-8b8a357 chore: back-merge v1.0.3 release w/Claude
+a502594 Merge pull request #17 from brunomaida/feature/260702-roadmap-bootstrap
+a35dd8a Merge branch 'chore/260611-bench-baseline' into develop
+dbb4d98 chore: merge bench-history baseline into develop
+8817dad Merge branch 'chore/260611-bench-history-init' into develop
+92a7fc4 Merge feature/260611-doc-taxonomy: doc-taxonomy (frontmatter, _index, links)
+230a14c Merge fix/260611-robustness-perf-fixes into develop
+6e6a995 Merge branch 'develop' of https://github.com/brunomaida/Relay into develop
+b24a0bb chore: add GitHub Packages publishing to release workflow
+cd46611 CHANGELOG.md, README.md, release-notes.md restructuring.
+a55c0ca docs: add Pipeline Topologies section to README w/Claude
+426ed93 chore: upgrade actions/checkout and actions/setup-dotnet to v5 w/Claude
 ```
 
----
+Boundary marker (previous release, not part of this release's content): `fe8b405 chore: back-merge v1.0.4 release w/Claude`.
 
-## Next Step
+## Resolution Update (2026-07-02, branch `chore/260702-v105-release-prep`)
 
-All gates PASS or N/A. Run `/release-2-merge-master`.
+Items 2–7 below (changelog fragment + consolidation, gate 5h report regen, version bump, README Architecture section, `architecture-decisions.md`) are now done — see the gate table above for per-gate detail and file references. Left open on purpose, per this branch's task scope:
+- **Item 1** (confirm the provisional version) — still requires human sign-off; not something this branch can do on its own. The fragment gap that was the stated blocker for that judgment call is now closed.
+- **Item 6 / Gate 2d** — explicitly excluded from this branch's scope; no branches were touched.
+- Gate 2b is only partially resolved (see gate table) — pre-existing untracked editor artifacts remain, by design.
+- Build (`dotnet build Relay.sln -c Release -warnaserror`) and the full commit-gate test suite were re-run after all fixes: 0 warnings/errors, 244 passed / 0 failed / 10 skipped — unchanged from the baseline in gate 3a/4 above.
+- Everything is staged but **not committed** on `chore/260702-v105-release-prep`, for human review before merging toward Step 8 (`chore: prepare release v1.0.5`) below.
 
----
+## Next Step (original checklist output — superseded in part by the Resolution Update above)
+
+Gates **2b, 2d, 5g, 5n, 5o are WARN/advisory and do not block**. Gates **5.0, 5a, 5h, 6 are NEEDS ACTION/NEEDS UPDATE and block** release until resolved by a human (no auto-fix was applied in this run, per instruction):
+
+1. **Confirm the provisional version** (1.0.5, PATCH) — or override if the missing robustness/perf changelog fragment changes the human's judgment.
+2. Add the missing `changelog.d/` fragment for the robustness/perf fixes (`c1818fa`, `9aae152`, `ab33f86`, `65b6cf1`) via `/changelog-draft`.
+3. Run Step 5.0 consolidation manually: rename `## [Unreleased]` → `## [1.0.5] - 2026-07-02` in `CHANGELOG.md`, insert a new empty `## [Unreleased]` above it, move fragment(s) to `changelog.d/archived/1.0.5/`.
+4. Resolve Gate 5h staleness: run `/resource-cost-mapping` and `/hot-path-audit` on `src/Relay` (scope should include `Buffers/MpscByteRingBuffer.cs`, `PacketSink.cs`, `Sinks/FileStreamSink.cs`, `Sinks/MemorySink.cs`, `Sinks/RotatingFileSink.cs`), or explicitly accept staleness and proceed.
+5. Set `<Version>`, `<AssemblyVersion>`, `<FileVersion>` to `1.0.5` in `Directory.Build.props`.
+6. Resolve Gate 2b (commit or discard `docs/_index.md` / untracked files) and Gate 2d (confirm and delete the two superseded unmerged branches; delete the 4 merged-but-stale local branches).
+7. Optionally address 5n.1 (add Architecture section) and 5o (add `docs/architecture-decisions.md`) — advisory only.
+8. Commit: `chore: prepare release v1.0.5`
+9. Run `/release-2-merge-master`
 
 ## Post-release
 
-- [ ] Verify CI/CD pipeline
+- [ ] Verify CI/CD pipeline (if applicable)
 - [ ] Notify stakeholders
