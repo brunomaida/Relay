@@ -1,0 +1,57 @@
+{
+  "timestamp_utc": "2026-06-12T13:06:32Z",
+  "suite": "Relay.Benchmarks.Sinks.UnixSocketSinkBenchmarks",
+  "tag": "micro",
+  "env_key": "c15f4501",
+  "env": {
+    "cpu": "12th Gen Intel Core i7-12700",
+    "cores": 12,
+    "os": "Windows 11 (10.0.26200.8655)",
+    "runtime": ".NET 9.0.14 (9.0.1426.11910)",
+    "bdn_version": "0.13.12",
+    "arch": "X64"
+  },
+  "git_sha": "eb15567",
+  "git_dirty": true,
+  "source": "ingest",
+  "confidence": "high",
+  "baseline": true,
+  "records": [
+    {
+      "bench_id": "Relay.Benchmarks.Sinks.UnixSocketSinkBenchmarks.Push_Single(ItemCount: 100000)",
+      "suite": "Relay.Benchmarks.Sinks.UnixSocketSinkBenchmarks",
+      "unit": "ns",
+      "mean": 3678988.1510416665,
+      "median": 3676058.203125,
+      "stddev": 50925.75333115637,
+      "min": 3629590.625,
+      "max": 3731315.625,
+      "p95": 3725789.8828125,
+      "p99": 3725789.8828125,
+      "alloc_bytes": 139275,
+      "gen0": 10,
+      "gen1": 10,
+      "gen2": 10,
+      "extra": {}
+    },
+    {
+      "bench_id": "Relay.Benchmarks.Sinks.UnixSocketSinkBenchmarks.Push_Single(ItemCount: 1000000)",
+      "suite": "Relay.Benchmarks.Sinks.UnixSocketSinkBenchmarks",
+      "unit": "ns",
+      "mean": 18878589.583333332,
+      "median": 17948246.875,
+      "stddev": 2401791.798793007,
+      "min": 17081140.625,
+      "max": 21606381.25,
+      "p95": 21240567.812499996,
+      "p99": 21240567.812499996,
+      "alloc_bytes": 139241,
+      "gen0": 1,
+      "gen1": 1,
+      "gen2": 1,
+      "extra": {}
+    }
+  ],
+  "run_id": "19c5baa49970f8f4",
+  "methodology_version": "1"
+}

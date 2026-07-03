@@ -1,0 +1,57 @@
+{
+  "timestamp_utc": "2026-06-12T13:05:29Z",
+  "suite": "Relay.Benchmarks.Sinks.RamPacketSinkBenchmarks",
+  "tag": "micro",
+  "env_key": "c15f4501",
+  "env": {
+    "cpu": "12th Gen Intel Core i7-12700",
+    "cores": 12,
+    "os": "Windows 11 (10.0.26200.8655)",
+    "runtime": ".NET 9.0.14 (9.0.1426.11910)",
+    "bdn_version": "0.13.12",
+    "arch": "X64"
+  },
+  "git_sha": "eb15567",
+  "git_dirty": true,
+  "source": "ingest",
+  "confidence": "high",
+  "baseline": true,
+  "records": [
+    {
+      "bench_id": "Relay.Benchmarks.Sinks.RamPacketSinkBenchmarks.Accept_Single(PayloadSize: 64)",
+      "suite": "Relay.Benchmarks.Sinks.RamPacketSinkBenchmarks",
+      "unit": "ns",
+      "mean": 4.513952881097794,
+      "median": 4.505069553852081,
+      "stddev": 0.015768597133359215,
+      "min": 4.504629969596863,
+      "max": 4.532159119844437,
+      "p95": 4.529450163245201,
+      "p99": 4.529450163245201,
+      "alloc_bytes": 0,
+      "gen0": 0,
+      "gen1": 0,
+      "gen2": 0,
+      "extra": {}
+    },
+    {
+      "bench_id": "Relay.Benchmarks.Sinks.RamPacketSinkBenchmarks.Accept_Single(PayloadSize: 256)",
+      "suite": "Relay.Benchmarks.Sinks.RamPacketSinkBenchmarks",
+      "unit": "ns",
+      "mean": 5.015726387500763,
+      "median": 5.01682311296463,
+      "stddev": 0.015257832407793893,
+      "min": 4.999949783086777,
+      "max": 5.030406266450882,
+      "p95": 5.029047951102257,
+      "p99": 5.029047951102257,
+      "alloc_bytes": 0,
+      "gen0": 0,
+      "gen1": 0,
+      "gen2": 0,
+      "extra": {}
+    }
+  ],
+  "run_id": "7b677c3e7ed35d21",
+  "methodology_version": "1"
+}
