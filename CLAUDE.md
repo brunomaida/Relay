@@ -19,46 +19,7 @@ Single responsibility: receive `T`, deliver to the configured backend, and if de
 
 # Project Layout
 
-```
-Relay.sln
-Directory.Packages.props
-src/
-  Relay/
-    Relay.csproj
-    DispatchSink.cs          ← abstract base (typed), Enqueue hot path
-    PacketSink.cs            ← abstract base (byte payloads), parallel hierarchy
-    SpscQueueSink.cs         ← async delivery via SPSC ring + consumer thread
-    SpscQueueSink.Packet.cs  ← byte-payload SPSC consumer (non-generic)
-    MpscQueueSink.cs         ← async delivery via MPSC ring (multi-producer)
-    MpscQueueSink.Packet.cs  ← byte-payload MPSC consumer (non-generic)
-    ForkSink.cs              ← primary + Next propagation (audit/bypass pattern)
-    MultiSink.cs             ← broadcast (array-based + Multi2Sink CRTP variant)
-    FilterSink.cs            ← conditional gate
-    NullSink.cs              ← no-op sink / terminal fallback
-    NullSink.Packet.cs       ← byte-payload no-op sink (non-generic)
-    Buffers/
-      SpscRingBuffer.cs      ← lock-free SPSC ring, 128B padded head/tail
-      SpscByteRingBuffer.cs  ← byte-variant length-prefixed ring
-      MpscRingBuffer.cs      ← MPSC ring: CAS tail + HeadCache + inline Slot (Log2 FIX #18)
-      MpscByteRingBuffer.cs  ← byte-variant MPSC: CAS reservation + header publish-bit
-    Sinks/
-      FileStreamSink.cs      ← binary write to FileStream, POH buffer, backoff recovery
-      MmfSink.cs             ← MemoryMappedFile, capacity-only failure
-      TcpSink.cs             ← TCP socket, POH send buffer, backoff reconnect
-      MemorySink.cs          ← native memory circular ring, last-resort fallback
-    Sinks/_Compat/
-      RamSink.cs             ← [Obsolete] shim → MemorySink<T>
-    Builder/
-      RelayBuilder.cs        ← static entry points: Start / StartSpsc / StartMpsc
-      SinkChain.cs           ← fluent chain builder; To / Fork / When / Multi; wires Next + Prev
-      MultiBuilder.cs        ← sub-builder: collects broadcast branches for MultiSink
-      FilterBinding.cs       ← intermediate state: closes When(pred) with .To(downstream)
-    Memory/
-      RelayMemory.cs         ← internal: PreFault + VirtualLock on ring buffer
-    Internal/
-      SinkConstraints.cs     ← internal: cache-line alignment assertion (DEBUG)
-      HfClock.cs             ← internal: Stopwatch.GetTimestamp() wrapper
-```
+Full type tree and directory map: `docs/TOPOLOGY.md`.
 
 # Namespaces
 | Namespace | Content |
@@ -115,7 +76,7 @@ src/
 - `IsHealthy` = OR over children (short-circuit: true as soon as one child is healthy).
 - `Accept` always returns true. Fallback to `Next` only when **all** children are unhealthy (`IsHealthy == false`).
 - Items are not re-delivered to unhealthy children; they silently miss them. Multi-dispatch is not redundancy — it is broadcast.
-- **`Multi2Sink<T, TC1, TC2>` CRTP variant:** JIT GDV devirtualizes sealed types at call site; BDN (N=2): Multi2=3.31 ns vs Multi=3.18 ns — no measured advantage. Prefer `Multi2Sink` when compile-time type binding is explicitly required; do not use for expected performance gains at N=2.
+- **`Multi2Sink<T, TC1, TC2>` CRTP variant:** JIT GDV devirtualizes sealed types at call site; BDN (N=2): Multi2=3.31 ns vs Multi=3.18 ns (measured N=2: docs/reports/2026-07-02-resource-cost-map-relay.md) — no measured advantage. Prefer `Multi2Sink` when compile-time type binding is explicitly required; do not use for expected performance gains at N=2.
 - **`Multi2PacketSink<TC1, TC2>` (packet hierarchy CRTP variant):** parallel to `Multi2Sink`, fixed-arity 2-child broadcast for `PacketSink` chains. Same JIT devirtualization properties when `TC1`, `TC2` are sealed. Available since Phase 6.
 
 ## `FilterSink<T>` semantics
@@ -217,13 +178,9 @@ cleaner and costs nothing at runtime.
 | Zero-copy fixed-layout matters (Struct-of-arrays, SIMD) | Payload is already a serialized/encoded byte blob |
 | `SinkConstraints.AssertCacheLineAligned<T>()` applies | You need a byte-oriented backend (text log, framed protocol) |
 
-### Status (current — Phase 1: no ETA set; create GitHub milestone before starting Phase 2)
-- SPSC-only concrete sinks. `MpscQueueSink` abstract base exists; no concrete MPSC
-  backends yet — add if multi-producer contention is demonstrated by BDN.
-- `PacketSink.PropagateAfterAccept` is defined and documented — concrete tee/fork sinks
-  for the packet hierarchy land in Phase 1 (`ForkSink` non-generic).
-- No dedicated builder yet (`SinkChainBuilder` / `SinkChain<THead>` land in Phase 1).
-  Chains are wired manually via `PacketSink.Next` (internal setter) until the builder ships.
+### MPSC backend status
+- `MpscQueueSink` (abstract base) exists; no concrete MPSC backends yet — add if
+  multi-producer contention is demonstrated by BDN.
 
 ## `SpscRingBuffer<T>` contract
 - SPSC: one producer thread, one consumer thread. Violating this is undefined behaviour.
@@ -267,11 +224,9 @@ Source of current/historical numbers = `docs/reports/bench-history/bench-history
 
 # Git Workflow (override)
 - Branch naming: `feature/<yyMMdd>-<slug>`, `fix/<yyMMdd>-<slug>`, `refactor/<yyMMdd>-<slug>` — no `<ref>` segment (lib has no issue tracker).
-- Commit gate: `dotnet test tests/Relay.Tests` (0 failures required).
 
 # Model Routing
-- **Sonnet** — implementation, refactor, tests
-- **Opus** — architectural decisions, new concrete pipes, performance analysis, scope review
+Model routing: global `fact-workflow-and-planning`.
 
 # Release Process
 1. Merge `develop` → `master` via PR (no direct push to master)
