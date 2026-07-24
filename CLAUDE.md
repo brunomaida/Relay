@@ -76,7 +76,7 @@ Full type tree and directory map: `docs/TOPOLOGY.md`.
 - `IsHealthy` = OR over children (short-circuit: true as soon as one child is healthy).
 - `Accept` always returns true. Fallback to `Next` only when **all** children are unhealthy (`IsHealthy == false`).
 - Items are not re-delivered to unhealthy children; they silently miss them. Multi-dispatch is not redundancy — it is broadcast.
-- **`Multi2Sink<T, TC1, TC2>` CRTP variant:** JIT GDV devirtualizes sealed types at call site; BDN (N=2): Multi2=3.31 ns vs Multi=3.18 ns (measured: MultiEnqueue/MultiPacketEnqueue, bench-history 2026-06-12) — no measured advantage. Prefer `Multi2Sink` when compile-time type binding is explicitly required; do not use for expected performance gains at N=2.
+- **`Multi2Sink<T, TC1, TC2>` CRTP variant:** JIT GDV devirtualizes sealed types at call site; BDN (N=2): Multi2=3.31 ns vs Multi=3.18 ns (measured N=2: docs/reports/2026-07-02-resource-cost-map-relay.md) — no measured advantage. Prefer `Multi2Sink` when compile-time type binding is explicitly required; do not use for expected performance gains at N=2.
 - **`Multi2PacketSink<TC1, TC2>` (packet hierarchy CRTP variant):** parallel to `Multi2Sink`, fixed-arity 2-child broadcast for `PacketSink` chains. Same JIT devirtualization properties when `TC1`, `TC2` are sealed. Available since Phase 6.
 
 ## `FilterSink<T>` semantics
