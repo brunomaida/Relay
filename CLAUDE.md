@@ -7,6 +7,9 @@ Single responsibility: receive `T`, deliver to the configured backend, and if de
 ## Tier
 `tier: ultra-low-latency` — all `.cs` files are hot-path; no cold-path exceptions. Enforced globally by `banned-api-enforce`.
 
+doc-scopes:
+  docs/architecture-decisions.md: *.sln, **/*.csproj, Directory.Build.props, Directory.Packages.props
+
 # Stack
 - Runtime: **.NET 9.0** (`net9.0`)
 - Language: **C# 13** (`<LangVersion>13</LangVersion>`)
