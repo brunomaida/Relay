@@ -99,6 +99,7 @@ public sealed class NativeAllocationGateTests
     {
         string root = ResolveSourceRoot();
         var offendingFiles = new List<string>();
+        var scannedRelativePaths = new List<string>();
 
         foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
         {
@@ -109,10 +110,20 @@ public sealed class NativeAllocationGateTests
             if (string.Equals(relativePath, ExemptRelativePath, StringComparison.OrdinalIgnoreCase))
                 continue;
 
+            scannedRelativePaths.Add(relativePath);
+
             string text = File.ReadAllText(file);
             if (FindViolations(text).Count > 0)
                 offendingFiles.Add(relativePath);
         }
+
+        // Dead-man's switch: an empty scanned set (enumeration returning nothing, the obj/bin
+        // skip widening to swallow real files, or the exemption matching more than NativeBuffer.cs)
+        // would make offendingFiles vacuously empty regardless of whether the regex logic is sound.
+        // A known real call site must survive the skip/exempt filters, or the scan itself is broken.
+        scannedRelativePaths.Should().Contain(
+            Path.Combine("Buffers", "MpscRingBuffer.cs"),
+            "the scan must actually reach known non-exempt source files — an empty/over-filtered scan would make the assertion below vacuously pass");
 
         offendingFiles.Should().BeEmpty(
             "NativeBuffer.cs must be the only sanctioned call site for NativeMemory.* under src\\Relay");
