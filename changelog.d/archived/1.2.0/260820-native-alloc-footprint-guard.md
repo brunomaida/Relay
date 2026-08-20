@@ -12,3 +12,6 @@
 - `docs\architecture-decisions.md`: new entry for the bug class, why `NativeBuffer` deliberately omits relational alignment/byteCount validation, and the `MemorySink` (packet) zeroing ruling above.
 - `docs\bench-methodology.md`: note that `[MemoryDiagnoser]` cannot detect `NativeMemory` over-allocation, and why footprint coverage lives in `Relay.Tests` instead.
 - `docs\TOPOLOGY.md` and `CLAUDE.md`: add `NativeBuffer` to the `Relay.Memory` namespace entry alongside `RelayMemory`.
+
+### Perf
+- N/A — all 4 migrated call sites are constructor/`Reset()`/dispose-path only (ring/sink allocation and teardown), never on the `Enqueue`→`Accept` hot path. No BDN re-run required.
