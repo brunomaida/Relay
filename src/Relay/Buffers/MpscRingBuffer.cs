@@ -80,8 +80,7 @@ internal sealed unsafe class MpscRingBuffer<T> : IDisposable where T : unmanaged
         _mask           = capacity - 1;
         _stride         = 64 + sizeof(T);
         _bytesAllocated = (nuint)(capacity * _stride);
-        _basePtr        = (byte*)NativeMemory.AlignedAlloc(_bytesAllocated, 64);
-        NativeMemory.Clear(_basePtr, _bytesAllocated);
+        _basePtr        = (byte*)NativeBuffer.AllocZeroedAligned(_bytesAllocated);
     }
 
     /// <summary>
@@ -181,6 +180,6 @@ internal sealed unsafe class MpscRingBuffer<T> : IDisposable where T : unmanaged
     {
         if (_disposed) return;
         _disposed = true;
-        NativeMemory.AlignedFree(_basePtr);
+        NativeBuffer.FreeAligned(_basePtr, _bytesAllocated);
     }
 }
