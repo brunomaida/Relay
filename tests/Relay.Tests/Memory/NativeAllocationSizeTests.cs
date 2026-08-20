@@ -17,7 +17,7 @@ namespace Relay.Tests.Memory;
 /// </summary>
 public sealed unsafe class NativeAllocationSizeTests
 {
-    [Fact]
+    [WindowsOracleFact]
     public void Probe_Calibration_ReportsSaneSizeForKnownAllocation()
     {
         NativeSizeProbe.IsCalibrated.Should().BeTrue(NativeSizeProbe.CalibrationFailureReason);
