@@ -149,7 +149,7 @@ created: 2026-06-11
   │                            FilterBinding<THead>                      [packet chain]
   │                            RelayBuilder.From<TState>, FromTcp<TState>,
   │                            FromSharedMemory<TState>, FromNamedPipe<TState>
-  ├── namespace Relay.Memory   RelayMemory                               [internal]
+  ├── namespace Relay.Memory   RelayMemory, NativeBuffer                 [internal]
   └── namespace Relay.Internal HfClock, SinkConstraints                 [internal]
 
   Relay.Sinks.Http.csproj  (src/Relay.Sinks.Http)
