@@ -62,4 +62,7 @@ internal static unsafe class NativeBuffer
         NativeMemory.Free(ptr);
         UnalignedBytesOutstanding -= (long)byteCount;
     }
+
+    /// <summary>Zeroes <paramref name="byteCount"/> bytes of already-owned memory. Not an allocation — outstanding-byte counters are unaffected.</summary>
+    internal static void Clear(void* ptr, nuint byteCount) => NativeMemory.Clear(ptr, byteCount);
 }

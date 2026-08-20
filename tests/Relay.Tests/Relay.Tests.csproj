@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <AssemblyMetadata Include="RelaySourceRoot" Value="$(MSBuildThisFileDirectory)..\..\src\Relay" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
