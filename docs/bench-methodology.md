@@ -46,6 +46,17 @@ beyond `noiseFloorNs`). Any new allocation where a bench was 0-alloc is a hard r
 ## Interpreting Results
 Focus on **Mean** and **Allocated**. `[Benchmark(Baseline = true)]` sets the in-suite Ratio reference.
 
+## Known Limitations
+
+`[MemoryDiagnoser]` only sees managed-heap allocations made inside the measured invocation. It cannot
+detect `NativeMemory` over-allocation: `NativeMemory.Alloc`/`AllocZeroed`/`AlignedAlloc` bypass the GC
+heap entirely, and every Relay ring/sink benchmark allocates its native buffer once in `[GlobalSetup]`
+— outside the measured window, not per-invocation. A regression like the Wave `(elementCount,
+elementSize)` argument-order bug (`docs/architecture-decisions.md`, 2026-08-20 entry) would report
+0 B allocated and produce no BDN signal at all. This is why native-allocation footprint coverage lives
+in `Relay.Tests` (`tests\Relay.Tests\Memory\NativeAllocationSizeTests.cs`,
+`AllocationAccountingTests.cs`), not the benchmark suite.
+
 ## Pre-regression Gate
 `bench-report gate` fails CI when a gated bench regresses beyond `gateMaxRegression` (statistically
 significant changes only). The thresholds below are **conservative starting values** — tighten after

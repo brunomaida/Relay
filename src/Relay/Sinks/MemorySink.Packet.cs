@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Relay.Memory;
 
 namespace Relay.Sinks;
 
@@ -41,7 +42,7 @@ public unsafe class MemorySink : PacketSink
         if (capacity <= 0 || (capacity & (capacity - 1)) != 0)
             throw new ArgumentException("Capacity must be a positive power of two.", nameof(capacity));
         _capacity = capacity;
-        _buffer   = (byte*)NativeMemory.AlignedAlloc((nuint)capacity, 64);
+        _buffer   = (byte*)NativeBuffer.AllocZeroedAligned((nuint)capacity);
     }
 
     /// <summary>
@@ -111,6 +112,6 @@ public unsafe class MemorySink : PacketSink
     {
         if (_disposed) return;
         _disposed = true;
-        NativeMemory.AlignedFree(_buffer);
+        NativeBuffer.FreeAligned(_buffer, (nuint)_capacity);
     }
 }

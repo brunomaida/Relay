@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Relay.Memory;
 
 namespace Relay.Sinks;
 
@@ -24,9 +25,10 @@ public unsafe class MemorySink<T> : DispatchSink<T> where T : unmanaged
 {
     private const int DefaultCapacity = 1 << 23; // 8_388_608 entries — ~512 MB for T=64B
 
-    private readonly T*   _buffer;
-    private readonly long _capacity;
-    private readonly long _mask;
+    private readonly T*    _buffer;
+    private readonly long  _capacity;
+    private readonly long  _mask;
+    private readonly nuint _bytesAllocated;
 
     private long _head;
     private long _tail;
@@ -37,9 +39,10 @@ public unsafe class MemorySink<T> : DispatchSink<T> where T : unmanaged
         if (capacity <= 0 || (capacity & (capacity - 1)) != 0)
             throw new ArgumentException("Capacity must be a positive power of two.", nameof(capacity));
 
-        _capacity = capacity;
-        _mask     = capacity - 1;
-        _buffer   = (T*)NativeMemory.AllocZeroed((nuint)(capacity * sizeof(T)));
+        _capacity       = capacity;
+        _mask           = capacity - 1;
+        _bytesAllocated = (nuint)(capacity * sizeof(T));
+        _buffer         = (T*)NativeBuffer.AllocZeroed(_bytesAllocated);
     }
 
     /// <summary>True when the ring has at least one free slot.</summary>
@@ -74,14 +77,14 @@ public unsafe class MemorySink<T> : DispatchSink<T> where T : unmanaged
     ~MemorySink()
     {
         if (!_disposed)
-            NativeMemory.Free(_buffer);
+            NativeBuffer.Free(_buffer, _bytesAllocated);
     }
 
     public override void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
-        NativeMemory.Free(_buffer);
+        NativeBuffer.Free(_buffer, _bytesAllocated);
         GC.SuppressFinalize(this);
     }
 }

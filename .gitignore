@@ -23,3 +23,4 @@ BenchmarkDotNet.Artifacts/
 benchmarks/baselines/results/
 benchmarks/baselines/BenchmarkRun-*.log
 /docs/superpowers/specs/2026-04-30-release-skills-design.md
+\.obsidian/
