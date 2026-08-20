@@ -31,7 +31,7 @@ Full type tree and directory map: `docs/TOPOLOGY.md`.
 | `Relay.Buffers` | `SpscRingBuffer<T>`, `MpscRingBuffer<T>`, `SpscByteRingBuffer`, `MpscByteRingBuffer` (internal to lib) |
 | `Relay.Sinks` | Concrete backends: `FileStreamSink<T>`, `MmfSink<T>`, `TcpSink<T>`, `MemorySink<T>` |
 | `Relay.Builder` | `RelayBuilder`, `SinkChain<T,THead>`, `MultiBuilder<T>`, `FilterBinding<T,THead>` |
-| `Relay.Memory` | `RelayMemory` (internal) |
+| `Relay.Memory` | `RelayMemory`, `NativeBuffer` (internal) |
 | `Relay.Internal` | `HfClock`, `SinkConstraints` (internal) |
 
 # Performance — Everything Is Hot Path
