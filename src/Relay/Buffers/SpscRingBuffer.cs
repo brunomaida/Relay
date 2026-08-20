@@ -69,8 +69,7 @@ internal sealed unsafe class SpscRingBuffer<T> : IDisposable where T : unmanaged
         Capacity        = capacity;
         _mask           = capacity - 1;
         _bytesAllocated = capacity * sizeof(T);
-        _basePtr        = (T*)NativeMemory.AlignedAlloc((nuint)_bytesAllocated, 64);
-        NativeMemory.Clear(_basePtr, (nuint)_bytesAllocated);
+        _basePtr        = (T*)NativeBuffer.AllocZeroedAligned((nuint)_bytesAllocated);
     }
 
     /// <summary>Pre-faults every page of the backing ring and attempts <c>VirtualLock</c> on Windows.</summary>
@@ -204,6 +203,6 @@ internal sealed unsafe class SpscRingBuffer<T> : IDisposable where T : unmanaged
     {
         if (_disposed) return;
         _disposed = true;
-        NativeMemory.AlignedFree(_basePtr);
+        NativeBuffer.FreeAligned(_basePtr, (nuint)_bytesAllocated);
     }
 }

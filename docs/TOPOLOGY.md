@@ -149,7 +149,7 @@ created: 2026-06-11
   │                            FilterBinding<THead>                      [packet chain]
   │                            RelayBuilder.From<TState>, FromTcp<TState>,
   │                            FromSharedMemory<TState>, FromNamedPipe<TState>
-  ├── namespace Relay.Memory   RelayMemory                               [internal]
+  ├── namespace Relay.Memory   RelayMemory, NativeBuffer                 [internal]
   └── namespace Relay.Internal HfClock, SinkConstraints                 [internal]
 
   Relay.Sinks.Http.csproj  (src/Relay.Sinks.Http)
@@ -815,6 +815,22 @@ created: 2026-06-11
     - Multi broadcast multiplies by N. Keep N ≤ 4.
     - MemorySink as last resort adds ~0c on success path, ~6c on all-children-fail path.
     - Multi2Sink (CRTP) saves ~6c over MultiSink when children are sealed types.
+```
+
+## Assembly Roles
+
+| Assembly | Role | Latency tier | Key types |
+|---|---|---|---|
+| `Relay` | Core dispatch library — composable fallback-sink chains over `T : unmanaged` and byte-payload `PacketSink`; SPSC/MPSC lock-free ring buffers, builder API. Zero external production dependencies. | nanosecond (ultra-low-latency, zero-alloc `Enqueue`→`Accept` hot path) | `DispatchSink<T>`, `SpscQueueSink<T>`, `MpscQueueSink<T>`, `PacketSink`, `BatchSink`, `RelayBuilder` |
+| `Relay.Sinks.Http` | Abstract circuit-breaker HTTP batch-POST sink (`PacketSink` → `SpscQueueSink` → `BatchSink` chain) — subclasses supply endpoint, content-type, per-request headers | warm runtime (I/O-bound, background consumer thread — off the producer `Enqueue` path); enforcement tier is still `ultra-low-latency` — `banned-api-enforce` applies to every `.cs` (CLAUDE.md § Tier) | `HttpBatchSink` |
+| `Relay.Sinks.Observability` | Concrete `HttpBatchSink` for Seq — POSTs CLEF/JSON lines to `/api/events/raw` | warm runtime (I/O-bound, background consumer thread — off the producer `Enqueue` path); enforcement tier is still `ultra-low-latency` — `banned-api-enforce` applies to every `.cs` (CLAUDE.md § Tier) | `SeqSink` |
+
+## Dependency Direction Graph
+
+```
+src/Relay/Relay -> (no project references — Relay is the dependency root)
+src/Relay.Sinks.Http/Relay.Sinks.Http -> Relay
+src/Relay.Sinks.Observability/Relay.Sinks.Observability -> Relay, Relay.Sinks.Http
 ```
 
 <!-- doc-links:auto -->

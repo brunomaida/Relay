@@ -9,6 +9,37 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ---
 
+## [1.2.0] - 2026-08-20
+
+### Docs
+- CLAUDE.md hygiene: Project Layout tree replaced with a pointer to `docs/TOPOLOGY.md` (tree had drifted ~20 files stale); removed the stale Phase-1 `Status` section (SinkChainBuilder, SinkChain.Packet.cs, ForkSink.Packet.cs all shipped) while preserving the still-true MPSC-no-concrete-backends note; deduplicated the two conflicting commit-gate lines down to the `Relay.sln --filter` gate; collapsed the duplicated Model Routing section to a pointer at global `fact-workflow-and-planning`; fixed provenance tag on the Multi2/Multi BDN claim (previously cited MultiEnqueue/MultiPacketEnqueue bench-history, which measures 3.25/3.38 ns, not the documented 3.31/3.18 ns) to cite `docs/reports/2026-07-02-resource-cost-map-relay.md` instead.
+
+### Perf
+- N/A — documentation only
+
+### Added
+- `Relay.Memory.NativeBuffer` (internal): single sanctioned entry point for `NativeMemory.*` calls under `src\Relay`. Exposes only single-argument-shape members — `AllocZeroedAligned(byteCount, alignment = 64)` / `FreeAligned(ptr, byteCount)` for the aligned family, `AllocZeroed(byteCount)` / `Free(ptr, byteCount)` for the unaligned family, `Clear(ptr, byteCount)` for post-construction zeroing — plus `[ThreadStatic]` outstanding-bytes counters (`AlignedBytesOutstanding`, `UnalignedBytesOutstanding`) incremented/decremented by the wrappers. Guards against the `NativeMemory.AllocZeroed`/`Alloc` 2-arg overload confusion (`(elementCount, elementSize)`, not `(bytes, alignment)`) that shipped a production leak in a sibling project (Wave issue #136, 406MB→38MB after fix).
+- Native-allocation footprint tests (`tests\Relay.Tests\Memory\NativeAllocationSizeTests.cs`): oracle-based (`_msize`/`_aligned_msize` via `ucrtbase.dll`) assertions that `SpscRingBuffer<T>`, `MpscRingBuffer<T>`, `MemorySink<T>`, and `MemorySink` (packet) allocate exactly the expected byte count, across multiple payload sizes and capacities, plus a regression test for the exact Wave bug shape (swapped `byteCount`/`alignment` arguments) and a non-power-of-two alignment rejection test.
+- Allocation-accounting tests (`tests\Relay.Tests\Memory\AllocationAccountingTests.cs`): assert `NativeBuffer`'s outstanding-bytes counters return to zero after `Dispose()` (aligned and unaligned families) and, via a same-thread reflection-invoked call, after the `MemorySink<T>` finalizer body runs. The finalizer test validates free-path routing only — the counters are `[ThreadStatic]`, so they are not expected to reconcile under genuine GC-driven finalization, which runs on a separate finalizer thread from the one that allocated.
+- Self-proving source-scan gate (`tests\Relay.Tests\Memory\NativeAllocationGateTests.cs`): `NativeMemory_IsNotCalledOutsideNativeBuffer` scans every `.cs` file under `src\Relay` and fails if any file other than `NativeBuffer.cs` contains a `NativeMemory.` token outside comments/XML-doc. Backed by positive-control fixtures (`Detector_FlagsKnownViolationFixture`, `Detector_FlagsUsingStaticImportFixture`) proving the detector actually fires, and negative-control fixtures (`Detector_IgnoresXmlDocReferences`, `Detector_FlagsRealCallButNotAdjacentXmlDoc`) proving it doesn't false-positive on `<see cref="NativeMemory...">` doc references.
+
+### Changed
+- Migrated all 4 production `NativeMemory.*` call sites (`SpscRingBuffer<T>`, `MpscRingBuffer<T>`, `MemorySink<T>`, `MemorySink` (packet)) plus `MpscRingBuffer.Reset()`'s `Clear` call to route through `NativeBuffer`. Behavior-preserving for all sites except `MemorySink` (packet) — see below.
+- `MemorySink` (packet, `src\Relay\Sinks\MemorySink.Packet.cs`, default capacity 4 MiB): now zeroes its buffer at construction via `NativeBuffer.AllocZeroedAligned`, where it previously did not (`NativeMemory.AlignedAlloc` never zeroes). Recorded as an explicit exception in `docs\architecture-decisions.md` (2026-08-20 entry) — accepted because construction is one-time init, not steady-state hot path, and is beneficial here since this sink's first writes happen during a failure event.
+
+### Docs
+- `docs\architecture-decisions.md`: new entry for the bug class, why `NativeBuffer` deliberately omits relational alignment/byteCount validation, and the `MemorySink` (packet) zeroing ruling above.
+- `docs\bench-methodology.md`: note that `[MemoryDiagnoser]` cannot detect `NativeMemory` over-allocation, and why footprint coverage lives in `Relay.Tests` instead.
+- `docs\TOPOLOGY.md` and `CLAUDE.md`: add `NativeBuffer` to the `Relay.Memory` namespace entry alongside `RelayMemory`.
+
+### Perf
+- N/A — all 4 migrated call sites are constructor/`Reset()`/dispose-path only (ring/sink allocation and teardown), never on the `Enqueue`→`Accept` hot path. No BDN re-run required.
+
+### Fixed
+- `Probe_Calibration_ReportsSaneSizeForKnownAllocation` test asserted the Windows-only `ucrtbase.dll` oracle always calibrates, failing on non-Windows CI. Gated to Windows-only via `WindowsOracleFactAttribute`.
+
+---
+
 ## [1.1.0] - 2026-07-03
 
 ### Changed
