@@ -88,3 +88,17 @@ internal sealed class OracleTheoryAttribute : TheoryAttribute
             Skip = NativeSizeProbe.CalibrationFailureReason;
     }
 }
+
+/// <summary>
+/// <see cref="FactAttribute"/> for tests that assert the oracle itself is sound. The oracle
+/// binds to ucrtbase.dll, a Windows-only CRT — non-Windows platforms skip instead of failing;
+/// on Windows a failed calibration is a real defect and the test runs to catch it.
+/// </summary>
+internal sealed class WindowsOracleFactAttribute : FactAttribute
+{
+    public WindowsOracleFactAttribute()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            Skip = "ucrtbase.dll oracle is Windows-only";
+    }
+}
