@@ -4,8 +4,12 @@ using System.Runtime.InteropServices;
 namespace Relay.Memory;
 
 /// <summary>
-/// Single unambiguous entry point for native allocation in Relay. A sibling project (Wave) shipped
-/// a production memory leak by calling the <c>(elementCount, elementSize)</c> overload of
+/// The single sanctioned entry point for native <see cref="NativeMemory"/> calls in this repo —
+/// allocation, free, and clear — and the boundary where the aligned/unaligned pairing invariant
+/// (aligned allocations freed only via <see cref="FreeAligned"/>; unaligned only via <see cref="Free"/>;
+/// never mixed) is enforced. Today that enforcement is by member naming only — there is no automated
+/// check that catches a mismatched <see cref="Free"/>/<see cref="FreeAligned"/> call. A sibling project
+/// (Wave) shipped a production memory leak by calling the <c>(elementCount, elementSize)</c> overload of
 /// <see cref="NativeMemory.AllocZeroed(nuint, nuint)"/> with <c>(bufferBytes, alignment)</c> arguments —
 /// this class collapses every call site to a single-argument shape where that swap cannot compile.
 /// </summary>
@@ -17,9 +21,21 @@ namespace Relay.Memory;
 internal static unsafe class NativeBuffer
 {
     /// <summary>Bytes currently outstanding via <see cref="AllocZeroedAligned"/> on this thread.</summary>
+    /// <remarks>
+    /// Diagnostics-only. Because this counter is <c>[ThreadStatic]</c>, it reconciles correctly only
+    /// when allocation and free run on the same thread — true for every <c>Dispose()</c> path in this
+    /// repo. It is NOT expected to reconcile under genuine GC-driven finalization: the CLR runs
+    /// finalizers on a dedicated finalizer thread, distinct from the allocating thread, so a real
+    /// finalizer-driven free would decrement a different thread's slot than the one that was
+    /// incremented (leaving the allocating thread's counter permanently inflated and the finalizer
+    /// thread's counter negative). Tests that exercise a finalizer body do so via reflection on the
+    /// allocating thread specifically to validate free-path routing (correct byte count, correct free
+    /// family) — that is not the same claim as "counters reconcile after real finalization".
+    /// </remarks>
     [ThreadStatic] internal static long AlignedBytesOutstanding;
 
     /// <summary>Bytes currently outstanding via <see cref="AllocZeroed"/> on this thread.</summary>
+    /// <remarks>Same <c>[ThreadStatic]</c> cross-thread-finalization caveat as <see cref="AlignedBytesOutstanding"/>.</remarks>
     [ThreadStatic] internal static long UnalignedBytesOutstanding;
 
     /// <summary>Allocates and zeroes <paramref name="byteCount"/> bytes aligned to <paramref name="alignment"/>. Free only via <see cref="FreeAligned"/>.</summary>
