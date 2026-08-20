@@ -172,7 +172,7 @@ internal sealed unsafe class MpscRingBuffer<T> : IDisposable where T : unmanaged
         _claimedTail.Value = 0;
         _headCache.Value   = 0;
         _head.Value        = 0;
-        NativeMemory.Clear(_basePtr, _bytesAllocated);
+        NativeBuffer.Clear(_basePtr, _bytesAllocated);
     }
 
     /// <summary>Frees the native ring. Idempotent.</summary>
