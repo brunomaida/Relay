@@ -1002,7 +1002,7 @@ dotnet test tests/Relay.Tests
 
 Base all branches off `develop`. Merge back to `develop` when stable.
 
-**Commit convention:** Conventional Commits in English (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`). Append `w/Claude` when the commit is co-authored by Claude Code.
+**Commit convention:** Conventional Commits in English (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`).
 
 ---
 
