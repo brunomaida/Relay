@@ -1316,6 +1316,15 @@
                 "content": [
                   "(no extractable summary)"
                 ]
+              },
+              {
+                "name": "chore-260924-roadmap-project-mode.md",
+                "type": "report",
+                "path": "/changelog.d/chore-260924-roadmap-project-mode.md",
+                "title": "Docs",
+                "content": [
+                  "Roadmap tracker moved to project mode: its config now lives in docs/roadmap.config.json and the built docs/roadmap.data.json + docs/roadmap.html are committed, so pr-precheck Check 8 can verify tracker freshness per branch. Regenerated docs/_index.md, which st"
+                ]
               }
             ],
             "reason": "Release workflow, GitHub Packages + NuGet publishing, symbols",
