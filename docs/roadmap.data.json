@@ -172,7 +172,7 @@
         ],
         "children": [
           {
-            "id": "R20",
+            "id": "S20",
             "type": "spec",
             "name": "Doc taxonomy",
             "start": "2026-06-11",
@@ -201,7 +201,7 @@
             "verBadge": "1.0.5"
           },
           {
-            "id": "R21",
+            "id": "S21",
             "type": "spec",
             "name": "Bench methodology + bench-history",
             "start": "2026-07-03",
@@ -232,7 +232,7 @@
             "verBadge": null
           },
           {
-            "id": "R22",
+            "id": "S22",
             "type": "spec",
             "name": "Resource cost map + robustness/perf fixes",
             "start": "2026-06-11",
@@ -277,6 +277,16 @@
                 "content": [
                   "_generated 2026-07-02 · model x64-goldenCove v1 · static+BDN hybrid · BDN baseline commit ddf2f0b (i7-12700, .NET 9.0.14, 12 cores, GC=Server, BDN 0.13.12); static-only delta for 2026-06-11 (c1818fa, 9aae152, ab33f86, 65b6cf1) — not re-benchmarked, see §9_ _Cy",
                   "mode: library — no Main; all public API is entry"
+                ]
+              },
+              {
+                "name": "refactor-260924-24-roadmap-id-standard.md",
+                "type": "report",
+                "path": "/changelog.d/refactor-260924-24-roadmap-id-standard.md",
+                "title": "Docs",
+                "content": [
+                  "Standardized roadmap ids to the cross-project S<n>/S<n>.<m> grammar (brunomaida/claude-config#64): R1..R22 -> S1..S22 in docs/roadmap.md, docs/roadmap.config.json (members/releases/aliases) and changelog.d/docs-260921-5-doc-sync.md. The docs/roadmap.config.jso",
+                  "N/A: documentation-only id rename, no runtime code path changed."
                 ]
               }
             ],
@@ -336,7 +346,7 @@
         "docs": [],
         "children": [
           {
-            "id": "R18",
+            "id": "S18",
             "type": "spec",
             "name": "Circular ring topology test suite",
             "start": "2026-05-27",
@@ -403,7 +413,7 @@
             "verBadge": null
           },
           {
-            "id": "R19",
+            "id": "S19",
             "type": "spec",
             "name": "Throughput perf tests + warmup",
             "start": "2026-05-27",
@@ -504,7 +514,7 @@
         "docs": [],
         "children": [
           {
-            "id": "R16",
+            "id": "S16",
             "type": "spec",
             "name": "PacketReceiver hierarchy + PacketCallback",
             "start": "2026-05-26",
@@ -548,7 +558,7 @@
             "verBadge": null
           },
           {
-            "id": "R17",
+            "id": "S17",
             "type": "spec",
             "name": "Receiver audit fixes (F0/F0b/F1/F3)",
             "start": "2026-05-26",
@@ -628,7 +638,7 @@
         "docs": [],
         "children": [
           {
-            "id": "R13",
+            "id": "S13",
             "type": "spec",
             "name": "Thread priority/affinity + RotatingFileSink fileNameFormat",
             "start": "2026-07-03",
@@ -647,7 +657,7 @@
             "verBadge": null
           },
           {
-            "id": "R14",
+            "id": "S14",
             "type": "spec",
             "name": "Robustness fixes (v1.0.2)",
             "start": "2026-07-02",
@@ -701,7 +711,7 @@
             "verBadge": null
           },
           {
-            "id": "R15",
+            "id": "S15",
             "type": "spec",
             "name": "External-AI audit triage",
             "start": "2026-05-24",
@@ -816,7 +826,7 @@
         ],
         "children": [
           {
-            "id": "R1",
+            "id": "S1",
             "type": "spec",
             "name": "Typed dispatch hierarchy + SPSC ring + concrete sinks",
             "start": "2026-04-23",
@@ -868,7 +878,7 @@
             "verBadge": null
           },
           {
-            "id": "R2",
+            "id": "S2",
             "type": "spec",
             "name": "Composition sinks + fluent builder",
             "start": "2026-04-23",
@@ -901,7 +911,7 @@
             "verBadge": null
           },
           {
-            "id": "R3",
+            "id": "S3",
             "type": "spec",
             "name": "Packet (byte) sink hierarchy",
             "start": "2026-04-23",
@@ -943,7 +953,7 @@
             "verBadge": null
           },
           {
-            "id": "R4",
+            "id": "S4",
             "type": "spec",
             "name": "SPSC ring hot-path optimization",
             "start": "2026-04-23",
@@ -983,7 +993,7 @@
             "verBadge": null
           },
           {
-            "id": "R5",
+            "id": "S5",
             "type": "spec",
             "name": "BenchmarkDotNet suite",
             "start": "2026-04-24",
@@ -1014,7 +1024,7 @@
             "verBadge": null
           },
           {
-            "id": "R6",
+            "id": "S6",
             "type": "spec",
             "name": "Naming canonicalization",
             "start": "2026-04-25",
@@ -1067,7 +1077,7 @@
         ],
         "children": [
           {
-            "id": "R7",
+            "id": "S7",
             "type": "spec",
             "name": "Cost-map BDN coverage",
             "start": "2026-04-29",
@@ -1161,7 +1171,7 @@
             "verBadge": null
           },
           {
-            "id": "R8",
+            "id": "S8",
             "type": "spec",
             "name": "RotatingFileSink day-boundary cache",
             "start": "2026-04-29",
@@ -1236,7 +1246,7 @@
         "docs": [],
         "children": [
           {
-            "id": "R9",
+            "id": "S9",
             "type": "spec",
             "name": "BatchSink — POH scratch accumulator",
             "start": "2026-04-26",
@@ -1269,7 +1279,7 @@
             "verBadge": null
           },
           {
-            "id": "R10",
+            "id": "S10",
             "type": "spec",
             "name": "HttpBatchSink + Relay.Sinks.Http",
             "start": "2026-04-27",
@@ -1289,7 +1299,7 @@
             "verBadge": null
           },
           {
-            "id": "R11",
+            "id": "S11",
             "type": "spec",
             "name": "SeqSink + Relay.Sinks.Observability",
             "start": "2026-04-28",
@@ -1308,7 +1318,7 @@
             "verBadge": null
           },
           {
-            "id": "R12",
+            "id": "S12",
             "type": "spec",
             "name": "CI/CD + NuGet packaging",
             "start": "2026-04-29",
