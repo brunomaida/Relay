@@ -82,6 +82,16 @@
             ]
           },
           {
+            "name": "refactor-260924-24-roadmap-id-standard.md",
+            "type": "report",
+            "path": "/changelog.d/refactor-260924-24-roadmap-id-standard.md",
+            "title": "Docs",
+            "content": [
+              "Standardized legacy R-prefixed roadmap ids to the cross-project S-prefixed grammar (S<n>) (brunomaida/claude-config#64) in docs/roadmap.md, docs/roadmap.config.json (members, releases and aliases) and changelog.d/docs-260921-5-doc-sync.md. The docs/roadmap.con",
+              "N/A: documentation-only id rename, no runtime code path changed."
+            ]
+          },
+          {
             "name": "ci-test-failures.md",
             "type": "report",
             "path": "/changelog.d/archived/1.0.1/ci-test-failures.md",
@@ -277,16 +287,6 @@
                 "content": [
                   "_generated 2026-07-02 · model x64-goldenCove v1 · static+BDN hybrid · BDN baseline commit ddf2f0b (i7-12700, .NET 9.0.14, 12 cores, GC=Server, BDN 0.13.12); static-only delta for 2026-06-11 (c1818fa, 9aae152, ab33f86, 65b6cf1) — not re-benchmarked, see §9_ _Cy",
                   "mode: library — no Main; all public API is entry"
-                ]
-              },
-              {
-                "name": "refactor-260924-24-roadmap-id-standard.md",
-                "type": "report",
-                "path": "/changelog.d/refactor-260924-24-roadmap-id-standard.md",
-                "title": "Docs",
-                "content": [
-                  "Standardized roadmap ids to the cross-project S<n>/S<n>.<m> grammar (brunomaida/claude-config#64): R1..R22 -> S1..S22 in docs/roadmap.md, docs/roadmap.config.json (members/releases/aliases) and changelog.d/docs-260921-5-doc-sync.md. The docs/roadmap.config.jso",
-                  "N/A: documentation-only id rename, no runtime code path changed."
                 ]
               }
             ],
