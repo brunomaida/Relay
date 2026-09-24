@@ -1,0 +1,320 @@
+{
+  "title": "Relay — Zero-Allocation .NET Dispatch/Sink Relay Library Roadmap",
+  "source": {
+    "type": "manifest",
+    "path": "docs/roadmap.md"
+  },
+  "tree": [
+    {
+      "id": "P0",
+      "name": "Phase 0: Core Foundation",
+      "members": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6"
+      ]
+    },
+    {
+      "id": "P1",
+      "name": "Phase 1: Cost-Map BDN Coverage",
+      "members": [
+        "R7",
+        "R8"
+      ]
+    },
+    {
+      "id": "P2",
+      "name": "Phase 2: Observability Sinks",
+      "members": [
+        "R9",
+        "R10",
+        "R11",
+        "R12"
+      ]
+    },
+    {
+      "id": "P3",
+      "name": "Phase 3: Hardening & Correctness",
+      "members": [
+        "R13",
+        "R14",
+        "R15"
+      ]
+    },
+    {
+      "id": "P4",
+      "name": "Phase 4: Passive Receivers",
+      "members": [
+        "R16",
+        "R17"
+      ]
+    },
+    {
+      "id": "P5",
+      "name": "Phase 5: Topology Testing",
+      "members": [
+        "R18",
+        "R19"
+      ]
+    },
+    {
+      "id": "P6",
+      "name": "Phase 6: Bench Infra & Doc Taxonomy",
+      "members": [
+        "R20",
+        "R21",
+        "R22"
+      ]
+    }
+  ],
+  "releases": {
+    "1.0.0": {
+      "ids": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R7",
+        "R8",
+        "R9",
+        "R10",
+        "R11",
+        "R12"
+      ]
+    },
+    "1.0.2": {
+      "ids": [
+        "R13",
+        "R14",
+        "R15"
+      ]
+    },
+    "1.0.3": {
+      "ids": [
+        "R16",
+        "R17"
+      ]
+    },
+    "1.0.4": {
+      "ids": [
+        "R18",
+        "R19"
+      ]
+    }
+  },
+  "aliases": {
+    "R1": [
+      "relay-phase1",
+      "dispatch",
+      "spsc-ring"
+    ],
+    "R3": [
+      "byte-vs-typed",
+      "mpsc-ringbuffer",
+      "byte-vs-log2",
+      "bytepipe"
+    ],
+    "R4": [
+      "resource-cost-map-relay",
+      "spsc-opt"
+    ],
+    "R5": [
+      "bdn-typed-mpsc",
+      "mpsc-propagate"
+    ],
+    "R7": [
+      "master-cost-map",
+      "cost-map-coverage",
+      "phase2-packet",
+      "packet-symmetry",
+      "phase3-mpsc",
+      "mpsc-byte",
+      "phase4-backends",
+      "phase6-multi2",
+      "multi2-packet",
+      "phase7-mpsc",
+      "mpsc-contention"
+    ],
+    "R8": [
+      "rotatingfilesink",
+      "day-boundary",
+      "hot-path-performance",
+      "performance-memory"
+    ],
+    "R12": [
+      "release-skills"
+    ],
+    "R14": [
+      "robustness",
+      "hot-path-audit-relay"
+    ],
+    "R15": [
+      "resilient-cat",
+      "externalai",
+      "external-ai",
+      "ex-resilient"
+    ],
+    "R16": [
+      "audit-receivers",
+      "hot-path-audit-receivers"
+    ],
+    "R17": [
+      "cost-map-receivers",
+      "resource-cost-map-receivers"
+    ],
+    "R18": [
+      "idempotent-thompson",
+      "circular-ring",
+      "audit-circular"
+    ],
+    "R19": [
+      "thompson",
+      "throughput"
+    ],
+    "R20": [
+      "doc-taxonomy"
+    ],
+    "R21": [
+      "bench-methodology",
+      "bench-history"
+    ],
+    "R22": [
+      "merry-weaving",
+      "weaving-sprout"
+    ]
+  },
+  "phase_docs": {
+    "P0": [
+      [
+        "docs/TOPOLOGY.md",
+        "spec"
+      ]
+    ],
+    "P1": [
+      [
+        "docs/reports/2026-04-29-resource-cost-map-relay.md",
+        "report"
+      ]
+    ],
+    "P6": [
+      [
+        "docs/bench-methodology.md",
+        "spec"
+      ]
+    ]
+  },
+  "domain": {
+    "core": [
+      "dispatch",
+      "sink",
+      "ring",
+      "spsc",
+      "mpsc",
+      "buffer",
+      "enqueue",
+      "consumer",
+      "hfclock",
+      "padded",
+      "hot-path",
+      "drain"
+    ],
+    "packet": [
+      "packet",
+      "byte",
+      "serialize",
+      "span",
+      "payload",
+      "bytepipe"
+    ],
+    "sinks": [
+      "file",
+      "filestream",
+      "tcp",
+      "udp",
+      "mmf",
+      "rotating",
+      "namedpipe",
+      "memory",
+      "sharedmemory",
+      "batch",
+      "ram"
+    ],
+    "receivers": [
+      "receiver",
+      "poll",
+      "udpreceiver",
+      "tcpreceiver",
+      "namedpipereceiver",
+      "callback",
+      "packetcallback"
+    ],
+    "observability": [
+      "seq",
+      "clef",
+      "http",
+      "httpbatch",
+      "circuit-breaker",
+      "observability"
+    ],
+    "composition": [
+      "fork",
+      "multi",
+      "filter",
+      "null",
+      "builder",
+      "chain",
+      "fanout",
+      "tee"
+    ],
+    "perf": [
+      "bench",
+      "bdn",
+      "audit",
+      "cost-map",
+      "resource-cost",
+      "optimization",
+      "throughput",
+      "latency",
+      "alloc",
+      "perf"
+    ],
+    "testing": [
+      "test",
+      "circular",
+      "saturation",
+      "stress",
+      "thompson",
+      "topology-test"
+    ],
+    "resilience": [
+      "recovery",
+      "fallback",
+      "backoff",
+      "healthy",
+      "robustness",
+      "resilient"
+    ],
+    "docs": [
+      "taxonomy",
+      "frontmatter",
+      "topology",
+      "readme",
+      "methodology",
+      "index"
+    ],
+    "release": [
+      "release",
+      "ci",
+      "cd",
+      "nuget",
+      "packaging",
+      "github-packages"
+    ]
+  },
+  "domain_fallback": "core"
+}
