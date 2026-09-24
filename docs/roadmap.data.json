@@ -112,6 +112,16 @@
             ]
           },
           {
+            "name": "fix-260526-receiver-desync-stall.md",
+            "type": "report",
+            "path": "/changelog.d/archived/1.0.3/fix-260526-receiver-desync-stall.md",
+            "title": "Summary",
+            "content": [
+              "TcpReceiver<TState>.Poll / NamedPipeReceiver<TState>.Poll: on invalid frame length (≤0 or > buffer), tear down the underlying stream/pipe and throw InvalidDataException instead of silently leaving the wire mid-frame. Subsequent Poll() returns false; the caller",
+              "SharedMemorySpscReceiver<TState> ctor: validate SHM_MAGIC (0x4C473200) at header offset 0; throw InvalidDataException on mismatch instead of accepting a foreign/uninitialised MMF."
+            ]
+          },
+          {
             "name": "260820-native-alloc-footprint-guard.md",
             "type": "report",
             "path": "/changelog.d/archived/1.2.0/260820-native-alloc-footprint-guard.md",
@@ -233,6 +243,15 @@
                 "content": [
                   "_generated 2026-06-12T13:07:29Z · env c15f4501 · 12th Gen Intel Core i7-12700 · .NET 9.0.14 (9.0.1426.11910) · 12 cores · BDN 0.13.12_",
                   "_Methodology: docs/bench-methodology.md (v1)_"
+                ]
+              },
+              {
+                "name": "260724-claudemd-relay.md",
+                "type": "report",
+                "path": "/changelog.d/archived/1.2.0/260724-claudemd-relay.md",
+                "title": "Docs",
+                "content": [
+                  "CLAUDE.md hygiene: Project Layout tree replaced with a pointer to docs/TOPOLOGY.md (tree had drifted ~20 files stale); removed the stale Phase-1 Status section (SinkChainBuilder, SinkChain.Packet.cs, ForkSink.Packet.cs all shipped) while preserving the still-t"
                 ]
               }
             ],
@@ -539,16 +558,6 @@
                 "content": [
                   "Fix: fix/260526-receiver-desync-stall. On invalid frameLen, the stream/pipe is torn down and Poll() throws InvalidDataException. Subsequent Poll() returns false. Regression tests in tests/Relay.Tests/Receivers/ReceiverDesyncStallTests.cs.",
                   "Dim: D24 (Unit tests), correctness. Files: TcpReceiver.cs:84-87, NamedPipeReceiver.cs:70-73."
-                ]
-              },
-              {
-                "name": "fix-260526-receiver-desync-stall.md",
-                "type": "report",
-                "path": "/changelog.d/archived/1.0.3/fix-260526-receiver-desync-stall.md",
-                "title": "Summary",
-                "content": [
-                  "TcpReceiver<TState>.Poll / NamedPipeReceiver<TState>.Poll: on invalid frame length (≤0 or > buffer), tear down the underlying stream/pipe and throw InvalidDataException instead of silently leaving the wire mid-frame. Subsequent Poll() returns false; the caller",
-                  "SharedMemorySpscReceiver<TState> ctor: validate SHM_MAGIC (0x4C473200) at header offset 0; throw InvalidDataException on mismatch instead of accepting a foreign/uninitialised MMF."
                 ]
               }
             ],
@@ -975,15 +984,6 @@
                 "content": [
                   "_generated 2026-04-23 · model x64-golden-cove v1 · static estimate, not benchmark · library mode_",
                   "entry count: 28 public methods/props across 10 public types"
-                ]
-              },
-              {
-                "name": "260724-claudemd-relay.md",
-                "type": "report",
-                "path": "/changelog.d/archived/1.2.0/260724-claudemd-relay.md",
-                "title": "Docs",
-                "content": [
-                  "CLAUDE.md hygiene: Project Layout tree replaced with a pointer to docs/TOPOLOGY.md (tree had drifted ~20 files stale); removed the stale Phase-1 Status section (SinkChainBuilder, SinkChain.Packet.cs, ForkSink.Packet.cs all shipped) while preserving the still-t"
                 ]
               }
             ],
