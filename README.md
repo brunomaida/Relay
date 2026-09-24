@@ -101,9 +101,10 @@ Full type hierarchy, ring-buffer internals, builder operators, and recommended t
 | `Sinks/RotatingFileSink` | Like `FileSink` with size + date rotation and file-count cleanup |
 | `Sinks/NamedPipeSink` | Length-prefixed named-pipe client (Input2Log compatible) |
 | `Sinks/UdpSink` | UDP datagrams, one datagram per enqueued payload |
+| `Sinks/UnixSocketSink` | Unix domain socket client, 4-byte BE length prefix (linux/macos only) |
 | `Sinks/TcpSink` | Length-framed TCP (packet hierarchy) |
 | `Sinks/MemorySink` | Native memory linear buffer, last-resort packet sink |
-| `Sinks/SharedMemorySink` | Synchronous MMF ring (Log2 wire protocol) |
+| `Sinks/SharedMemorySpscSink` | Synchronous MMF ring (Log2 wire protocol), Windows-only, single producer; `SharedMemorySink` is its `[Obsolete]` compat alias |
 | `PacketCallback<TState>` | Zero-alloc delegate for `ReadOnlySpan<byte>` callbacks (TState avoids closure capture) |
 | `PacketReceiver` | Abstract receiver base — passive, driven by caller's `Poll()` loop; optional `Next` forward-chain |
 | `Receivers/UdpReceiver<TState>` | Non-blocking UDP receive (`Socket.Poll(0, SelectRead)` + `stackalloc 1432B`) — hot path |
@@ -118,6 +119,7 @@ Full type hierarchy, ring-buffer internals, builder operators, and recommended t
 | `Builder/SinkChainBuilder` + `SinkChain<THead>` | Fluent packet chain assembly |
 | `Builder/RelayBuilder.From*` | Factories: `From` (UDP), `FromTcp`, `FromSharedMemory`, `FromNamedPipe` |
 | `Memory/RelayMemory` | `PreFault` + `VirtualLock` on ring buffer pages |
+| `Memory/NativeBuffer` | Internal single entry point for `NativeMemory.*` allocation (ADR-7); tracks outstanding bytes |
 | `Internal/HfClock` | `Stopwatch.GetTimestamp()` wrapper — never `DateTime.UtcNow` |
 | `Internal/SinkConstraints` | DEBUG assertion: `T` must be cache-line-aligned |
 
@@ -901,6 +903,7 @@ Two parallel, type-safe hierarchies share the same fallback semantics: `Dispatch
        │       ├── NamedPipeSink     (sealed)  ← length-prefixed named-pipe client
        │       ├── UdpSink           (sealed)  ← UDP datagrams
        │       ├── TcpSink           (sealed)  ← length-framed TCP, POH send buffer
+       │       ├── UnixSocketSink    (sealed)  ← Unix domain socket client, 4-byte BE length prefix (linux/macos)
        │       └── BatchSink  (abstract)
        │               │  _scratch: byte[] POH  ← accumulates payloads per batch
        │               │  OversizedDropCount    ← observable counter
@@ -926,9 +929,10 @@ Two parallel, type-safe hierarchies share the same fallback semantics: `Dispatch
        │  Native memory fill-once buffer, linear layout with 4-byte BE headers
        │  DrainTo(PacketSink) ← called externally on recovery
 
-  SharedMemorySink  (sealed)  ← synchronous PacketSink, Log2 MMF wire protocol
+  SharedMemorySpscSink  (unsealed, Windows-only)  ← synchronous PacketSink, Log2 MMF wire protocol
        │  Named MemoryMappedFile ring (128-byte header + data area)
        │  No consumer thread — writes synchronously on producer thread
+       │  SharedMemorySink (sealed, [Obsolete]) = compat shim deriving from it (Sinks/_Compat)
 
   ─────────────────────────────────────────────────────────────────────────────
   PacketCallback<TState>  (delegate, namespace Relay)
@@ -1002,7 +1006,7 @@ dotnet test tests/Relay.Tests
 
 Base all branches off `develop`. Merge back to `develop` when stable.
 
-**Commit convention:** Conventional Commits in English (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`). Append `w/Claude` when the commit is co-authored by Claude Code.
+**Commit convention:** Conventional Commits in English (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`).
 
 ---
 
@@ -1017,7 +1021,7 @@ O produtor chama um único método — `Enqueue` — e a biblioteca cuida do rot
 
 **Sinks concretos (tipados):** `FileStreamSink<T>`, `TcpSink<T>`, `MmfSink<T>`, `MemorySink<T>`
 
-**Sinks concretos (packet):** `FileSink`, `RotatingFileSink`, `NamedPipeSink`, `UdpSink`, `TcpSink`, `MemorySink`, `SharedMemorySink`, `SeqSink` (CLEF/HTTP via `BatchSink` → `HttpBatchSink`)
+**Sinks concretos (packet):** `FileSink`, `RotatingFileSink`, `NamedPipeSink`, `UdpSink`, `UnixSocketSink`, `TcpSink`, `MemorySink`, `SharedMemorySpscSink`, `SeqSink` (CLEF/HTTP via `BatchSink` → `HttpBatchSink`)
 
 **Casos de uso principais:**
 - Gravação de eventos de alta frequência em arquivo binário com fallback em RAM

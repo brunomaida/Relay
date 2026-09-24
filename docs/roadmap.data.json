@@ -6,7 +6,7 @@
     "version": "Unreleased",
     "released": false,
     "start": "2026-04-23",
-    "end": "2026-06-14",
+    "end": "2026-07-05",
     "status": "wip",
     "statusLabel": "In Progress",
     "tags": [
@@ -27,7 +27,7 @@
         "type": "phase",
         "name": "Project & Cross-cutting Docs",
         "start": "2026-04-23",
-        "end": "2026-06-14",
+        "end": "2026-07-05",
         "status": "wip",
         "statusLabel": "Reference",
         "tags": [
@@ -73,6 +73,15 @@
             ]
           },
           {
+            "name": "docs-260917-0-adr-convention-migration.md",
+            "type": "report",
+            "path": "/changelog.d/docs-260917-0-adr-convention-migration.md",
+            "title": "Docs",
+            "content": [
+              "docs\\architecture-decisions.md rewritten to the new ADR convention (PR #21, commit 860ee8e): bytes-first cut, English-only, single-tag date discipline; docs\\architecture-decisions-archive.md created alongside it, empty — ADR-1 through ADR-8 were all live at th"
+            ]
+          },
+          {
             "name": "ci-test-failures.md",
             "type": "report",
             "path": "/changelog.d/archived/1.0.1/ci-test-failures.md",
@@ -108,13 +117,13 @@
     ]
   },
   {
-    "id": "REL:1.0.5",
+    "id": "REL:1.2.0",
     "type": "release",
-    "name": "1.0.5 · 2026-07-02",
-    "version": "1.0.5",
+    "name": "1.2.0 · 2026-08-20",
+    "version": "1.2.0",
     "released": true,
-    "start": "2026-06-10",
-    "end": "2026-06-14",
+    "start": "2026-06-11",
+    "end": "2026-07-05",
     "status": "done",
     "statusLabel": "Released",
     "tags": [
@@ -134,8 +143,8 @@
         "id": "P6",
         "type": "phase",
         "name": "Phase 6: Bench Infra & Doc Taxonomy",
-        "start": "2026-06-10",
-        "end": "2026-06-14",
+        "start": "2026-06-11",
+        "end": "2026-07-05",
         "status": "done",
         "statusLabel": "Completed",
         "tags": [
@@ -178,24 +187,25 @@
               {
                 "name": "260611-doc-taxonomy.md",
                 "type": "report",
-                "path": "/changelog.d/260611-doc-taxonomy.md",
-                "title": "260611-doc-taxonomy.md",
+                "path": "/changelog.d/archived/1.0.5/260611-doc-taxonomy.md",
+                "title": "Docs",
                 "content": [
-                  "(no extractable summary)"
+                  "Doc-taxonomy: frontmatter on primordials, docs/_index.md hub, relative cross-links (fact-doc-structure).",
+                  "N/A — documentation linking only."
                 ]
               }
             ],
             "reason": "YAML frontmatter, _index hub, relative cross-links, TOPOLOGY naming canon",
             "is_branch": false,
             "version": "1.0.5",
-            "verBadge": null
+            "verBadge": "1.0.5"
           },
           {
             "id": "R21",
             "type": "spec",
             "name": "Bench methodology + bench-history",
-            "start": "2026-06-12",
-            "end": "2026-06-14",
+            "start": "2026-07-03",
+            "end": "2026-07-05",
             "status": "done",
             "statusLabel": "Completed",
             "tags": [
@@ -218,15 +228,15 @@
             ],
             "reason": "bench-methodology doc; bench-history bootstrap via backfill; micro baselines",
             "is_branch": false,
-            "version": "1.0.5",
+            "version": "1.2.0",
             "verBadge": null
           },
           {
             "id": "R22",
             "type": "spec",
             "name": "Resource cost map + robustness/perf fixes",
-            "start": "2026-06-10",
-            "end": "2026-06-12",
+            "start": "2026-06-11",
+            "end": "2026-07-02",
             "status": "done",
             "statusLabel": "Completed",
             "tags": [
@@ -260,19 +270,20 @@
                 ]
               },
               {
-                "name": "2026-06-10-resource-cost-map-relay.md",
+                "name": "2026-07-02-resource-cost-map-relay.md",
                 "type": "report",
-                "path": "/docs/reports/2026-06-10-resource-cost-map-relay.md",
-                "title": "2026-06-10-resource-cost-map-relay.md",
+                "path": "/docs/reports/2026-07-02-resource-cost-map-relay.md",
+                "title": "Resource Cost Map — Relay",
                 "content": [
-                  "(no extractable summary)"
+                  "_generated 2026-07-02 · model x64-goldenCove v1 · static+BDN hybrid · BDN baseline commit ddf2f0b (i7-12700, .NET 9.0.14, 12 cores, GC=Server, BDN 0.13.12); static-only delta for 2026-06-11 (c1818fa, 9aae152, ab33f86, 65b6cf1) — not re-benchmarked, see §9_ _Cy",
+                  "mode: library — no Main; all public API is entry"
                 ]
               }
             ],
             "reason": "Cost-map refresh; FileStreamSink crash guard, RDTSC throttle, MpscByteRingBuffer recursion fix",
             "is_branch": false,
             "version": "1.0.5",
-            "verBadge": null
+            "verBadge": "1.0.5"
           }
         ]
       }
@@ -579,7 +590,7 @@
     "version": "1.0.2",
     "released": true,
     "start": "2026-05-24",
-    "end": "2026-05-28",
+    "end": "2026-07-05",
     "status": "done",
     "statusLabel": "Released",
     "tags": [
@@ -600,7 +611,7 @@
         "type": "phase",
         "name": "Phase 3: Hardening & Correctness",
         "start": "2026-05-24",
-        "end": "2026-05-28",
+        "end": "2026-07-05",
         "status": "done",
         "statusLabel": "Completed",
         "tags": [
@@ -620,8 +631,8 @@
             "id": "R13",
             "type": "spec",
             "name": "Thread priority/affinity + RotatingFileSink fileNameFormat",
-            "start": "2026-05-26",
-            "end": "2026-05-28",
+            "start": "2026-07-03",
+            "end": "2026-07-05",
             "status": "done",
             "statusLabel": "Completed",
             "tags": [
@@ -639,8 +650,8 @@
             "id": "R14",
             "type": "spec",
             "name": "Robustness fixes (v1.0.2)",
-            "start": "2026-05-25",
-            "end": "2026-05-27",
+            "start": "2026-07-02",
+            "end": "2026-07-04",
             "status": "done",
             "statusLabel": "Completed",
             "tags": [
@@ -654,12 +665,13 @@
             "progress": 100,
             "docs": [
               {
-                "name": "2026-05-25-hot-path-audit-relay.md",
+                "name": "2026-07-02-hot-path-audit-relay.md",
                 "type": "report",
-                "path": "/docs/reports/2026-05-25-hot-path-audit-relay.md",
-                "title": "2026-05-25-hot-path-audit-relay.md",
+                "path": "/docs/reports/2026-07-02-hot-path-audit-relay.md",
+                "title": "Hot-Path Audit — Relay core (2026-07-02)",
                 "content": [
-                  "(no extractable summary)"
+                  "Cold paths not audited: constructors, TryOpenStream, Cleanup, RotateNow, DisposeBackend, MemorySink<T>.~MemorySink() finalizer body (correctness-only, not called on the hot path).",
+                  "A1 — CPU Cycles: PASS RotatingFileSink.ShouldRotate (RotatingFileSink.cs:123-129): size compare is unconditional (1c); the RDTSC-backed day-boundary check (HfClock.NowTicks, ~47c) now executes only when (++_shouldRotateCounter & 0xFF) == 0 — 1-in-256 records. "
                 ]
               },
               {
@@ -751,7 +763,7 @@
     "version": "1.0.0",
     "released": true,
     "start": "2026-04-23",
-    "end": "2026-05-04",
+    "end": "2026-05-01",
     "status": "done",
     "statusLabel": "Released",
     "tags": [
@@ -1208,7 +1220,7 @@
         "type": "phase",
         "name": "Phase 2: Observability Sinks",
         "start": "2026-04-26",
-        "end": "2026-05-04",
+        "end": "2026-05-01",
         "status": "done",
         "statusLabel": "Completed",
         "tags": [
@@ -1260,8 +1272,8 @@
             "id": "R10",
             "type": "spec",
             "name": "HttpBatchSink + Relay.Sinks.Http",
-            "start": "2026-05-01",
-            "end": "2026-05-03",
+            "start": "2026-04-27",
+            "end": "2026-04-29",
             "status": "done",
             "statusLabel": "Completed",
             "tags": [
@@ -1280,8 +1292,8 @@
             "id": "R11",
             "type": "spec",
             "name": "SeqSink + Relay.Sinks.Observability",
-            "start": "2026-05-02",
-            "end": "2026-05-04",
+            "start": "2026-04-28",
+            "end": "2026-04-30",
             "status": "done",
             "statusLabel": "Completed",
             "tags": [
@@ -1299,8 +1311,8 @@
             "id": "R12",
             "type": "spec",
             "name": "CI/CD + NuGet packaging",
-            "start": "2026-04-30",
-            "end": "2026-05-02",
+            "start": "2026-04-29",
+            "end": "2026-05-01",
             "status": "done",
             "statusLabel": "Completed",
             "tags": [
@@ -1309,21 +1321,22 @@
             "progress": 100,
             "docs": [
               {
-                "name": "2026-04-30-release-skills-design.md",
-                "type": "spec",
-                "path": "/docs/superpowers/specs/2026-04-30-release-skills-design.md",
-                "title": "2026-04-30-release-skills-design.md",
-                "content": [
-                  "(no extractable summary)"
-                ]
-              },
-              {
                 "name": "chore-260924-roadmap-project-mode.md",
                 "type": "report",
                 "path": "/changelog.d/chore-260924-roadmap-project-mode.md",
                 "title": "Docs",
                 "content": [
                   "Roadmap tracker moved to project mode: its config now lives in docs/roadmap.config.json and the built docs/roadmap.data.json + docs/roadmap.html are committed, so pr-precheck Check 8 can verify tracker freshness per branch. Regenerated docs/_index.md, which st"
+                ]
+              },
+              {
+                "name": "docs-260921-5-doc-sync.md",
+                "type": "report",
+                "path": "/changelog.d/docs-260921-5-doc-sync.md",
+                "title": "Docs",
+                "content": [
+                  "README.md: removed the instruction to append an AI-attribution suffix to commit messages; added UnixSocketSink, SharedMemorySpscSink (with its [Obsolete] SharedMemorySink alias) and Memory/NativeBuffer to the source-layout table, type hierarchy and concrete-si",
+                  "docs\\TOPOLOGY.md: added UnixSocketSink and SharedMemorySpscSink to the PacketSink hierarchy, namespace list, concrete-sink detail and threading tables (the type previously listed there, SharedMemorySink, is an [Obsolete] shim)."
                 ]
               }
             ],
