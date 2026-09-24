@@ -1,10 +1,3 @@
----
-title: "Benchmark History"
-type: bench-history
-solution: Relay
-created: 2026-06-11
----
-
 # Benchmark History
 
 _generated 2026-06-12T13:07:29Z · env `c15f4501` · 12th Gen Intel Core i7-12700 · .NET 9.0.14 (9.0.1426.11910) · 12 cores · BDN 0.13.12_
@@ -408,8 +401,3 @@ _Methodology: `docs/bench-methodology.md` (v1)_
 | `Relay.Benchmarks.ByteEnqueueBenchmarks.Depth1_Byte_TryEnqueue_Reject` | 0.25 ns | 0.01 ns | 0.26 ns | 0 | new |
 | `Relay.Benchmarks.ByteEnqueueBenchmarks.Depth1_Byte_Drop_NextNull_Unhealthy` | 3.85 ns | 0.02 ns | 3.87 ns | 0 | new |
 | `Relay.Benchmarks.ByteEnqueueBenchmarks.Depth1_Byte_Drop_NextNull_Reject` | 3.93 ns | 0.10 ns | 4.02 ns | 0 | new |
-
-<!-- doc-links:auto -->
-## Related
-
-- [Bench methodology](../../bench-methodology.md)
