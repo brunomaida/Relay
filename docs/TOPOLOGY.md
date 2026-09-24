@@ -72,6 +72,7 @@ created: 2026-06-11
        │       ├── NamedPipeSink     (sealed)  ← length-prefixed named-pipe client
        │       ├── UdpSink           (sealed)  ← UDP datagrams
        │       ├── TcpSink           (sealed)  ← length-framed TCP, POH send buffer
+       │       ├── UnixSocketSink    (sealed)  ← Unix domain socket client, 4-byte BE length prefix (linux/macos)
        │       └── BatchSink  (abstract)
        │               │  _scratch: byte[] POH  ← accumulates payloads per batch
        │               │  OversizedDropCount    ← observable counter
@@ -97,9 +98,10 @@ created: 2026-06-11
        │  Native memory fill-once buffer, linear layout with 4-byte BE headers
        │  DrainTo(PacketSink) ← called externally on recovery
 
-  SharedMemorySink  (sealed)  ← synchronous PacketSink, Log2 MMF wire protocol
+  SharedMemorySpscSink  (unsealed, Windows-only)  ← synchronous PacketSink, Log2 MMF wire protocol
        │  Named MemoryMappedFile ring (128-byte header + data area)
        │  No consumer thread — writes synchronously on producer thread
+       │  SharedMemorySink (sealed, [Obsolete]) = compat shim deriving from it (Sinks/_Compat)
 
   ─────────────────────────────────────────────────────────────────────────────
   PacketCallback<TState>  (delegate, namespace Relay)
@@ -140,7 +142,8 @@ created: 2026-06-11
   │                            SpscByteRingBuffer, MpscByteRingBuffer    [internal]
   ├── namespace Relay.Sinks    FileStreamSink<T>, MmfSink<T>, TcpSink<T>, MemorySink<T>
   │                            FileSink, RotatingFileSink, NamedPipeSink,
-  │                            UdpSink, TcpSink, MemorySink, SharedMemorySink
+  │                            UdpSink, TcpSink, MemorySink, SharedMemorySpscSink,
+  │                            UnixSocketSink, SharedMemorySink [Obsolete]
   ├── namespace Relay.Receivers UdpReceiver<TState>, TcpReceiver<TState>,
   │                            SharedMemorySpscReceiver<TState>, NamedPipeReceiver<TState>
   ├── namespace Relay.Builder  RelayBuilder, SinkChain<T,THead>, MultiBuilder<T>,
@@ -630,9 +633,16 @@ created: 2026-06-11
   Fill-once native memory ring. Linear layout with 4-byte host-order headers.
   DrainTo(PacketSink) for recovery. No consumer thread.
 
-  SharedMemorySink
-  ────────────────
-  Synchronous (no consumer thread). Named MemoryMappedFile ring.
+  UnixSocketSink  (linux/macos)
+  ─────────────────────────────
+  Ring → [consumer thread] → Unix domain socket client → 4-byte BE length prefix + payload
+  Expects an existing server (e.g. Input2Log UnixSocketInput). Batches into a POH send buffer.
+  Failure:  send failure → _healthy = false; reconnect backoff 1s → 30s
+  Default:  sendBufferCapacity=65536, ringCapacity=65536, flushInterval=100ms
+
+  SharedMemorySpscSink  (Windows-only; [Obsolete] alias: SharedMemorySink)
+  ────────────────────
+  Synchronous (no consumer thread). Named MemoryMappedFile ring. Single producer only.
   Wire protocol: 128-byte MMF header (magic + capacity + write/read index)
                  + data area with 4-byte BE length-prefixed records.
   Compatible with Log2 SharedMemorySink consumer.
@@ -652,11 +662,12 @@ created: 2026-06-11
   relay-file-<name>      BelowNormal  RotatingFileSink          Drain ring → rotating file
   relay-pipe-<name>      BelowNormal  NamedPipeSink             Drain ring → NamedPipe
   relay-udp              BelowNormal  UdpSink                   Drain ring → UDP socket
+  relay-packet-unix-<fn> BelowNormal  UnixSocketSink            Drain ring → Unix domain socket
   relay-tcp (packet)     BelowNormal  TcpSink (packet)          Drain ring → TCP stream
   relay-seq              BelowNormal  SeqSink                   Drain ring → HTTP POST
   relay-{name}           BelowNormal  SpscQueueSink subclass    Custom backend
 
-  MemorySink, MemorySink (packet), SharedMemorySink have NO dedicated thread.
+  MemorySink, MemorySink (packet), SharedMemorySpscSink have NO dedicated thread.
   Writes happen synchronously on the producer thread.
   MultiSink, ForkSink, FilterSink, NullSink, SerializeSink have NO threads.
 
