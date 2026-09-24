@@ -1,0 +1,1339 @@
+[
+  {
+    "id": "REL:Unreleased",
+    "type": "release",
+    "name": "Unreleased",
+    "version": "Unreleased",
+    "released": false,
+    "start": "2026-04-23",
+    "end": "2026-06-14",
+    "status": "wip",
+    "statusLabel": "In Progress",
+    "tags": [
+      "bug",
+      "docs",
+      "perf",
+      "receivers",
+      "release",
+      "sinks",
+      "testing",
+      "tests"
+    ],
+    "progress": 0,
+    "docs": [],
+    "children": [
+      {
+        "id": "PRJ",
+        "type": "phase",
+        "name": "Project & Cross-cutting Docs",
+        "start": "2026-04-23",
+        "end": "2026-06-14",
+        "status": "wip",
+        "statusLabel": "Reference",
+        "tags": [
+          "bug",
+          "docs",
+          "perf",
+          "receivers",
+          "release",
+          "sinks",
+          "testing",
+          "tests"
+        ],
+        "progress": 0,
+        "docs": [
+          {
+            "name": "2026-05-28-improve-readme-md-with-ascii-fancy-bird.md",
+            "type": "spec",
+            "path": "/docs/superpowers/plans/2026-05-28-improve-readme-md-with-ascii-fancy-bird.md",
+            "title": "Plan: Add Pipeline Topology Diagrams to README.md",
+            "content": [
+              "README.md has one generic ASCII diagram (lines 39–53) showing a linear fallback chain. It does not show the combinator patterns (Multi, Fork, Filter) or the Receiver input layer that feed packets into sink chains. The goal is a ## Pipeline Topologies section w",
+              "Simple — serial fallback chains (3 patterns)"
+            ]
+          },
+          {
+            "name": "2026-05-28-ok-ent-o-siga-imperative-dragonfly.md",
+            "type": "spec",
+            "path": "/docs/superpowers/plans/2026-05-28-ok-ent-o-siga-imperative-dragonfly.md",
+            "title": "Context",
+            "content": [
+              "Continuação do /release-3-execute para Relay v1.0.4. release-notes.md aprovado (somente mudanças da versão atual). publish-target=none (tag + GitHub Release apenas). CI monitor=yes.",
+              "Workflows CI/CD: já existem e corretos (release.yml dispara em tags v)"
+            ]
+          },
+          {
+            "name": "2026-08-20-native-alloc-footprint-guard.md",
+            "type": "spec",
+            "path": "/docs/superpowers/plans/2026-08-20-native-alloc-footprint-guard.md",
+            "title": "Plan: Native-allocation footprint regression guard (Relay)",
+            "content": [
+              "Cross-repo spec/context: C:\\Development\\Libs\\docs\\superpowers\\plans\\2026-08-20-native-alloc-footprint-guard.md — read it for full background. Related issue: Relay#20.",
+              "No public API surface change. All new members are internal."
+            ]
+          },
+          {
+            "name": "ci-test-failures.md",
+            "type": "report",
+            "path": "/changelog.d/archived/1.0.1/ci-test-failures.md",
+            "title": "Fixed",
+            "content": [
+              "SharedMemorySinkTests: mark 4 facts as [Fact(Skip = \"Windows only\")] — MemoryMappedFile.CreateOrOpen with a named map throws PlatformNotSupportedException on Linux; the [SupportedOSPlatform(\"windows\")] attribute is a Roslyn hint only and does not cause xUnit t",
+              "BatchSinkTests.Flush_signal_drains_pending_payload: replaced Thread.Sleep(100) with sink.Stop(1_000) — consumer thread runs at BelowNormal priority and was not guaranteed to be scheduled within 100 ms on a loaded CI VM; Stop joins the thread, giving a hard hap"
+            ]
+          },
+          {
+            "name": "feature-260526-14-shm-pipe-receivers.md",
+            "type": "report",
+            "path": "/changelog.d/archived/1.0.3/feature-260526-14-shm-pipe-receivers.md",
+            "title": "Summary",
+            "content": [
+              "Add SharedMemorySpscReceiver<TState>: hot-path SPSC ring consumer; mirrors SharedMemorySpscSink wire format exactly (128-byte header, 4B BE length prefix, ring-wrapped payload, Volatile.Read/Write on ReadIndex/WriteIndex)",
+              "Add NamedPipeReceiver<TState>: management-plane named-pipe receiver; compatible with NamedPipeSink wire format; WaitForConnection blocks on management thread, Poll reads synchronously (blocking acceptable on management-plane)"
+            ]
+          },
+          {
+            "name": "260820-native-alloc-footprint-guard.md",
+            "type": "report",
+            "path": "/changelog.d/archived/1.2.0/260820-native-alloc-footprint-guard.md",
+            "title": "Added",
+            "content": [
+              "Relay.Memory.NativeBuffer (internal): single sanctioned entry point for NativeMemory. calls under src\\Relay. Exposes only single-argument-shape members — AllocZeroedAligned(byteCount, alignment = 64) / FreeAligned(ptr, byteCount) for the aligned family, AllocZ",
+              "Native-allocation footprint tests (tests\\Relay.Tests\\Memory\\NativeAllocationSizeTests.cs): oracle-based (_msize/_aligned_msize via ucrtbase.dll) assertions that SpscRingBuffer<T>, MpscRingBuffer<T>, MemorySink<T>, and MemorySink (packet) allocate exactly the e"
+            ]
+          }
+        ],
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": "REL:1.0.5",
+    "type": "release",
+    "name": "1.0.5 · 2026-07-02",
+    "version": "1.0.5",
+    "released": true,
+    "start": "2026-06-10",
+    "end": "2026-06-14",
+    "status": "done",
+    "statusLabel": "Released",
+    "tags": [
+      "bdn",
+      "bug",
+      "core",
+      "docs",
+      "hot-path",
+      "perf",
+      "resilience",
+      "review"
+    ],
+    "progress": 100,
+    "docs": [],
+    "children": [
+      {
+        "id": "P6",
+        "type": "phase",
+        "name": "Phase 6: Bench Infra & Doc Taxonomy",
+        "start": "2026-06-10",
+        "end": "2026-06-14",
+        "status": "done",
+        "statusLabel": "Completed",
+        "tags": [
+          "bdn",
+          "bug",
+          "core",
+          "docs",
+          "hot-path",
+          "perf",
+          "resilience",
+          "review"
+        ],
+        "progress": 100,
+        "docs": [
+          {
+            "name": "bench-methodology.md",
+            "type": "spec",
+            "path": "/docs/bench-methodology.md",
+            "title": "Relay — Benchmark Methodology",
+            "content": [
+              "Per-project methodology consumed by the bench-report skill. Prose is for humans; the machine > block below drives verdict thresholds and the regression gate. Relay is ultra-low-latency, > zero-alloc — ring-buffer, MPSC, and packet-sink hot paths measured at ns",
+              "| Parameter | Value | |-----------|-------| | Tool | BenchmarkDotNet (see Relay.Benchmarks.csproj) | | Runtime | net9.0, Release | | Diagnosers | [MemoryDiagnoser] on every benchmark (zero-alloc invariant) |"
+            ]
+          }
+        ],
+        "children": [
+          {
+            "id": "R20",
+            "type": "spec",
+            "name": "Doc taxonomy",
+            "start": "2026-06-11",
+            "end": "2026-06-13",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "docs"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "260611-doc-taxonomy.md",
+                "type": "report",
+                "path": "/changelog.d/260611-doc-taxonomy.md",
+                "title": "260611-doc-taxonomy.md",
+                "content": [
+                  "(no extractable summary)"
+                ]
+              }
+            ],
+            "reason": "YAML frontmatter, _index hub, relative cross-links, TOPOLOGY naming canon",
+            "is_branch": false,
+            "version": "1.0.5",
+            "verBadge": null
+          },
+          {
+            "id": "R21",
+            "type": "spec",
+            "name": "Bench methodology + bench-history",
+            "start": "2026-06-12",
+            "end": "2026-06-14",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "bdn",
+              "docs",
+              "perf"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "bench-history.md",
+                "type": "report",
+                "path": "/docs/reports/bench-history/bench-history.md",
+                "title": "Benchmark History",
+                "content": [
+                  "_generated 2026-06-12T13:07:29Z · env c15f4501 · 12th Gen Intel Core i7-12700 · .NET 9.0.14 (9.0.1426.11910) · 12 cores · BDN 0.13.12_",
+                  "_Methodology: docs/bench-methodology.md (v1)_"
+                ]
+              }
+            ],
+            "reason": "bench-methodology doc; bench-history bootstrap via backfill; micro baselines",
+            "is_branch": false,
+            "version": "1.0.5",
+            "verBadge": null
+          },
+          {
+            "id": "R22",
+            "type": "spec",
+            "name": "Resource cost map + robustness/perf fixes",
+            "start": "2026-06-10",
+            "end": "2026-06-12",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "bug",
+              "core",
+              "hot-path",
+              "perf",
+              "resilience",
+              "review"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-06-11-merry-weaving-sprout.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-06-11-merry-weaving-sprout.md",
+                "title": "Plan: Relay Hot-Path Cost Map + Robustness Audit",
+                "content": [
+                  "User requested evaluation of performance improvements via /resource-cost-mapping combined with the BDN baseline (bench_history.md, commit ddf2f0b, i7-12700 / .NET 9.0.14). Also: robustness assessment under high load (memory leaks, failure modes, crash paths).",
+                  "All source files have been read. Fable advisor review completed. Two FileStreamSink crash paths discovered during analysis; those are the primary actionable findings alongside the cost map."
+                ]
+              },
+              {
+                "name": "2026-06-11-merry-weaving-sprout-2.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-06-11-merry-weaving-sprout-2.md",
+                "title": "Plan: Relay Robustness + Hot-Path Fixes",
+                "content": [
+                  "Cost-map audit (2026-06-10, static+BDN) identified 2 crash paths that kill FileStreamSink's consumer thread under transient disk failure, plus 1 RDTSC per-record overhead in RotatingFileSink and 1 non-inlineable recursion in MpscByteRingBuffer. Fable unavailab",
+                  "No new abstractions. All changes are surgical."
+                ]
+              },
+              {
+                "name": "2026-06-10-resource-cost-map-relay.md",
+                "type": "report",
+                "path": "/docs/reports/2026-06-10-resource-cost-map-relay.md",
+                "title": "2026-06-10-resource-cost-map-relay.md",
+                "content": [
+                  "(no extractable summary)"
+                ]
+              }
+            ],
+            "reason": "Cost-map refresh; FileStreamSink crash guard, RDTSC throttle, MpscByteRingBuffer recursion fix",
+            "is_branch": false,
+            "version": "1.0.5",
+            "verBadge": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "REL:1.0.4",
+    "type": "release",
+    "name": "1.0.4 · 2026-05-28",
+    "version": "1.0.4",
+    "released": true,
+    "start": "2026-05-27",
+    "end": "2026-05-29",
+    "status": "done",
+    "statusLabel": "Released",
+    "tags": [
+      "composition",
+      "core",
+      "docs",
+      "hot-path",
+      "perf",
+      "release",
+      "review",
+      "testing",
+      "tests"
+    ],
+    "progress": 100,
+    "docs": [],
+    "children": [
+      {
+        "id": "P5",
+        "type": "phase",
+        "name": "Phase 5: Topology Testing",
+        "start": "2026-05-27",
+        "end": "2026-05-29",
+        "status": "done",
+        "statusLabel": "Completed",
+        "tags": [
+          "composition",
+          "core",
+          "docs",
+          "hot-path",
+          "perf",
+          "release",
+          "review",
+          "testing",
+          "tests"
+        ],
+        "progress": 100,
+        "docs": [],
+        "children": [
+          {
+            "id": "R18",
+            "type": "spec",
+            "name": "Circular ring topology test suite",
+            "start": "2026-05-27",
+            "end": "2026-05-29",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "composition",
+              "core",
+              "docs",
+              "hot-path",
+              "perf",
+              "release",
+              "review",
+              "testing",
+              "tests"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-05-27-quero-criar-um-teste-idempotent-thompson.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-05-27-quero-criar-um-teste-idempotent-thompson.md",
+                "title": "Circular Ring Topology Tests — Relay.Tests",
+                "content": [
+                  "Criar testes de performance/stress/endurance que exercitem topologias de sinks em anel circular. Objetivo: medir throughput sustentado, saturação de backpressure e pressão GC em cadeiras de múltiplos nós interconectados. O \"circular\" é implementado no WriteToB",
+                  "Em topologia infinita (producer contínuo), o último nó do ring chama Node-1.Enqueue no seu consumer thread — simultaneamente ao producer thread. Isso viola o contrato SPSC."
+                ]
+              },
+              {
+                "name": "2026-05-27-quero-criar-um-teste-idempotent-thompson-2.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-05-27-quero-criar-um-teste-idempotent-thompson-2.md",
+                "title": "Plano: Throughput Perf Tests + Warmup nos Stress Tests Existentes",
+                "content": [
+                  "Os stress tests atuais em Relay.Tests/Circular/ sofrem de dois problemas: 1. Sem warmup explícito: os primeiros 1–2 snapshots são contaminados por JIT compilation e escalonamento inicial de threads, distorcendo min/avg/stddev. 2. Janela curta: 5–10 snapshots n",
+                  "BenchmarkDotNet não é adequado para ring topology: BDN mede latência de batch (startup + inject + drain), enquanto a métrica relevante aqui é throughput sustentado em steady-state (msg/s). Usar BDN incluiria overhead de criação de threads nos números."
+                ]
+              },
+              {
+                "name": "2026-05-27-quero-criar-um-teste-idempotent-thompson-3.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-05-27-quero-criar-um-teste-idempotent-thompson-3.md",
+                "title": "Status: Testes 30s em Sinks, Chains e Circular",
+                "content": [
+                  "\"Temos testes de Sinks completos, encadeados e circulares, com durações de 30s também?\"",
+                  "Estes testes medem ausência de corrupção/perda, não throughput. O timeout de 30s é um teto, não uma janela de medição. JIT warmup não distorce resultados de correctness."
+                ]
+              },
+              {
+                "name": "2026-05-27-hot-path-audit-circular-ring-tests.md",
+                "type": "report",
+                "path": "/docs/reports/2026-05-27-hot-path-audit-circular-ring-tests.md",
+                "title": "Hot Path Audit — Circular Ring Tests",
+                "content": [
+                  "Delivery hot path: Enqueue(item) → SPSC/MPSC ring buffer → consumer thread → WriteToBackend → RingNext?.Enqueue(item).",
+                  "Paths executed by test code: | Code segment | On hot path? | Rationale | |---|---|---| | ring.Entry.Enqueue(new Packet64 { ... }) injection loop | Yes — producer side of the ring | Calls into library hot path directly | | WaitQuiesce polling loop with Thread.S"
+                ]
+              }
+            ],
+            "reason": "Pure/Backend/Saturation/Receiver ring tests; 30s stress + 5s warmup",
+            "is_branch": false,
+            "version": "1.0.4",
+            "verBadge": null
+          },
+          {
+            "id": "R19",
+            "type": "spec",
+            "name": "Throughput perf tests + warmup",
+            "start": "2026-05-27",
+            "end": "2026-05-29",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "composition",
+              "core",
+              "docs",
+              "perf",
+              "release",
+              "testing",
+              "tests"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-05-27-quero-criar-um-teste-idempotent-thompson-2.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-05-27-quero-criar-um-teste-idempotent-thompson-2.md",
+                "title": "Plano: Throughput Perf Tests + Warmup nos Stress Tests Existentes",
+                "content": [
+                  "Os stress tests atuais em Relay.Tests/Circular/ sofrem de dois problemas: 1. Sem warmup explícito: os primeiros 1–2 snapshots são contaminados por JIT compilation e escalonamento inicial de threads, distorcendo min/avg/stddev. 2. Janela curta: 5–10 snapshots n",
+                  "BenchmarkDotNet não é adequado para ring topology: BDN mede latência de batch (startup + inject + drain), enquanto a métrica relevante aqui é throughput sustentado em steady-state (msg/s). Usar BDN incluiria overhead de criação de threads nos números."
+                ]
+              },
+              {
+                "name": "2026-05-27-quero-criar-um-teste-idempotent-thompson-3.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-05-27-quero-criar-um-teste-idempotent-thompson-3.md",
+                "title": "Status: Testes 30s em Sinks, Chains e Circular",
+                "content": [
+                  "\"Temos testes de Sinks completos, encadeados e circulares, com durações de 30s também?\"",
+                  "Estes testes medem ausência de corrupção/perda, não throughput. O timeout de 30s é um teto, não uma janela de medição. JIT warmup não distorce resultados de correctness."
+                ]
+              },
+              {
+                "name": "2026-05-27-quero-criar-um-teste-idempotent-thompson.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-05-27-quero-criar-um-teste-idempotent-thompson.md",
+                "title": "Circular Ring Topology Tests — Relay.Tests",
+                "content": [
+                  "Criar testes de performance/stress/endurance que exercitem topologias de sinks em anel circular. Objetivo: medir throughput sustentado, saturação de backpressure e pressão GC em cadeiras de múltiplos nós interconectados. O \"circular\" é implementado no WriteToB",
+                  "Em topologia infinita (producer contínuo), o último nó do ring chama Node-1.Enqueue no seu consumer thread — simultaneamente ao producer thread. Isso viola o contrato SPSC."
+                ]
+              }
+            ],
+            "reason": "Steady-state throughput benchmarks; JIT warmup in MPSC harness",
+            "is_branch": false,
+            "version": "1.0.4",
+            "verBadge": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "REL:1.0.3",
+    "type": "release",
+    "name": "1.0.3 · 2026-05-26",
+    "version": "1.0.3",
+    "released": true,
+    "start": "2026-05-26",
+    "end": "2026-05-28",
+    "status": "done",
+    "statusLabel": "Released",
+    "tags": [
+      "bug",
+      "core",
+      "hot-path",
+      "packet",
+      "perf",
+      "receivers",
+      "review"
+    ],
+    "progress": 100,
+    "docs": [],
+    "children": [
+      {
+        "id": "P4",
+        "type": "phase",
+        "name": "Phase 4: Passive Receivers",
+        "start": "2026-05-26",
+        "end": "2026-05-28",
+        "status": "done",
+        "statusLabel": "Completed",
+        "tags": [
+          "bug",
+          "core",
+          "hot-path",
+          "packet",
+          "perf",
+          "receivers",
+          "review"
+        ],
+        "progress": 100,
+        "docs": [],
+        "children": [
+          {
+            "id": "R16",
+            "type": "spec",
+            "name": "PacketReceiver hierarchy + PacketCallback",
+            "start": "2026-05-26",
+            "end": "2026-05-28",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "core",
+              "hot-path",
+              "packet",
+              "perf",
+              "receivers",
+              "review"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-05-26-hot-path-audit-receivers.md",
+                "type": "report",
+                "path": "/docs/reports/2026-05-26-hot-path-audit-receivers.md",
+                "title": "Hot-Path Audit — Receivers (post v1.0.2 back-merge)",
+                "content": [
+                  "Fix: fix/260526-receiver-desync-stall. On invalid frameLen, the stream/pipe is torn down and Poll() throws InvalidDataException. Subsequent Poll() returns false. Regression tests in tests/Relay.Tests/Receivers/ReceiverDesyncStallTests.cs.",
+                  "Dim: D24 (Unit tests), correctness. Files: TcpReceiver.cs:84-87, NamedPipeReceiver.cs:70-73."
+                ]
+              },
+              {
+                "name": "fix-260526-receiver-desync-stall.md",
+                "type": "report",
+                "path": "/changelog.d/archived/1.0.3/fix-260526-receiver-desync-stall.md",
+                "title": "Summary",
+                "content": [
+                  "TcpReceiver<TState>.Poll / NamedPipeReceiver<TState>.Poll: on invalid frame length (≤0 or > buffer), tear down the underlying stream/pipe and throw InvalidDataException instead of silently leaving the wire mid-frame. Subsequent Poll() returns false; the caller",
+                  "SharedMemorySpscReceiver<TState> ctor: validate SHM_MAGIC (0x4C473200) at header offset 0; throw InvalidDataException on mismatch instead of accepting a foreign/uninitialised MMF."
+                ]
+              }
+            ],
+            "reason": "UDP/TCP/SharedMemory-SPSC/NamedPipe receivers; zero-alloc span callback; From factories",
+            "is_branch": false,
+            "version": "1.0.3",
+            "verBadge": null
+          },
+          {
+            "id": "R17",
+            "type": "spec",
+            "name": "Receiver audit fixes (F0/F0b/F1/F3)",
+            "start": "2026-05-26",
+            "end": "2026-05-28",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "bug",
+              "perf",
+              "receivers",
+              "review"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-05-26-resource-cost-map-receivers.md",
+                "type": "report",
+                "path": "/docs/reports/2026-05-26-resource-cost-map-receivers.md",
+                "title": "Resource Cost Map — receivers (post v1.0.2)",
+                "content": [
+                  "_generated 2026-05-26 · model x64-zen4 v1 · library mode · static estimate, not benchmark_",
+                  "mode: library (Relay.dll; no Main; rates unknown unless integrator hints)"
+                ]
+              }
+            ],
+            "reason": "Frame-length validation, SHM_MAGIC check, doc correctness, drop pinned header",
+            "is_branch": false,
+            "version": "1.0.3",
+            "verBadge": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "REL:1.0.2",
+    "type": "release",
+    "name": "1.0.2 · 2026-05-25",
+    "version": "1.0.2",
+    "released": true,
+    "start": "2026-05-24",
+    "end": "2026-05-28",
+    "status": "done",
+    "statusLabel": "Released",
+    "tags": [
+      "bug",
+      "core",
+      "hot-path",
+      "perf",
+      "release",
+      "resilience",
+      "review",
+      "sinks"
+    ],
+    "progress": 100,
+    "docs": [],
+    "children": [
+      {
+        "id": "P3",
+        "type": "phase",
+        "name": "Phase 3: Hardening & Correctness",
+        "start": "2026-05-24",
+        "end": "2026-05-28",
+        "status": "done",
+        "statusLabel": "Completed",
+        "tags": [
+          "bug",
+          "core",
+          "hot-path",
+          "perf",
+          "release",
+          "resilience",
+          "review",
+          "sinks"
+        ],
+        "progress": 100,
+        "docs": [],
+        "children": [
+          {
+            "id": "R13",
+            "type": "spec",
+            "name": "Thread priority/affinity + RotatingFileSink fileNameFormat",
+            "start": "2026-05-26",
+            "end": "2026-05-28",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "core",
+              "sinks"
+            ],
+            "progress": 100,
+            "docs": [],
+            "reason": "Consumer-thread priority/CPU pinning; custom filename patterns; Func<DateTime> injection",
+            "is_branch": false,
+            "version": "1.0.2",
+            "verBadge": null
+          },
+          {
+            "id": "R14",
+            "type": "spec",
+            "name": "Robustness fixes (v1.0.2)",
+            "start": "2026-05-25",
+            "end": "2026-05-27",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "bug",
+              "core",
+              "hot-path",
+              "perf",
+              "resilience",
+              "review"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-05-25-hot-path-audit-relay.md",
+                "type": "report",
+                "path": "/docs/reports/2026-05-25-hot-path-audit-relay.md",
+                "title": "2026-05-25-hot-path-audit-relay.md",
+                "content": [
+                  "(no extractable summary)"
+                ]
+              },
+              {
+                "name": "2026-04-23-hot-path-audit-relay-v2.md",
+                "type": "report",
+                "path": "/docs/reports/2026-04-23-hot-path-audit-relay-v2.md",
+                "title": "Hot Path Audit — Relay Library (Post-Fix Pass)",
+                "content": [
+                  "Before the current state, the v1 audit contained one factual error identified by the Opus meta-review:",
+                  "A1 cycle math was wrong. Volatile.Read on x64 is an acquire load (mov + compiler barrier), NOT an mfence. Cost is ~4–5c on L1-warm, not ~15c. The ~15c figure in CLAUDE.md applies to Volatile.Write (release store = xchg/lock-equivalent). The savings from removi"
+                ]
+              },
+              {
+                "name": "260611-robustness-perf-fixes.md",
+                "type": "report",
+                "path": "/changelog.d/archived/1.0.5/260611-robustness-perf-fixes.md",
+                "title": "Fixed",
+                "content": [
+                  "FileStreamSink<T>: prevent consumer thread crash on sustained backend failure. FlushBuffer left _bufferPos unreset after an IOException, causing an out-of-bounds write on the next WriteToBackend call; TryRecoverBackend left a disposed _stream reference in plac",
+                  "Root-cause: #NA · Regression-test: Relay.Tests.FileStreamSinkCrashTests.IOException_InFlushBuffer_DoesNotKillConsumer, Relay.Tests.FileStreamSinkCrashTests.RecoveryFailure_WithDisposedStream_DoesNotKillConsumer"
+                ]
+              }
+            ],
+            "reason": "SHM publish ordering, TcpSink health guard, partial-send loops, oversized-payload guard",
+            "is_branch": false,
+            "version": "1.0.2",
+            "verBadge": null
+          },
+          {
+            "id": "R15",
+            "type": "spec",
+            "name": "External-AI audit triage",
+            "start": "2026-05-24",
+            "end": "2026-05-26",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "perf",
+              "release",
+              "resilience",
+              "review"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-05-24-ExternalAI-Audit.md",
+                "type": "spec",
+                "path": "/docs/text-specs/2026-05-24-ExternalAI-Audit.md",
+                "title": "Relatório de Análise Gemini 3.1",
+                "content": [
+                  "Melhoras/Correções: O ConsumeLoop em SpscQueueSink e MpscQueueSink utiliza um spin/yield/sleep fallback com Thread.Sleep(1) fixo. O método IsFull/IsEmpty realiza Volatile.Read diretos que invalidam o cache entre os núcleos (core-to-core cache trashing).",
+                  "Justificativa: No Windows, Thread.Sleep(1) delega ao escalonador do SO e, dependendo da resolução do timer, custa em média ~15.6ms (cerca de 46 milhões de ciclos de CPU desperdiçados em CPUs modernas a 3GHz). Isso destrói a baixa latência no tail de requisiçõe"
+                ]
+              },
+              {
+                "name": "2026-05-24-analisando-docs-text-specs-2026-05-24-ex-resilient-cat.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-05-24-analisando-docs-text-specs-2026-05-24-ex-resilient-cat.md",
+                "title": "Relatório de Triagem — docs/text-specs/2026-05-24-ExternalAI-Audit.md",
+                "content": [
+                  "O documento docs/text-specs/2026-05-24-ExternalAI-Audit.md reúne dois pareceres externos (Gemini 3.1 e Codex 5.5) sobre o Relay. Vários itens são bugs de correção reais (uso multi-processo do SharedMemorySink, envios parciais de socket nos sinks packet, overfl",
+                  "O objetivo deste relatório é separar com clareza:"
+                ]
+              },
+              {
+                "name": "2026-05-24-analisando-docs-text-specs-2026-05-24-ex-resilient-cat-2.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-05-24-analisando-docs-text-specs-2026-05-24-ex-resilient-cat-2.md",
+                "title": "Plano — Execução das 4 decisões pendentes (§2.2, §2.3, §2.4, §3.3)",
+                "content": [
+                  "Após executar o plano original de triagem do audit Gemini+Codex, restaram 4 itens da seção §2 (Recomendado / perf mensurável) e §3 (Opcional). A lição central de §2.1 (rejeitado por benchmark) é que claims numéricos do audit não são aceitáveis como base — +5-2",
+                  "1. Hipótese técnica explícita antes de qualquer código — qual mecanismo de hardware/runtime explica o ganho esperado, e por que o cenário do Relay o ativa. 2. Benchmark que mede o mecanismo, não o proxy — se a hipótese é \"elimina cache bounce X→Y\", o benchmark"
+                ]
+              }
+            ],
+            "reason": "Gemini 3.1 audit → triage + decision execution (§2.2/2.3/2.4/3.3)",
+            "is_branch": false,
+            "version": "1.0.2",
+            "verBadge": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "REL:1.0.0",
+    "type": "release",
+    "name": "1.0.0 · 2026-05-09",
+    "version": "1.0.0",
+    "released": true,
+    "start": "2026-04-23",
+    "end": "2026-05-04",
+    "status": "done",
+    "statusLabel": "Released",
+    "tags": [
+      "analysis",
+      "bdn",
+      "composition",
+      "core",
+      "hot-path",
+      "observability",
+      "packet",
+      "perf",
+      "release",
+      "review",
+      "sinks",
+      "tests"
+    ],
+    "progress": 100,
+    "docs": [],
+    "children": [
+      {
+        "id": "P0",
+        "type": "phase",
+        "name": "Phase 0: Core Foundation",
+        "start": "2026-04-23",
+        "end": "2026-04-27",
+        "status": "done",
+        "statusLabel": "Completed",
+        "tags": [
+          "analysis",
+          "bdn",
+          "composition",
+          "core",
+          "hot-path",
+          "packet",
+          "perf",
+          "review"
+        ],
+        "progress": 100,
+        "docs": [
+          {
+            "name": "TOPOLOGY.md",
+            "type": "spec",
+            "path": "/docs/TOPOLOGY.md",
+            "title": "Relay Library — Topology",
+            "content": [
+              "================================================================================ TYPE HIERARCHY ================================================================================",
+              "DispatchSink<T> (abstract, T : unmanaged) │ │ Next: DispatchSink<T>? ← set by SinkChain.To() │ IsHealthy: bool ← abstract; consumer thread writes, producer reads │ PropagateAfterAccept: bool ← protected readonly field (ctor param, default false) │ Enqueue(in T"
+            ]
+          }
+        ],
+        "children": [
+          {
+            "id": "R1",
+            "type": "spec",
+            "name": "Typed dispatch hierarchy + SPSC ring + concrete sinks",
+            "start": "2026-04-23",
+            "end": "2026-04-25",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "core",
+              "hot-path",
+              "perf",
+              "review"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-04-24-relay-phase1-design.md",
+                "type": "spec",
+                "path": "/docs/superpowers/specs/2026-04-24-relay-phase1-design.md",
+                "title": "Relay Fase 1 — Design spec",
+                "content": [
+                  "Data: 2026-04-24 Contexto: pré-requisito para integração Log2 → Relay (Fase 2)",
+                  "Completar a hierarquia PacketSink no Relay com infraestrutura, builder e sinks concretos, corrigindo bugs existentes e garantindo performance igual ou superior ao baseline Log2 atual. Ao final desta fase, Relay está pronto para receber o adapter Log2 → Relay ("
+                ]
+              },
+              {
+                "name": "2026-04-23-hot-path-audit-relay.md",
+                "type": "report",
+                "path": "/docs/reports/2026-04-23-hot-path-audit-relay.md",
+                "title": "Hot Path Audit — Relay Library",
+                "content": [
+                  "All code on the Enqueue → Accept axis qualifies. Call frequency is tick-rate (>10k/sec per CLAUDE.md). No profiler evidence was available; justification is the explicit design intent of the library.",
+                  "Consumer thread (ConsumeLoop) is warm path, not direct producer hot path."
+                ]
+              },
+              {
+                "name": "feature-260525-4-relay-receivers.md",
+                "type": "report",
+                "path": "/changelog.d/archived/1.0.3/feature-260525-4-relay-receivers.md",
+                "title": "Summary",
+                "content": [
+                  "PacketCallback<TState> delegate — zero-alloc span-compatible callback; sidesteps Action<ReadOnlySpan<byte>> C# restriction; static-lambda dispatch eliminates closure allocation",
+                  "PacketReceiver abstract base — passive receiver hierarchy (caller's loop drives via Poll()); optional Next: PacketSink? forward-chain"
+                ]
+              }
+            ],
+            "reason": "DispatchSink<T> hot path, lock-free SPSC ring, FileStream/Tcp/Mmf/Memory backends",
+            "is_branch": false,
+            "version": "1.0.0",
+            "verBadge": null
+          },
+          {
+            "id": "R2",
+            "type": "spec",
+            "name": "Composition sinks + fluent builder",
+            "start": "2026-04-23",
+            "end": "2026-04-25",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "analysis",
+              "bdn",
+              "composition",
+              "core",
+              "perf"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-04-23-bdn-vs-static-analysis.md",
+                "type": "report",
+                "path": "/docs/reports/2026-04-23-bdn-vs-static-analysis.md",
+                "title": "BDN Measurements vs Static Analysis — Relay Hot Path",
+                "content": [
+                  "_generated 2026-04-23 · BenchmarkDotNet 0.13.12 · .NET 9.0.14 RyuJIT X64 AVX2_ _v2: corrected run — CounterPipe terminal (DCE fix) + [IterationSetup] removed (RingBuffer fix)_",
+                  "DCE fix: CounterPipe (Volatile.Write) replaces SinkPipe as terminal pipe."
+                ]
+              }
+            ],
+            "reason": "Fork/Multi/Multi2/Filter/Null + RelayBuilder chain wiring (Next/Prev)",
+            "is_branch": false,
+            "version": "1.0.0",
+            "verBadge": null
+          },
+          {
+            "id": "R3",
+            "type": "spec",
+            "name": "Packet (byte) sink hierarchy",
+            "start": "2026-04-23",
+            "end": "2026-04-25",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "bdn",
+              "core",
+              "packet",
+              "perf"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-04-23-bdn-byte-vs-typed.md",
+                "type": "report",
+                "path": "/docs/reports/2026-04-23-bdn-byte-vs-typed.md",
+                "title": "BDN — Byte-pipe hierarchy vs Typed baseline",
+                "content": [
+                  "_generated 2026-04-23 · BenchmarkDotNet 0.13.12 (ShortRun) · .NET 9.0.14 RyuJIT X64 AVX2_",
+                  "New BytePipe hierarchy (BytePipe, SpscByteRingBuffer, SpscByteQueuePipe, NullBytePipe) measured against the typed baseline from the same day (EnqueueBenchmarks, full-job run at 15:49)."
+                ]
+              },
+              {
+                "name": "2026-04-23-mpsc-ringbuffer-byte-vs-log2.md",
+                "type": "report",
+                "path": "/docs/reports/2026-04-23-mpsc-ringbuffer-byte-vs-log2.md",
+                "title": "MPSC ring buffers — Relay byte vs Log2 typed",
+                "content": [
+                  "_generated 2026-04-23 · structural comparison + projected performance · no cross-lib benchmark yet_",
+                  "Relay.Buffers.MpscByteRingBuffer (this commit) — variable-length byte payloads."
+                ]
+              }
+            ],
+            "reason": "Parallel PacketSink tree over SpscByteRingBuffer for variable-length payloads",
+            "is_branch": false,
+            "version": "1.0.0",
+            "verBadge": null
+          },
+          {
+            "id": "R4",
+            "type": "spec",
+            "name": "SPSC ring hot-path optimization",
+            "start": "2026-04-23",
+            "end": "2026-04-25",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "core",
+              "hot-path",
+              "perf"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-04-23-resource-cost-map-relay.md",
+                "type": "report",
+                "path": "/docs/reports/2026-04-23-resource-cost-map-relay.md",
+                "title": "Resource Cost Map — Relay",
+                "content": [
+                  "_generated 2026-04-23 · model x64-golden-cove v1 · static estimate, not benchmark · library mode_",
+                  "entry count: 28 public methods/props across 10 public types"
+                ]
+              },
+              {
+                "name": "260724-claudemd-relay.md",
+                "type": "report",
+                "path": "/changelog.d/archived/1.2.0/260724-claudemd-relay.md",
+                "title": "Docs",
+                "content": [
+                  "CLAUDE.md hygiene: Project Layout tree replaced with a pointer to docs/TOPOLOGY.md (tree had drifted ~20 files stale); removed the stale Phase-1 Status section (SinkChainBuilder, SinkChain.Packet.cs, ForkSink.Packet.cs all shipped) while preserving the still-t"
+                ]
+              }
+            ],
+            "reason": "Remote-index caching, bounds-check elimination, flush-deadline throttling",
+            "is_branch": false,
+            "version": "1.0.0",
+            "verBadge": null
+          },
+          {
+            "id": "R5",
+            "type": "spec",
+            "name": "BenchmarkDotNet suite",
+            "start": "2026-04-24",
+            "end": "2026-04-26",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "bdn",
+              "core",
+              "perf"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-04-24-bdn-typed-mpsc-propagate.md",
+                "type": "report",
+                "path": "/docs/reports/2026-04-24-bdn-typed-mpsc-propagate.md",
+                "title": "BDN — typed MPSC + Propagate + throughput harness",
+                "content": [
+                  "_generated 2026-04-24 · BenchmarkDotNet 0.13.12 (ShortRun) + xUnit Thread harness · .NET 9.0.14 RyuJIT X64 AVX2_",
+                  "Headline finding: MPSC ring is not the bottleneck under realistic multi-producer load — the single consumer thread saturates at ~24M items/sec. Producer CAS cost is invisible until the consumer can keep up. Typed SPSC was 2.9 ns RoundTrip on single thread = ~3"
+                ]
+              }
+            ],
+            "reason": "Full hot-path BDN coverage: ring buffers, enqueue depth, multi, filter",
+            "is_branch": false,
+            "version": "1.0.0",
+            "verBadge": null
+          },
+          {
+            "id": "R6",
+            "type": "spec",
+            "name": "Naming canonicalization",
+            "start": "2026-04-25",
+            "end": "2026-04-27",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "core"
+            ],
+            "progress": 100,
+            "docs": [],
+            "reason": "Tee→Fork, FanOut→Multi, RamSink→MemorySink + [Obsolete] compat shims",
+            "is_branch": false,
+            "version": "1.0.0",
+            "verBadge": null
+          }
+        ]
+      },
+      {
+        "id": "P1",
+        "type": "phase",
+        "name": "Phase 1: Cost-Map BDN Coverage",
+        "start": "2026-04-29",
+        "end": "2026-05-01",
+        "status": "done",
+        "statusLabel": "Completed",
+        "tags": [
+          "bdn",
+          "composition",
+          "core",
+          "hot-path",
+          "packet",
+          "perf",
+          "review",
+          "sinks",
+          "tests"
+        ],
+        "progress": 100,
+        "docs": [
+          {
+            "name": "2026-04-29-resource-cost-map-relay.md",
+            "type": "report",
+            "path": "/docs/reports/2026-04-29-resource-cost-map-relay.md",
+            "title": "Resource Cost Map — Relay",
+            "content": [
+              "_generated 2026-04-29 · model x64-zen4/golden-cove v1 · static estimate, not benchmark · library mode_",
+              "entry count: 41 public methods/props across 17 public types (DispatchSink<T> + PacketSink parallel hierarchies)"
+            ]
+          }
+        ],
+        "children": [
+          {
+            "id": "R7",
+            "type": "spec",
+            "name": "Cost-map BDN coverage",
+            "start": "2026-04-29",
+            "end": "2026-05-01",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "bdn",
+              "composition",
+              "core",
+              "packet",
+              "perf",
+              "tests"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-04-29-master-cost-map-coverage.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-04-29-master-cost-map-coverage.md",
+                "title": "Cost-Map Coverage — Master Plan (8 phases)",
+                "content": [
+                  "For agentic workers: this is an orchestration document, not an executable plan. Each phase has a dedicated child plan filed under docs/superpowers/plans/2026-04-29-phaseN-.md. Use those child plans with superpowers:subagent-driven-development or superpowers:ex",
+                  "Goal: Close every BDN coverage gap identified in benchmarks/artifacts/2026-04-29-hotpath/cross-check-and-gaps.md (1 critical + 10 high + 10 medium = 21 items) and apply the RotatingFileSink UtcNow regression fix flagged in docs/reports/2026-04-29-resource-cost"
+                ]
+              },
+              {
+                "name": "2026-04-29-phase2-packet-symmetry.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-04-29-phase2-packet-symmetry.md",
+                "title": "Phase 2 — Packet-Tree Symmetry BDNs",
+                "content": [
+                  "Phase 2 of 8 in master plan docs/superpowers/plans/2026-04-29-master-cost-map-coverage.md. For agentic workers: REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use checkbox (- [ ]) syntax.",
+                  "Goal: Add BDN classes for the packet-hierarchy equivalents that already exist in the typed hierarchy. Closes coverage gaps M1 (ForkSink packet), M2 (MultiSink packet, N=2), M4 (FilterSink packet), M9 (SpscQueueSink packet end-to-end Push) from benchmarks/artif"
+                ]
+              },
+              {
+                "name": "2026-04-29-phase3-mpsc-byte-and-end-to-end.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-04-29-phase3-mpsc-byte-and-end-to-end.md",
+                "title": "Phase 3 — MPSC Byte Ring + MPSC End-to-End",
+                "content": [
+                  "Phase 3 of 8 in master plan docs/superpowers/plans/2026-04-29-master-cost-map-coverage.md. For agentic workers: REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use checkbox (- [ ]).",
+                  "Goal: Add BDN coverage for the new MPSC byte ring (H1/H2) and MPSC end-to-end push throughput in both typed (H3) and packet (H4) variants. Closes coverage gaps H1, H2, H3, H4 from benchmarks/artifacts/2026-04-29-hotpath/cross-check-and-gaps.md. No production c"
+                ]
+              },
+              {
+                "name": "2026-04-29-phase4-backends.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-04-29-phase4-backends.md",
+                "title": "Phase 4 — Concrete Backend BDNs",
+                "content": [
+                  "Phase 4 of 8 in master plan docs/superpowers/plans/2026-04-29-master-cost-map-coverage.md. For agentic workers: REQUIRED SUB-SKILL: superpowers:subagent-driven-development.",
+                  "Goal: Add BDN coverage for 7 concrete sinks. Closes coverage gaps H5 (SharedMemorySink), H6 (RamSink packet), H7 (MmfSink<T>), H8 (UdpSink), M5 (BatchSink), M6 (NamedPipeSink), M7 (UnixSocketSink). No production code changes."
+                ]
+              },
+              {
+                "name": "2026-04-29-phase6-multi2-packet.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-04-29-phase6-multi2-packet.md",
+                "title": "Phase 6 — Multi2PacketSink (CRTP variant for packet hierarchy)",
+                "content": [
+                  "Phase 6 of 8 in master plan docs/superpowers/plans/2026-04-29-master-cost-map-coverage.md. For agentic workers: REQUIRED SUB-SKILL: superpowers:subagent-driven-development.",
+                  "Goal: Add a sealed CRTP Multi2PacketSink<TC1, TC2> to the packet hierarchy, mirroring the existing typed Multi2Sink<T, TC1, TC2>. Closes coverage gap M3 (DESIGN GAP — type did not exist) from benchmarks/artifacts/2026-04-29-hotpath/cross-check-and-gaps.md. Pro"
+                ]
+              },
+              {
+                "name": "2026-04-29-phase7-mpsc-contention.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-04-29-phase7-mpsc-contention.md",
+                "title": "Phase 7 — MPSC Multi-Thread Contention BDN",
+                "content": [
+                  "Phase 7 of 8 in master plan. For agentic workers: REQUIRED SUB-SKILL: superpowers:subagent-driven-development.",
+                  "Goal: Add multi-producer contention BDN for MpscRingBuffer<Entry64> and MpscByteRingBuffer. Closes coverage gap M10 (blind subgraph §8 in cost-map — \"MPSC CAS-retry distribution\"). No production code changes (no instrumentation; throughput is the measurable pr"
+                ]
+              },
+              {
+                "name": "2026-04-29-resource-cost-map-relay.md",
+                "type": "report",
+                "path": "/docs/reports/2026-04-29-resource-cost-map-relay.md",
+                "title": "Resource Cost Map — Relay",
+                "content": [
+                  "_generated 2026-04-29 · model x64-zen4/golden-cove v1 · static estimate, not benchmark · library mode_",
+                  "entry count: 41 public methods/props across 17 public types (DispatchSink<T> + PacketSink parallel hierarchies)"
+                ]
+              }
+            ],
+            "reason": "8-phase master plan: packet symmetry, MPSC byte, backends, Multi2, contention",
+            "is_branch": false,
+            "version": "1.0.0",
+            "verBadge": null
+          },
+          {
+            "id": "R8",
+            "type": "spec",
+            "name": "RotatingFileSink day-boundary cache",
+            "start": "2026-04-29",
+            "end": "2026-05-01",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "core",
+              "hot-path",
+              "perf",
+              "review",
+              "sinks"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-04-29-rotatingfilesink-day-boundary-cache.md",
+                "type": "spec",
+                "path": "/docs/superpowers/plans/2026-04-29-rotatingfilesink-day-boundary-cache.md",
+                "title": "RotatingFileSink Day-Boundary Cache — Phase 1 Implementation Plan",
+                "content": [
+                  "Phase 1 of 8 in master plan docs/superpowers/plans/2026-04-29-master-cost-map-coverage.md. For agentic workers: REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. St",
+                  "Goal: Eliminate the per-record DateTime.UtcNow.Date call in RotatingFileSink.ShouldRotate (consumer hot path) by caching the next day-boundary in HfClock ticks. Drops cost from ~50c → ~3c per consumed payload. Closes coverage gap C1 from benchmarks/artifacts/2"
+                ]
+              },
+              {
+                "name": "2026-04-30-hot-path-audit-relay.md",
+                "type": "report",
+                "path": "/docs/reports/2026-04-30-hot-path-audit-relay.md",
+                "title": "Hot Path Audit — Relay (v4)",
+                "content": [
+                  "Files added or changed since the 2026-04-26 audit:",
+                  "All paths listed in v3 remain current. The cost map is authoritative:"
+                ]
+              },
+              {
+                "name": "2026-04-30-hot-path-performance-memory-relay.md",
+                "type": "report",
+                "path": "/docs/reports/2026-04-30-hot-path-performance-memory-relay.md",
+                "title": "Relay hot-path performance and memory report - 2026-04-30",
+                "content": [
+                  "_Base: docs/reports/2026-04-29-resource-cost-map-relay.md, docs/topology.md, current src/Relay//.cs, and BDN artifacts from phases 1-7. Cycle conversion used by the prior report: ~4.5 GHz, so 1 ns ~= 4.5 cycles._",
+                  "The implemented changes hold up. The steady-state producer and consumer hot paths remain allocation-free: no heap allocation was found in Enqueue, TryEnqueue, Accept, TryPublish, TryPeek, TryConsume, or the normal WriteToBackend buffer-copy paths. BDN microben"
+                ]
+              }
+            ],
+            "reason": "Cache next UTC-midnight in HfClock ticks; remove DateTime.UtcNow.Date from consumer hot path",
+            "is_branch": false,
+            "version": "1.0.0",
+            "verBadge": null
+          }
+        ]
+      },
+      {
+        "id": "P2",
+        "type": "phase",
+        "name": "Phase 2: Observability Sinks",
+        "start": "2026-04-26",
+        "end": "2026-05-04",
+        "status": "done",
+        "statusLabel": "Completed",
+        "tags": [
+          "core",
+          "hot-path",
+          "observability",
+          "perf",
+          "release",
+          "review",
+          "sinks"
+        ],
+        "progress": 100,
+        "docs": [],
+        "children": [
+          {
+            "id": "R9",
+            "type": "spec",
+            "name": "BatchSink — POH scratch accumulator",
+            "start": "2026-04-26",
+            "end": "2026-04-28",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "core",
+              "hot-path",
+              "perf",
+              "review",
+              "sinks"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-04-26-hot-path-audit-relay.md",
+                "type": "report",
+                "path": "/docs/reports/2026-04-26-hot-path-audit-relay.md",
+                "title": "Hot Path Audit — Relay (v3)",
+                "content": [
+                  "Three days of Phase 3.0 work landed (commits f1887a9 → a9e6316):",
+                  "The new HTTP / Seq / Rotating sinks live downstream of BatchSink/SpscQueueSink; they are consumer-thread only and not on the producer hot path."
+                ]
+              }
+            ],
+            "reason": "Batching base over SpscQueueSink; OversizedDropCount; OnFlush(full batch)",
+            "is_branch": false,
+            "version": "1.0.0",
+            "verBadge": null
+          },
+          {
+            "id": "R10",
+            "type": "spec",
+            "name": "HttpBatchSink + Relay.Sinks.Http",
+            "start": "2026-05-01",
+            "end": "2026-05-03",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "core",
+              "observability",
+              "sinks"
+            ],
+            "progress": 100,
+            "docs": [],
+            "reason": "HTTP POST batch sink with circuit breaker + observability counters",
+            "is_branch": false,
+            "version": "1.0.0",
+            "verBadge": null
+          },
+          {
+            "id": "R11",
+            "type": "spec",
+            "name": "SeqSink + Relay.Sinks.Observability",
+            "start": "2026-05-02",
+            "end": "2026-05-04",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "core",
+              "observability"
+            ],
+            "progress": 100,
+            "docs": [],
+            "reason": "CLEF-over-HTTP sink to Seq /api/events/raw",
+            "is_branch": false,
+            "version": "1.0.0",
+            "verBadge": null
+          },
+          {
+            "id": "R12",
+            "type": "spec",
+            "name": "CI/CD + NuGet packaging",
+            "start": "2026-04-30",
+            "end": "2026-05-02",
+            "status": "done",
+            "statusLabel": "Completed",
+            "tags": [
+              "release"
+            ],
+            "progress": 100,
+            "docs": [
+              {
+                "name": "2026-04-30-release-skills-design.md",
+                "type": "spec",
+                "path": "/docs/superpowers/specs/2026-04-30-release-skills-design.md",
+                "title": "2026-04-30-release-skills-design.md",
+                "content": [
+                  "(no extractable summary)"
+                ]
+              },
+              {
+                "name": "chore-260924-roadmap-project-mode.md",
+                "type": "report",
+                "path": "/changelog.d/chore-260924-roadmap-project-mode.md",
+                "title": "Docs",
+                "content": [
+                  "Roadmap tracker moved to project mode: its config now lives in docs/roadmap.config.json and the built docs/roadmap.data.json + docs/roadmap.html are committed, so pr-precheck Check 8 can verify tracker freshness per branch. Regenerated docs/_index.md, which st"
+                ]
+              }
+            ],
+            "reason": "Release workflow, GitHub Packages + NuGet publishing, symbols",
+            "is_branch": false,
+            "version": "1.0.0",
+            "verBadge": null
+          }
+        ]
+      }
+    ]
+  }
+]
