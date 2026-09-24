@@ -662,7 +662,7 @@ created: 2026-06-11
   relay-file-<name>      BelowNormal  RotatingFileSink          Drain ring → rotating file
   relay-pipe-<name>      BelowNormal  NamedPipeSink             Drain ring → NamedPipe
   relay-udp              BelowNormal  UdpSink                   Drain ring → UDP socket
-  relay-unix-<name>      BelowNormal  UnixSocketSink            Drain ring → Unix domain socket
+  relay-packet-unix-<fn> BelowNormal  UnixSocketSink            Drain ring → Unix domain socket
   relay-tcp (packet)     BelowNormal  TcpSink (packet)          Drain ring → TCP stream
   relay-seq              BelowNormal  SeqSink                   Drain ring → HTTP POST
   relay-{name}           BelowNormal  SpscQueueSink subclass    Custom backend
