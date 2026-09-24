@@ -9,125 +9,125 @@
       "id": "P0",
       "name": "Phase 0: Core Foundation",
       "members": [
-        "R1",
-        "R2",
-        "R3",
-        "R4",
-        "R5",
-        "R6"
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
       ]
     },
     {
       "id": "P1",
       "name": "Phase 1: Cost-Map BDN Coverage",
       "members": [
-        "R7",
-        "R8"
+        "S7",
+        "S8"
       ]
     },
     {
       "id": "P2",
       "name": "Phase 2: Observability Sinks",
       "members": [
-        "R9",
-        "R10",
-        "R11",
-        "R12"
+        "S9",
+        "S10",
+        "S11",
+        "S12"
       ]
     },
     {
       "id": "P3",
       "name": "Phase 3: Hardening & Correctness",
       "members": [
-        "R13",
-        "R14",
-        "R15"
+        "S13",
+        "S14",
+        "S15"
       ]
     },
     {
       "id": "P4",
       "name": "Phase 4: Passive Receivers",
       "members": [
-        "R16",
-        "R17"
+        "S16",
+        "S17"
       ]
     },
     {
       "id": "P5",
       "name": "Phase 5: Topology Testing",
       "members": [
-        "R18",
-        "R19"
+        "S18",
+        "S19"
       ]
     },
     {
       "id": "P6",
       "name": "Phase 6: Bench Infra & Doc Taxonomy",
       "members": [
-        "R20",
-        "R21",
-        "R22"
+        "S20",
+        "S21",
+        "S22"
       ]
     }
   ],
   "releases": {
     "1.0.0": {
       "ids": [
-        "R1",
-        "R2",
-        "R3",
-        "R4",
-        "R5",
-        "R6",
-        "R7",
-        "R8",
-        "R9",
-        "R10",
-        "R11",
-        "R12"
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6",
+        "S7",
+        "S8",
+        "S9",
+        "S10",
+        "S11",
+        "S12"
       ]
     },
     "1.0.2": {
       "ids": [
-        "R13",
-        "R14",
-        "R15"
+        "S13",
+        "S14",
+        "S15"
       ]
     },
     "1.0.3": {
       "ids": [
-        "R16",
-        "R17"
+        "S16",
+        "S17"
       ]
     },
     "1.0.4": {
       "ids": [
-        "R18",
-        "R19"
+        "S18",
+        "S19"
       ]
     }
   },
   "aliases": {
-    "R1": [
+    "S1": [
       "relay-phase1",
       "dispatch",
       "spsc-ring"
     ],
-    "R3": [
+    "S3": [
       "byte-vs-typed",
       "mpsc-ringbuffer",
       "byte-vs-log2",
       "bytepipe"
     ],
-    "R4": [
+    "S4": [
       "resource-cost-map-relay",
       "spsc-opt"
     ],
-    "R5": [
+    "S5": [
       "bdn-typed-mpsc",
       "mpsc-propagate"
     ],
-    "R7": [
+    "S7": [
       "master-cost-map",
       "cost-map-coverage",
       "phase2-packet",
@@ -140,50 +140,50 @@
       "phase7-mpsc",
       "mpsc-contention"
     ],
-    "R8": [
+    "S8": [
       "rotatingfilesink",
       "day-boundary",
       "hot-path-performance",
       "performance-memory"
     ],
-    "R12": [
+    "S12": [
       "release-skills"
     ],
-    "R14": [
+    "S14": [
       "robustness",
       "hot-path-audit-relay"
     ],
-    "R15": [
+    "S15": [
       "resilient-cat",
       "externalai",
       "external-ai",
       "ex-resilient"
     ],
-    "R16": [
+    "S16": [
       "audit-receivers",
       "hot-path-audit-receivers"
     ],
-    "R17": [
+    "S17": [
       "cost-map-receivers",
       "resource-cost-map-receivers"
     ],
-    "R18": [
+    "S18": [
       "idempotent-thompson",
       "circular-ring",
       "audit-circular"
     ],
-    "R19": [
+    "S19": [
       "thompson",
       "throughput"
     ],
-    "R20": [
+    "S20": [
       "doc-taxonomy"
     ],
-    "R21": [
+    "S21": [
       "bench-methodology",
       "bench-history"
     ],
-    "R22": [
+    "S22": [
       "merry-weaving",
       "weaving-sprout"
     ]
