@@ -68,6 +68,13 @@
         "S21",
         "S22"
       ]
+    },
+    {
+      "id": "P7",
+      "name": "Phase 7: SWAN Hot-Route Proofs",
+      "members": [
+        "S24"
+      ]
     }
   ],
   "releases": {

@@ -36,3 +36,4 @@ Unreleased) are derived from `CHANGELOG.md`; phase grouping is thematic.
 | S20 | 1 | — | Doc taxonomy | YAML frontmatter, _index hub, relative cross-links, TOPOLOGY naming canon | | | changelog.d/archived/1.0.5/260611-doc-taxonomy.md | | done |
 | S21 | 1 | — | Bench methodology + bench-history | bench-methodology doc; bench-history bootstrap via backfill; micro baselines | | | | | done |
 | S22 | 1 | — | Resource cost map + robustness/perf fixes | Cost-map refresh; FileStreamSink crash guard, RDTSC throttle, MpscByteRingBuffer recursion fix | | docs/superpowers/plans/2026-06-11-merry-weaving-sprout.md | docs/reports/2026-07-02-resource-cost-map-relay.md | | done |
+| S24 | 1 | — | SWAN Hot-Route Flow Tests | SWAN S5.5d: flow tests for the 48 frozen SWAN hot routes of Relay, the `.swan/` slice and its links; S23 is held by another local branch | | | | | in-progress |
