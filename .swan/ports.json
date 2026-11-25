@@ -1,0 +1,151 @@
+[
+  {
+    "id": "in.app",
+    "name": "Aplicação",
+    "io": "in",
+    "th": "app",
+    "d": "Código da aplicação host chamando a API pública de cada lib visível. A aresta diz qual chamada (Log.Info, PacketSink.Enqueue, ISource<T>, SchedulePlan, texto de agenda, workload).",
+    "fake": [
+      "em processo",
+      "host xUnit chamando a API pública"
+    ],
+    "hopAliases": [
+      "in.feed",
+      "in.host.ks",
+      "in.host.relay",
+      "in.host.sc",
+      "in.text"
+    ]
+  },
+  {
+    "id": "out.file",
+    "name": "Arquivo",
+    "io": "out",
+    "th": "net",
+    "d": "logs/*.log. Arquivos rotativos por tamanho e data.",
+    "fake": [
+      "temporário",
+      "pasta temporária"
+    ]
+  },
+  {
+    "id": "out.shm",
+    "name": "MMF",
+    "io": "out",
+    "th": "net",
+    "d": "MMF compartilhado. Anel SPSC em MemoryMappedFile lido por SharedMemoryInput.",
+    "fake": [
+      "loopback",
+      "MMF local"
+    ]
+  },
+  {
+    "id": "out.seq",
+    "name": "HTTP / WebSocket",
+    "io": "out",
+    "th": "net",
+    "d": "Seq. Ingestão CLEF por HTTP.",
+    "fake": null
+  },
+  {
+    "id": "out.tx",
+    "name": "Serviço externo",
+    "io": "out",
+    "th": "net",
+    "d": "Exchange / Gateway TX. Ordens emitidas apenas pelo Primary.",
+    "fake": null
+  },
+  {
+    "id": "in.tcp",
+    "name": "Rede TCP",
+    "io": "in",
+    "th": "net",
+    "d": "Rede · TCP (outro host). Produtor externo (Log2-cpp, Relay-cpp ou outro host) enviando frames LOG2 v1 por TCP.",
+    "fake": [
+      "loopback",
+      "Log2Server.Tests · IngestionE2ETests"
+    ]
+  },
+  {
+    "id": "in.udp",
+    "name": "Rede UDP",
+    "io": "in",
+    "th": "net",
+    "d": "Rede · UDP (outro host). Produtor externo enviando datagramas LOG2 v1 ≤ 1432 B.",
+    "fake": [
+      "loopback",
+      "Log2Server.Tests · IngestionE2ETests"
+    ]
+  },
+  {
+    "id": "in.ipc",
+    "name": "Pipe / UDS",
+    "io": "in",
+    "th": "net",
+    "d": "Processo local · pipe / UDS. Outro processo no mesmo host escrevendo por named pipe ou Unix socket.",
+    "fake": [
+      "loopback",
+      "named pipe / UDS local"
+    ]
+  },
+  {
+    "id": "in.mmf",
+    "name": "MMF",
+    "io": "in",
+    "th": "net",
+    "d": "Processo local · MMF. Outro processo (ex.: Log2-cpp) escrevendo no anel SPSC em MemoryMappedFile.",
+    "fake": [
+      "loopback",
+      "MMF local"
+    ]
+  },
+  {
+    "id": "out.tcp",
+    "name": "Rede TCP",
+    "io": "out",
+    "th": "net",
+    "d": "Coletor remoto · TCP. Destino TCP fora do ecossistema (outro Log2Server, Relay-cpp, coletor próprio).",
+    "fake": [
+      "loopback",
+      "listener TCP local"
+    ]
+  },
+  {
+    "id": "out.udp",
+    "name": "Rede UDP",
+    "io": "out",
+    "th": "net",
+    "d": "Coletor remoto · UDP. Destino UDP fora do ecossistema.",
+    "fake": [
+      "loopback",
+      "socket UDP local"
+    ]
+  },
+  {
+    "id": "out.ipc",
+    "name": "Pipe / UDS",
+    "io": "out",
+    "th": "net",
+    "d": "Processo local · pipe / UDS. Processo consumidor no mesmo host via named pipe ou Unix socket.",
+    "fake": [
+      "loopback",
+      "pipe local"
+    ]
+  },
+  {
+    "id": "out.app",
+    "name": "Aplicação",
+    "io": "out",
+    "th": "app",
+    "d": "Resultado devolvido à aplicação host: PacketCallback, IConsumer<T> ou ocorrências.",
+    "fake": [
+      "em processo",
+      "consumidor capturado no teste"
+    ],
+    "hopAliases": [
+      "out.host.ks",
+      "out.host.relay",
+      "out.occ"
+    ]
+  }
+]

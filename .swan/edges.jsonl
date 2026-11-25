@@ -1,0 +1,54 @@
+{"from":"ps.enq","to":"sbr.pub","kind":"call","heat":"hot","msg":"slot","origin":"migrated"}
+{"from":"sbr.pub","to":"sbr.con","kind":"handoff","heat":"hot","msg":"slot","origin":"migrated","note":"thread do chamador → relay-{sink}"}
+{"from":"sbr.con","to":"spscq.loop","kind":"call","heat":"warm","msg":"slot","origin":"migrated"}
+{"from":"spscq.loop","to":"rtcp.wtb","kind":"call","heat":"warm","msg":"wire","origin":"migrated"}
+{"from":"spscq.loop","to":"rudp.wtb","kind":"call","heat":"warm","msg":"wire","origin":"migrated"}
+{"from":"spscq.loop","to":"rrot.wtb","kind":"call","heat":"warm","msg":"text","origin":"migrated"}
+{"from":"spscq.loop","to":"batch.wtb","kind":"call","heat":"warm","msg":"clef","origin":"migrated"}
+{"from":"batch.wtb","to":"seq.flush","kind":"call","heat":"warm","msg":"clef","origin":"migrated"}
+{"from":"seq.flush","to":"out.seq","kind":"wire","heat":"warm","msg":"clef","proto":"HTTPS · POST /api/events/raw","origin":"migrated"}
+{"from":"rrot.wtb","to":"out.file","kind":"wire","heat":"warm","msg":"text","proto":"Arquivo · rotação tamanho/data","origin":"migrated"}
+{"from":"rtcp.wtb","to":"tcpin.read","kind":"wire","heat":"warm","msg":"frame","proto":"TCP · [4 B BE][LOG2 v1]","origin":"migrated"}
+{"from":"rudp.wtb","to":"udpin.read","kind":"wire","heat":"warm","msg":"dgram","proto":"UDP · datagrama ≤ 1432 B","origin":"migrated"}
+{"from":"ps.enq","to":"rshm.acc","kind":"call","heat":"hot","msg":"wire","origin":"migrated"}
+{"from":"rshm.acc","to":"out.shm","kind":"wire","heat":"hot","msg":"wire","proto":"MMF · anel SPSC, header 128 B","origin":"migrated"}
+{"from":"ps.enq","to":"rmem.drain","kind":"fallback","heat":"cold","msg":"slot","origin":"migrated","note":"Next: destino primário indisponível"}
+{"from":"rmem.drain","to":"ps.enq","kind":"recover","heat":"cold","msg":"slot","origin":"migrated","note":"Prev: drena de volta na recuperação"}
+{"from":"rudp.wtb","to":"udpr.poll","kind":"wire","heat":"hot","msg":"hb","proto":"UDP · heartbeat / delta entre hosts","origin":"migrated"}
+{"from":"udpr.poll","to":"ce.hb","kind":"call","heat":"hot","msg":"hb","origin":"migrated"}
+{"from":"udpr.poll","to":"ire.apply","kind":"call","heat":"hot","msg":"hb","origin":"migrated"}
+{"from":"spscq.loop","to":"rpipe.wtb","kind":"call","heat":"warm","msg":"wire","origin":"migrated"}
+{"from":"rpipe.wtb","to":"pipein.read","kind":"wire","heat":"warm","msg":"frame","proto":"Named pipe · [4 B BE][LOG2 v1]","origin":"migrated"}
+{"from":"spscq.loop","to":"runix.wtb","kind":"call","heat":"warm","msg":"wire","origin":"migrated"}
+{"from":"runix.wtb","to":"uxin.read","kind":"wire","heat":"warm","msg":"frame","proto":"Unix socket · [4 B BE][LOG2 v1]","origin":"migrated"}
+{"from":"rshm.acc","to":"shmin.read","kind":"wire","heat":"hot","msg":"slot","proto":"MMF · anel SPSC (mesmo host)","origin":"migrated"}
+{"from":"rpipe.wtb","to":"pipr.poll","kind":"wire","heat":"warm","msg":"frame","proto":"Named pipe · Relay → Relay","origin":"migrated"}
+{"from":"rshm.acc","to":"shmr.poll","kind":"wire","heat":"hot","msg":"slot","proto":"MMF · SPSC entre processos","origin":"migrated"}
+{"from":"rtcp.wtb","to":"tcpr.poll","kind":"wire","heat":"warm","msg":"frame","proto":"TCP · Relay → Relay","origin":"migrated"}
+{"from":"pipr.poll","to":"pcb","kind":"call","heat":"warm","origin":"migrated"}
+{"from":"shmr.poll","to":"pcb","kind":"call","heat":"hot","origin":"migrated"}
+{"from":"tcpr.poll","to":"pcb","kind":"call","heat":"warm","origin":"migrated"}
+{"from":"udpr.poll","to":"pcb","kind":"call","heat":"hot","origin":"migrated"}
+{"from":"in.tcp","to":"tcpr.poll","kind":"wire","heat":"warm","msg":"frame","proto":"TCP · Relay-cpp → Relay","origin":"migrated"}
+{"from":"in.udp","to":"udpr.poll","kind":"wire","heat":"hot","msg":"dgram","proto":"UDP · Relay-cpp → Relay","origin":"migrated"}
+{"from":"in.ipc","to":"pipr.poll","kind":"wire","heat":"warm","msg":"frame","proto":"Named pipe · Relay-cpp → Relay","origin":"migrated"}
+{"from":"in.mmf","to":"shmr.poll","kind":"wire","heat":"hot","msg":"slot","proto":"MMF · SPSC entre processos","origin":"migrated"}
+{"from":"rtcp.wtb","to":"out.tcp","kind":"wire","heat":"warm","msg":"frame","proto":"TCP · [4 B BE][LOG2 v1] · fora do ecossistema","origin":"migrated"}
+{"from":"rudp.wtb","to":"out.udp","kind":"wire","heat":"warm","msg":"dgram","proto":"UDP · datagrama ≤ 1432 B · fora do ecossistema","origin":"migrated"}
+{"from":"rpipe.wtb","to":"out.ipc","kind":"wire","heat":"warm","msg":"frame","proto":"Named pipe · consumidor local","origin":"migrated"}
+{"from":"runix.wtb","to":"out.ipc","kind":"wire","heat":"warm","msg":"frame","proto":"Unix socket · consumidor local","origin":"migrated"}
+{"from":"in.app","to":"scb.to","kind":"config","heat":"cold","origin":"migrated","note":"App host · Relay · monta Next/Prev da cadeia","props":{"solo":"relay","via":"App host · Relay"}}
+{"from":"scb.to","to":"ps.enq","kind":"config","heat":"cold","origin":"migrated"}
+{"from":"scb.fork","to":"fork","kind":"config","heat":"cold","origin":"migrated"}
+{"from":"in.app","to":"ps.enq","kind":"call","heat":"hot","msg":"wire","origin":"migrated","note":"App host · Relay · Enqueue(ReadOnlySpan<byte>)","props":{"solo":"relay","via":"App host · Relay"}}
+{"from":"ps.enq","to":"fork","kind":"call","heat":"hot","msg":"wire","origin":"migrated"}
+{"from":"fork","to":"sbr.pub","kind":"call","heat":"hot","msg":"slot","origin":"migrated","note":"primário + propaga para Next"}
+{"from":"ps.enq","to":"multi","kind":"call","heat":"hot","msg":"wire","origin":"migrated"}
+{"from":"multi","to":"sbr.pub","kind":"call","heat":"hot","msg":"slot","origin":"migrated","note":"broadcast para filhos"}
+{"from":"in.app","to":"udpr.poll","kind":"call","heat":"hot","origin":"migrated","note":"App host · Relay · app dirige o Poll","props":{"solo":"relay","via":"App host · Relay"}}
+{"from":"in.app","to":"tcpr.poll","kind":"call","heat":"warm","origin":"migrated","note":"App host · Relay","props":{"solo":"relay","via":"App host · Relay"}}
+{"from":"in.app","to":"pipr.poll","kind":"call","heat":"warm","origin":"migrated","note":"App host · Relay","props":{"solo":"relay","via":"App host · Relay"}}
+{"from":"in.app","to":"shmr.poll","kind":"call","heat":"hot","origin":"migrated","note":"App host · Relay","props":{"solo":"relay","via":"App host · Relay"}}
+{"from":"pcb","to":"out.app","kind":"call","heat":"hot","msg":"wire","origin":"migrated","note":"Callback da app (PacketCallback)","props":{"solo":"relay","via":"Callback da app (PacketCallback)"}}
+{"from":"out.tcp","to":"in.tcp","kind":"wire","heat":"cold","proto":"mesmo meio · TCP","origin":"migrated","props":{"loop":true}}
+{"from":"out.ipc","to":"in.ipc","kind":"wire","heat":"cold","proto":"mesmo meio · pipe/UDS","origin":"migrated","props":{"loop":true}}

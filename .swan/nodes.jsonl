@@ -1,0 +1,66 @@
+{"id":"in.app","parent":null,"kind":"input","name":"Aplicação","symbol":null,"th":"app","origin":"migrated","io":"in","d":"Código da aplicação host chamando a API pública de cada lib visível. A aresta diz qual chamada (Log.Info, PacketSink.Enqueue, ISource<T>, SchedulePlan, texto de agenda, workload)."}
+{"id":"out.file","parent":null,"kind":"log","name":"Arquivo","symbol":null,"th":"net","origin":"migrated","io":"out","d":"logs/*.log. Arquivos rotativos por tamanho e data.","props":{"was":"logs/*.log"}}
+{"id":"out.shm","parent":null,"kind":"shm","name":"MMF","symbol":null,"th":"net","origin":"migrated","io":"out","d":"MMF compartilhado. Anel SPSC em MemoryMappedFile lido por SharedMemoryInput.","props":{"was":"MMF compartilhado"}}
+{"id":"out.seq","parent":null,"kind":"extsvc","name":"HTTP / WebSocket","symbol":null,"th":"net","origin":"migrated","io":"out","d":"Seq. Ingestão CLEF por HTTP.","props":{"was":"Seq"}}
+{"id":"out.tx","parent":null,"kind":"extsvc","name":"Serviço externo","symbol":null,"th":"net","origin":"migrated","io":"out","d":"Exchange / Gateway TX. Ordens emitidas apenas pelo Primary.","props":{"was":"Exchange / Gateway TX"}}
+{"id":"relay","parent":"eco","kind":"solution","name":"Libs/Relay","symbol":null,"tier":"hot","src":"Relay/docs/TOPOLOGY.md","origin":"migrated","d":"Base de entrega: cadeias de sinks com fallback, fork, broadcast, anéis SPSC/MPSC e receivers."}
+{"id":"a.relay","parent":"relay","kind":"assembly","name":"Relay.dll","symbol":null,"origin":"migrated","props":{"csproj":"src/Relay/Relay.csproj","pkg":"NuGet Relay"}}
+{"id":"n.r","parent":"a.relay","kind":"namespace","name":"Relay","symbol":null,"origin":"migrated"}
+{"id":"ps","parent":"n.r","kind":"abstract","name":"PacketSink","symbol":null,"th":"cons","origin":"migrated","d":"Base de payloads em bytes: Enqueue decide entre aceitar, propagar ou cair no Next."}
+{"id":"ps.enq","parent":"ps","kind":"method","name":"Enqueue","symbol":null,"origin":"migrated","props":{"code":"bool accepted = IsHealthy && Accept(frame);\nif (accepted && !PropagateAfterAccept) return;\nNext?.Enqueue(frame);    // fallback ou fork","sig":"void Enqueue(ReadOnlySpan<byte> frame)","t":["PacketSinkDropCountTests"],"method":true}}
+{"id":"spscq","parent":"n.r","kind":"abstract","name":"SpscQueueSink","symbol":null,"th":"relay","origin":"migrated","d":"Anel SPSC + thread consumidora \"relay-{sink}\"; recuperação por Prev.","props":{"rel":[["herda","ps"]]}}
+{"id":"spscq.loop","parent":"spscq","kind":"loop","name":"ConsumeLoop","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"spscq.prev","parent":"spscq","kind":"method","name":"TryDrainToPrev","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"batch","parent":"n.r","kind":"abstract","name":"BatchSink","symbol":null,"th":"relay","origin":"migrated","props":{"rel":[["herda","spscq"]]}}
+{"id":"batch.wtb","parent":"batch","kind":"method","name":"WriteToBackend","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"fork","parent":"n.r","kind":"fork","name":"ForkSink","symbol":null,"origin":"migrated","d":"Primário + propagação para Next após aceitar.","props":{"rel":[["herda","ps"]]}}
+{"id":"multi","parent":"n.r","kind":"multi","name":"MultiSink","symbol":null,"origin":"migrated","d":"Broadcast para filhos; cai no Next só se todos estiverem indisponíveis.","props":{"rel":[["herda","ps"]]}}
+{"id":"n.rb","parent":"a.relay","kind":"namespace","name":"Relay.Buffers","symbol":null,"origin":"migrated","props":{"dir":"src/Relay/Buffers"}}
+{"id":"sbr","parent":"n.rb","kind":"ring","name":"SpscByteRingBuffer","symbol":null,"origin":"migrated","d":"Anel SPSC lock-free prefixado por tamanho; head/tail em linhas de cache separadas."}
+{"id":"sbr.pub","parent":"sbr","kind":"method","name":"TryPublish","symbol":null,"th":"cons","origin":"migrated","props":{"method":true}}
+{"id":"sbr.con","parent":"sbr","kind":"method","name":"TryConsume","symbol":null,"th":"relay","origin":"migrated","props":{"method":true}}
+{"id":"n.rs","parent":"a.relay","kind":"namespace","name":"Relay.Sinks","symbol":null,"th":"relay","origin":"migrated","props":{"dir":"src/Relay/Sinks"}}
+{"id":"rtcp","parent":"n.rs","kind":"tcp","name":"TcpSink","symbol":null,"origin":"migrated","d":"TCP com framing de tamanho e buffer POH.","props":{"rel":[["herda","spscq"]]}}
+{"id":"rtcp.wtb","parent":"rtcp","kind":"method","name":"WriteToBackend","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"rudp","parent":"n.rs","kind":"udp","name":"UdpSink","symbol":null,"origin":"migrated","d":"Datagramas UDP. Reutilizado por Log2 e pelo transporte do Reddy.","props":{"rel":[["herda","spscq"]]}}
+{"id":"rudp.wtb","parent":"rudp","kind":"method","name":"WriteToBackend","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"rrot","parent":"n.rs","kind":"filestream","name":"RotatingFileSink","symbol":null,"origin":"migrated","d":"Rotação por tamanho e data, limpeza por contagem.","props":{"rel":[["herda","spscq"]]}}
+{"id":"rrot.wtb","parent":"rrot","kind":"method","name":"WriteToBackend","symbol":null,"origin":"migrated","props":{"t":["RotatingFileSinkTests"],"method":true}}
+{"id":"rshm","parent":"n.rs","kind":"shm","name":"SharedMemorySpscSink","symbol":null,"th":"cons","origin":"migrated","d":"Síncrono, sem thread própria; protocolo MMF compatível com Log2.","props":{"rel":[["herda","ps"]]}}
+{"id":"rshm.acc","parent":"rshm","kind":"method","name":"Accept","symbol":null,"origin":"migrated","props":{"t":["SharedMemorySinkTests"],"method":true}}
+{"id":"rmem","parent":"n.rs","kind":"native","name":"MemorySink","symbol":null,"origin":"migrated","d":"Buffer nativo de preenchimento único; destino de fallback.","props":{"rel":[["herda","ps"]]}}
+{"id":"rmem.drain","parent":"rmem","kind":"method","name":"DrainTo","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"n.rr","parent":"a.relay","kind":"namespace","name":"Relay.Receivers","symbol":null,"th":"main","origin":"migrated","props":{"dir":"src/Relay/Receivers"}}
+{"id":"udpr","parent":"n.rr","kind":"receiver","name":"UdpReceiver<TState>","symbol":null,"origin":"migrated","d":"Poll não bloqueante; stackalloc de 1432 B por chamada."}
+{"id":"udpr.poll","parent":"udpr","kind":"loop","name":"Poll","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"tcpr","parent":"n.rr","kind":"receiver","name":"TcpReceiver<TState>","symbol":null,"origin":"migrated"}
+{"id":"tcpr.poll","parent":"tcpr","kind":"loop","name":"Poll","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"n.rbl","parent":"a.relay","kind":"namespace","name":"Relay.Builder","symbol":null,"tier":"cold","th":"cfg","origin":"migrated"}
+{"id":"scb","parent":"n.rbl","kind":"fallback","name":"SinkChainBuilder","symbol":null,"origin":"migrated","d":"Monta Next (fallback) e Prev (recuperação) entre sinks."}
+{"id":"scb.to","parent":"scb","kind":"method","name":"To","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"scb.fork","parent":"scb","kind":"method","name":"Fork","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"a.rhttp","parent":"relay","kind":"assembly","name":"Relay.Sinks.Http.dll","symbol":null,"tier":"warm","origin":"migrated","props":{"csproj":"src/Relay.Sinks.Http/Relay.Sinks.Http.csproj"}}
+{"id":"n.rhttp","parent":"a.rhttp","kind":"namespace","name":"Relay.Sinks.Http","symbol":null,"th":"relay","origin":"migrated"}
+{"id":"hbs","parent":"n.rhttp","kind":"abstract","name":"HttpBatchSink","symbol":null,"origin":"migrated","d":"Circuit breaker: HttpFailureCount, BreakerOpenCount, DroppedBatchCount.","props":{"rel":[["herda","batch"]]}}
+{"id":"a.robs","parent":"relay","kind":"assembly","name":"Relay.Sinks.Observability.dll","symbol":null,"tier":"warm","origin":"migrated","props":{"csproj":"src/Relay.Sinks.Observability/Relay.Sinks.Observability.csproj"}}
+{"id":"n.seq","parent":"a.robs","kind":"namespace","name":"Observability.Seq","symbol":null,"th":"relay","origin":"migrated"}
+{"id":"seq","parent":"n.seq","kind":"https","name":"SeqSink","symbol":null,"origin":"migrated","d":"CLEF por HTTP com circuit breaker.","props":{"rel":[["herda","hbs"]]}}
+{"id":"seq.flush","parent":"seq","kind":"method","name":"OnFlush","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"rpipe","parent":"n.rs","kind":"pipe","name":"NamedPipeSink","symbol":null,"src":"src/Relay/Sinks/NamedPipeSink.cs","origin":"migrated","d":"Named pipe com o mesmo framing de 4 B do TCP.","props":{"rel":[["herda","spscq"]]}}
+{"id":"rpipe.wtb","parent":"rpipe","kind":"method","name":"WriteToBackend","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"runix","parent":"n.rs","kind":"pipe","name":"UnixSocketSink","symbol":null,"src":"src/Relay/Sinks/UnixSocketSink.cs","origin":"migrated","d":"AF_UNIX com framing de 4 B.","props":{"rel":[["herda","spscq"]]}}
+{"id":"runix.wtb","parent":"runix","kind":"method","name":"WriteToBackend","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"pipr","parent":"n.rr","kind":"receiver","name":"NamedPipeReceiver<TState>","symbol":null,"src":"src/Relay/Receivers/NamedPipeReceiver.cs","origin":"migrated"}
+{"id":"pipr.poll","parent":"pipr","kind":"loop","name":"Poll","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"shmr","parent":"n.rr","kind":"receiver","name":"SharedMemorySpscReceiver<TState>","symbol":null,"src":"src/Relay/Receivers/SharedMemorySpscReceiver.cs","origin":"migrated"}
+{"id":"shmr.poll","parent":"shmr","kind":"loop","name":"Poll","symbol":null,"origin":"migrated","props":{"method":true}}
+{"id":"pcb","parent":"n.r","kind":"delegate","name":"PacketCallback<TState>","symbol":null,"src":"src/Relay/PacketCallback.cs","origin":"migrated","d":"Callback de entrega dos receivers: (state, ReadOnlySpan<byte> frame)."}
+{"id":"ppred","parent":"n.r","kind":"delegate","name":"PacketPredicate","symbol":null,"src":"src/Relay/FilterSink.Packet.cs","origin":"migrated","d":"Predicado de FilterSink sobre o payload."}
+{"id":"in.tcp","parent":null,"kind":"tcp","name":"Rede TCP","symbol":null,"th":"net","origin":"migrated","io":"in","d":"Rede · TCP (outro host). Produtor externo (Log2-cpp, Relay-cpp ou outro host) enviando frames LOG2 v1 por TCP.","props":{"was":"Rede · TCP (outro host)"}}
+{"id":"in.udp","parent":null,"kind":"udp","name":"Rede UDP","symbol":null,"th":"net","origin":"migrated","io":"in","d":"Rede · UDP (outro host). Produtor externo enviando datagramas LOG2 v1 ≤ 1432 B.","props":{"was":"Rede · UDP (outro host)"}}
+{"id":"in.ipc","parent":null,"kind":"pipe","name":"Pipe / UDS","symbol":null,"th":"net","origin":"migrated","io":"in","d":"Processo local · pipe / UDS. Outro processo no mesmo host escrevendo por named pipe ou Unix socket.","props":{"was":"Processo local · pipe / UDS"}}
+{"id":"in.mmf","parent":null,"kind":"shm","name":"MMF","symbol":null,"th":"net","origin":"migrated","io":"in","d":"Processo local · MMF. Outro processo (ex.: Log2-cpp) escrevendo no anel SPSC em MemoryMappedFile.","props":{"was":"Processo local · MMF"}}
+{"id":"out.tcp","parent":null,"kind":"tcp","name":"Rede TCP","symbol":null,"th":"net","origin":"migrated","io":"out","d":"Coletor remoto · TCP. Destino TCP fora do ecossistema (outro Log2Server, Relay-cpp, coletor próprio).","props":{"was":"Coletor remoto · TCP"}}
+{"id":"out.udp","parent":null,"kind":"udp","name":"Rede UDP","symbol":null,"th":"net","origin":"migrated","io":"out","d":"Coletor remoto · UDP. Destino UDP fora do ecossistema.","props":{"was":"Coletor remoto · UDP"}}
+{"id":"out.ipc","parent":null,"kind":"pipe","name":"Pipe / UDS","symbol":null,"th":"net","origin":"migrated","io":"out","d":"Processo local · pipe / UDS. Processo consumidor no mesmo host via named pipe ou Unix socket.","props":{"was":"Processo local · pipe / UDS"}}
+{"id":"out.app","parent":null,"kind":"output","name":"Aplicação","symbol":null,"th":"app","origin":"migrated","io":"out","d":"Resultado devolvido à aplicação host: PacketCallback, IConsumer<T> ou ocorrências."}
