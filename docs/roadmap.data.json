@@ -6,11 +6,12 @@
     "version": "Unreleased",
     "released": false,
     "start": "2026-04-23",
-    "end": "2026-09-27",
+    "end": "2026-11-28",
     "status": "wip",
     "statusLabel": "In Progress",
     "tags": [
       "bug",
+      "core",
       "docs",
       "perf",
       "receivers",
@@ -19,39 +20,84 @@
       "testing",
       "tests"
     ],
-    "progress": 30,
+    "progress": 33,
     "docs": [],
     "children": [
       {
         "id": "P7",
         "type": "phase",
         "name": "Phase 7: SWAN Hot-Route Proofs",
-        "start": "2026-09-25",
-        "end": "2026-09-27",
-        "status": "wip",
-        "statusLabel": "In Progress",
+        "start": "2026-11-25",
+        "end": "2026-11-27",
+        "status": "done",
+        "statusLabel": "Completed",
         "tags": [
           "testing",
           "tests"
         ],
-        "progress": 60,
+        "progress": 100,
         "docs": [],
         "children": [
           {
             "id": "S24",
             "type": "spec",
             "name": "SWAN Hot-Route Flow Tests",
-            "start": "2026-09-25",
-            "end": "2026-09-27",
-            "status": "wip",
-            "statusLabel": "In Progress",
+            "start": "2026-11-25",
+            "end": "2026-11-27",
+            "status": "done",
+            "statusLabel": "Completed",
             "tags": [
               "testing",
               "tests"
             ],
-            "progress": 60,
+            "progress": 100,
+            "docs": [
+              {
+                "name": "feature-261125-swan-hot-route-proofs.md",
+                "type": "report",
+                "path": "/changelog.d/feature-261125-swan-hot-route-proofs.md",
+                "title": "Tests"
+              }
+            ],
+            "reason": "SWAN S5.5d: flow tests for 41 of the 48 frozen SWAN hot routes of Relay (34 new under `tests/Relay.Tests/SwanRoutes/`, 7 existing tests linked); 7 owner-signed H3 exclusions (5 type-level hops, 2 unreachable exits); the `.swan/` slice and its links; S23 is held by another local branch",
+            "is_branch": false,
+            "start_synthetic": false,
+            "end_synthetic": false,
+            "version": "Unreleased",
+            "verBadge": null
+          }
+        ]
+      },
+      {
+        "id": "P8",
+        "type": "phase",
+        "name": "Phase 8: Robustness Follow-ups",
+        "start": "2026-11-26",
+        "end": "2026-11-28",
+        "status": "todo",
+        "statusLabel": "Registered",
+        "tags": [
+          "core",
+          "sinks"
+        ],
+        "progress": 0,
+        "docs": [],
+        "children": [
+          {
+            "id": "S25",
+            "type": "spec",
+            "name": "TcpSink refused-connect socket leak",
+            "start": "2026-11-26",
+            "end": "2026-11-28",
+            "status": "todo",
+            "statusLabel": "Registered",
+            "tags": [
+              "core",
+              "sinks"
+            ],
+            "progress": 0,
             "docs": [],
-            "reason": "SWAN S5.5d: flow tests for the 48 frozen SWAN hot routes of Relay, the `.swan/` slice and its links; S23 is held by another local branch",
+            "reason": "`TcpSink.TryConnect` (`TcpSink.cs:186-190`) does not dispose its socket when `Connect` is refused, so the handle lives until finalization; found by the SWAN S5.5d review",
             "is_branch": false,
             "start_synthetic": true,
             "end_synthetic": true,
@@ -65,7 +111,7 @@
         "type": "phase",
         "name": "Project & Cross-cutting Docs",
         "start": "2026-04-23",
-        "end": "2026-09-27",
+        "end": "2026-11-28",
         "statusLabel": "Reference",
         "tags": [
           "bug",
