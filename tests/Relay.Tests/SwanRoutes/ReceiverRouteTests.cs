@@ -23,7 +23,9 @@ public sealed class ReceiverRouteTests : IDisposable
 {
     private const int TimeoutMs         = 5_000;
     private const int RecoveryTimeoutMs = 10_000; // >= 3x FileSink.MinBackoffMs; the first retry waits 2 s
-    private const int BacklogFrames     = 1_500;  // 8 B records (12 000 B) fit the 16 384 B ring; Stop must land before the consumer empties it
+    private const int BacklogTimeoutMs  = 30_000; // bounds the backlog's Poll loop, each Stop's drain and the wait after it
+    private const int RingBytes         = 1 << 20; // fallback and primary rings: 1 048 576 B
+    private const int BacklogFrames     = 100_000; // 8 B records (800 000 B) fit RingBytes; Stop must land before the consumer empties it
     private const int NoDeadlineMs      = 60_000; // no deadline flush runs within a test
 
     private static readonly DateTime Day = new(2026, 11, 25, 0, 0, 0, DateTimeKind.Utc);
@@ -38,7 +40,10 @@ public sealed class ReceiverRouteTests : IDisposable
     /// <summary>
     /// Route <c>scan.in.app.out.system.io.filestream.write.ddd367eb</c>: frames fall through the unhealthy primary into the
     /// fallback's ring; after the primary recovers, the fallback's shutdown drains its backlog to <c>Prev</c>, and the primary's
-    /// <c>DisposeBackend &gt; FlushToStream</c> lands it in the primary's file.
+    /// <c>FlushToStream</c> writes it to the primary's file: from <c>WriteToBackend</c> each time the 64 KB write buffer fills, and
+    /// from <c>FlushBackend</c>, which the consumer <c>finally</c> runs before <c>DisposeBackend</c>
+    /// (<c>SpscQueueSink.Packet.cs:218-219</c>), so <c>DisposeBackend &gt; FlushToStream</c> only flushes the stream.
+    /// The route is an owner-signed H3 exclusion: this test is kept unlinked and still runs in CI.
     /// </summary>
     [Fact]
     public async Task Poll_FileSinkFallbackBacklogAfterPrimaryRecovers_DrainsToPrimaryFile()
@@ -47,8 +52,8 @@ public sealed class ReceiverRouteTests : IDisposable
         var primaryDir   = Path.Combine(_dir, "primary");
         var primaryPath  = Path.Combine(primaryDir, "primary.bin");
         var fallbackPath = Path.Combine(_dir, "fallback.bin");
-        using var primary  = new FileSink(primaryPath, ringCapacity: 16_384, flushIntervalMs: 1_000);
-        using var fallback = new FileSink(fallbackPath, writeBufferCapacity: 1, ringCapacity: 16_384, flushIntervalMs: 0);
+        using var primary  = new FileSink(primaryPath, ringCapacity: RingBytes, flushIntervalMs: 1_000);
+        using var fallback = new FileSink(fallbackPath, writeBufferCapacity: 1, ringCapacity: RingBytes, flushIntervalMs: 0);
         var chain = RelayBuilder.StartPacket(primary).To(fallback);
         using var receiver = new NamedPipeReceiver<int>(pipeName, state: 0, static (_, _) => { }, next: chain.Head);
         using var client   = new NamedPipeClientStream(".", pipeName, PipeDirection.Out);
@@ -64,18 +69,18 @@ public sealed class ReceiverRouteTests : IDisposable
         (await probe).Should().BeTrue();
         SpinWait.SpinUntil(() => !primary.IsHealthy, TimeoutMs).Should().BeTrue("the primary's first open fails while its directory is missing");
         var backlog = Task.Run(() => { int n = 0; while (n < BacklogFrames && receiver.Poll()) n++; return n; });
-        SpinWait.SpinUntil(() => backlog.IsCompleted, TimeoutMs).Should().BeTrue("Poll returns once each remaining frame is read");
+        SpinWait.SpinUntil(() => backlog.IsCompleted, BacklogTimeoutMs).Should().BeTrue("Poll returns once each remaining frame is read");
         (await backlog).Should().Be(BacklogFrames);
-        SpinWait.SpinUntil(() => write.IsCompleted, TimeoutMs).Should().BeTrue("the client's writes complete once Poll read them");
+        SpinWait.SpinUntil(() => write.IsCompleted, BacklogTimeoutMs).Should().BeTrue("the client's writes complete once Poll read them");
         await write;
         Directory.CreateDirectory(primaryDir);
         SpinWait.SpinUntil(() => primary.IsHealthy, RecoveryTimeoutMs).Should().BeTrue("the primary must recover after the backoff");
         fallback.Start();
-        fallback.Stop(drainTimeoutMs: 2_000);
-        primary.Stop(drainTimeoutMs: 2_000);
+        fallback.Stop(drainTimeoutMs: BacklogTimeoutMs);
+        primary.Stop(drainTimeoutMs: BacklogTimeoutMs);
 
         byte[] expected = Frames(first: 1, count: BacklogFrames);
-        SpinWait.SpinUntil(() => Delivered(fallbackPath, primaryPath).AsSpan().SequenceEqual(expected), TimeoutMs).Should().BeTrue("every backlog frame lands once, in order, across the fallback and primary files");
+        SpinWait.SpinUntil(() => Delivered(fallbackPath, primaryPath).AsSpan().SequenceEqual(expected), BacklogTimeoutMs).Should().BeTrue("every backlog frame lands once, in order, across the fallback and primary files");
         ReadShared(primaryPath).Should().NotBeEmpty("the fallback's backlog beyond one batch must drain to Prev");
         Delivered(fallbackPath, primaryPath).Should().Equal(expected);
     }

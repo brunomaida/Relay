@@ -21,9 +21,10 @@ namespace Relay.Tests.SwanRoutes;
 [Trait("Category", "Integration")]
 public sealed class PacketSinkTryEnqueueDrainRouteTests : IDisposable
 {
-    private const int TimeoutMs     = 5_000;
-    private const int BacklogFrames = 1_500;  // 8 B records (12 000 B) fit the 16 384 B ring; Stop must land before the consumer empties it
-    private const int NoDeadlineMs  = 60_000; // no deadline flush runs within a test
+    private const int TimeoutMs     = 30_000;  // bounds each Stop's drain and the wait after it: one write per record, 100 000 records
+    private const int RingBytes     = 1 << 20; // fallback and Prev rings: 1 048 576 B
+    private const int BacklogFrames = 100_000; // 8 B records (800 000 B) fit RingBytes; Stop must land before the consumer empties it
+    private const int NoDeadlineMs  = 60_000;  // no deadline flush runs within a test
 
     private readonly string _dir = Directory.CreateTempSubdirectory("relay-swan-").FullName;
 
@@ -44,7 +45,7 @@ public sealed class PacketSinkTryEnqueueDrainRouteTests : IDisposable
         var seen         = new ConcurrentQueue<byte[]>();
         var downstream   = new CollectingSink();
         var filter       = new FilterSink(p => { seen.Enqueue(p.ToArray()); return false; }, downstream);
-        using var fallback = new FileSink(fallbackPath, writeBufferCapacity: 1, ringCapacity: 16_384, flushIntervalMs: 0);
+        using var fallback = new FileSink(fallbackPath, writeBufferCapacity: 1, ringCapacity: RingBytes, flushIntervalMs: 0);
         RelayBuilder.StartPacket(filter).To(fallback);
         byte[] expected = Frames(BacklogFrames);
 
@@ -53,7 +54,7 @@ public sealed class PacketSinkTryEnqueueDrainRouteTests : IDisposable
             if (fallback.TryEnqueue(expected.AsSpan(i * sizeof(int), sizeof(int)))) accepted++;
         accepted.Should().Be(BacklogFrames, "the fallback's ring holds the whole backlog");
         fallback.Start();
-        fallback.Stop(drainTimeoutMs: 2_000);
+        fallback.Stop(drainTimeoutMs: TimeoutMs);
 
         SpinWait.SpinUntil(() => Delivered(ReadShared(fallbackPath), seen).AsSpan().SequenceEqual(expected), TimeoutMs).Should().BeTrue("every backlog frame lands once, in order, across the fallback file and the predicate");
         seen.Should().NotBeEmpty("the fallback's backlog beyond one batch must drain to Prev, the filter");
@@ -71,8 +72,8 @@ public sealed class PacketSinkTryEnqueueDrainRouteTests : IDisposable
     {
         var primaryPath  = Path.Combine(_dir, "primary.bin");
         var fallbackPath = Path.Combine(_dir, "fallback.bin");
-        using var primary  = new FileSink(primaryPath, writeBufferCapacity: 1, ringCapacity: 16_384, flushIntervalMs: NoDeadlineMs);
-        using var fallback = new FileMpscSink(fallbackPath, ringCapacity: 16_384, flushIntervalMs: 0);
+        using var primary  = new FileSink(primaryPath, writeBufferCapacity: 1, ringCapacity: RingBytes, flushIntervalMs: NoDeadlineMs);
+        using var fallback = new FileMpscSink(fallbackPath, ringCapacity: RingBytes, flushIntervalMs: 0);
         RelayBuilder.StartPacket(primary).To(fallback);
         byte[] expected = Frames(BacklogFrames);
 
@@ -82,8 +83,8 @@ public sealed class PacketSinkTryEnqueueDrainRouteTests : IDisposable
         accepted.Should().Be(BacklogFrames, "the fallback's ring holds the whole backlog");
         primary.Start();
         fallback.Start();
-        fallback.Stop(drainTimeoutMs: 2_000);
-        primary.Stop(drainTimeoutMs: 2_000);
+        fallback.Stop(drainTimeoutMs: TimeoutMs);
+        primary.Stop(drainTimeoutMs: TimeoutMs);
 
         SpinWait.SpinUntil(() => Delivered(ReadShared(fallbackPath), ReadShared(primaryPath)).AsSpan().SequenceEqual(expected), TimeoutMs).Should().BeTrue("every backlog frame lands once, in order, across the fallback and primary files");
         ReadShared(primaryPath).Should().NotBeEmpty("the fallback's backlog beyond one batch must drain to Prev, the primary");
@@ -99,8 +100,8 @@ public sealed class PacketSinkTryEnqueueDrainRouteTests : IDisposable
     {
         var primaryPath  = Path.Combine(_dir, "primary.bin");
         var fallbackPath = Path.Combine(_dir, "fallback.bin");
-        using var primary  = new FileSink(primaryPath, writeBufferCapacity: 1, ringCapacity: 16_384, flushIntervalMs: NoDeadlineMs);
-        using var fallback = new FileMpscSink(fallbackPath, ringCapacity: 16_384, flushIntervalMs: 0);
+        using var primary  = new FileSink(primaryPath, writeBufferCapacity: 1, ringCapacity: RingBytes, flushIntervalMs: NoDeadlineMs);
+        using var fallback = new FileMpscSink(fallbackPath, ringCapacity: RingBytes, flushIntervalMs: 0);
         RelayBuilder.StartPacket(primary).To(fallback);
         byte[] expected = Frames(BacklogFrames);
 
@@ -110,8 +111,8 @@ public sealed class PacketSinkTryEnqueueDrainRouteTests : IDisposable
         accepted.Should().Be(BacklogFrames, "the fallback's ring holds the whole backlog");
         primary.Start();
         fallback.Start();
-        fallback.Stop(drainTimeoutMs: 2_000);
-        primary.Stop(drainTimeoutMs: 2_000);
+        fallback.Stop(drainTimeoutMs: TimeoutMs);
+        primary.Stop(drainTimeoutMs: TimeoutMs);
 
         SpinWait.SpinUntil(() => Delivered(ReadShared(fallbackPath), ReadShared(primaryPath)).AsSpan().SequenceEqual(expected), TimeoutMs).Should().BeTrue("every backlog frame lands once, in order, across the fallback and primary files");
         ReadShared(primaryPath).Should().NotBeEmpty("the fallback's consumer must drain its backlog beyond one batch to Prev, the primary");
