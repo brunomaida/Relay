@@ -54,7 +54,7 @@ public sealed class DrainRouteTests : IDisposable
         SpinWait.SpinUntil(() => Holds(Path0, expected), TimeoutMs).Should().BeTrue("WriteToBackend writes the oversized record directly");
         file.Stop(drainTimeoutMs: 1_000);
 
-        SpinWait.SpinUntil(() => Holds(Path0, expected), TimeoutMs).Should().BeTrue("the shutdown flush adds no bytes");
+        SpinWait.SpinUntil(() => Holds(Path0, expected), TimeoutMs).Should().BeTrue("the bytes are unchanged after Stop");
         ReadShared(Path0).Should().Equal(expected);
     }
 
@@ -78,7 +78,7 @@ public sealed class DrainRouteTests : IDisposable
         SpinWait.SpinUntil(() => Holds(Path0, expected), TimeoutMs).Should().BeTrue("WriteToBackend writes each drained record directly");
         file.Stop(drainTimeoutMs: 1_000);
 
-        SpinWait.SpinUntil(() => Holds(Path0, expected), TimeoutMs).Should().BeTrue("the shutdown flush adds no bytes");
+        SpinWait.SpinUntil(() => Holds(Path0, expected), TimeoutMs).Should().BeTrue("the bytes are unchanged after Stop");
         ReadShared(Path0).Should().Equal(expected);
     }
 
@@ -102,7 +102,7 @@ public sealed class DrainRouteTests : IDisposable
         SpinWait.SpinUntil(() => Holds(Path0, expected), TimeoutMs).Should().BeTrue("WriteToBackend writes each drained payload directly");
         file.Stop(drainTimeoutMs: 1_000);
 
-        SpinWait.SpinUntil(() => Holds(Path0, expected), TimeoutMs).Should().BeTrue("the shutdown flush adds no bytes");
+        SpinWait.SpinUntil(() => Holds(Path0, expected), TimeoutMs).Should().BeTrue("the bytes are unchanged after Stop");
         ReadShared(Path0).Should().Equal(expected);
     }
 
@@ -128,7 +128,7 @@ public sealed class DrainRouteTests : IDisposable
         SpinWait.SpinUntil(() => Holds(Path0, expected), TimeoutMs).Should().BeTrue("WriteToBackend writes each forwarded record directly");
         file.Stop(drainTimeoutMs: 1_000);
 
-        SpinWait.SpinUntil(() => Holds(Path0, expected), TimeoutMs).Should().BeTrue("the shutdown flush adds no bytes");
+        SpinWait.SpinUntil(() => Holds(Path0, expected), TimeoutMs).Should().BeTrue("the bytes are unchanged after Stop");
         ReadShared(Path0).Should().Equal(expected);
     }
 
