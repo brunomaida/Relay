@@ -1,0 +1,1212 @@
+[
+  {
+    "id": "rl1",
+    "kind": "route",
+    "hops": "in.app ps.enq sbr.pub sbr.con spscq.loop rtcp.wtb out.tcp",
+    "entry": "in.app",
+    "exit": "out.tcp",
+    "branches": {
+      "rl1.fallback": {
+        "at": "ps.enq",
+        "to": "rmem.drain"
+      }
+    },
+    "origin": "migrated",
+    "props": {
+      "n": "App → PacketSink → TcpSink → coletor TCP",
+      "sub": "Relay stand-alone · relay-{sink}"
+    }
+  },
+  {
+    "id": "rl2",
+    "kind": "route",
+    "hops": "in.app ps.enq sbr.pub sbr.con spscq.loop rudp.wtb out.udp",
+    "entry": "in.app",
+    "exit": "out.udp",
+    "origin": "migrated",
+    "props": {
+      "n": "App → PacketSink → UdpSink → coletor UDP",
+      "sub": "Relay stand-alone · datagrama ≤ 1432 B"
+    }
+  },
+  {
+    "id": "rl3",
+    "kind": "route",
+    "hops": "in.app ps.enq sbr.pub sbr.con spscq.loop rrot.wtb out.file",
+    "entry": "in.app",
+    "exit": "out.file",
+    "origin": "migrated",
+    "props": {
+      "n": "App → PacketSink → arquivo rotativo",
+      "sub": "Relay stand-alone"
+    }
+  },
+  {
+    "id": "rl4",
+    "kind": "route",
+    "hops": "in.app ps.enq rshm.acc out.shm",
+    "entry": "in.app",
+    "exit": "out.shm",
+    "origin": "migrated",
+    "props": {
+      "n": "App → SharedMemorySpscSink → MMF",
+      "sub": "síncrono, sem thread do Relay"
+    }
+  },
+  {
+    "id": "rl5",
+    "kind": "route",
+    "hops": "in.app ps.enq sbr.pub sbr.con spscq.loop rpipe.wtb out.ipc",
+    "entry": "in.app",
+    "exit": "out.ipc",
+    "origin": "migrated",
+    "props": {
+      "n": "App → NamedPipe / UnixSocket → processo local",
+      "sub": "IPC mesmo host"
+    }
+  },
+  {
+    "id": "rl6",
+    "kind": "route",
+    "hops": "in.app ps.enq multi sbr.pub sbr.con spscq.loop batch.wtb seq.flush out.seq",
+    "entry": "in.app",
+    "exit": "out.seq",
+    "origin": "migrated",
+    "props": {
+      "n": "App → MultiSink → SeqSink (HTTP)",
+      "sub": "broadcast + circuit breaker"
+    }
+  },
+  {
+    "id": "rl1.fallback",
+    "kind": "route",
+    "hops": "in.app scb.to ps.enq rmem.drain",
+    "entry": "in.app",
+    "exit": "rmem.drain",
+    "origin": "migrated",
+    "props": {
+      "n": "App → fallback para MemorySink",
+      "sub": "Next: primário indisponível",
+      "baseId": "rl7",
+      "aka": [
+        "rl7"
+      ],
+      "obs": "MemorySink",
+      "why": "era rl7; desfecho diferente da mesma cadeia (primário indisponível)"
+    }
+  },
+  {
+    "id": "rl8",
+    "kind": "route",
+    "hops": "in.udp udpr.poll pcb out.app",
+    "entry": "in.udp",
+    "exit": "out.app",
+    "origin": "migrated",
+    "props": {
+      "n": "Rede UDP → UdpReceiver → callback da app",
+      "sub": "Relay stand-alone · receiver"
+    }
+  },
+  {
+    "id": "rl9",
+    "kind": "route",
+    "hops": "in.tcp tcpr.poll pcb out.app",
+    "entry": "in.tcp",
+    "exit": "out.app",
+    "origin": "migrated",
+    "props": {
+      "n": "Rede TCP → TcpReceiver → callback da app",
+      "sub": "Relay stand-alone · receiver"
+    }
+  },
+  {
+    "id": "rl10",
+    "kind": "route",
+    "hops": "in.mmf shmr.poll pcb out.app",
+    "entry": "in.mmf",
+    "exit": "out.app",
+    "origin": "migrated",
+    "props": {
+      "n": "MMF → SharedMemorySpscReceiver → callback",
+      "sub": "Relay stand-alone · entre processos"
+    }
+  },
+  {
+    "id": "rd3",
+    "kind": "route",
+    "hops": "in.udp udpr.poll ire.apply",
+    "entry": "in.udp",
+    "exit": "ire.apply",
+    "origin": "migrated",
+    "props": {
+      "n": "Peer remoto → UdpReceiver → replicação",
+      "sub": "TryApply + Commit",
+      "obs": "estado replicado"
+    }
+  },
+  {
+    "id": "rp36",
+    "kind": "segment",
+    "hops": [
+      {
+        "id": "rshm.acc",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.shm",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": null,
+    "exit": "out.shm",
+    "origin": "curated",
+    "props": {
+      "key": "rshm.acc out.shm",
+      "n": "⟨chamador⟩ SharedMemorySpscSink.Accept → MMF",
+      "sub": "candidata salva · 2 nós",
+      "was": "umur3gowv"
+    }
+  },
+  {
+    "id": "rp35",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rudp.wtb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.udp",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.udp",
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq sbr.pub sbr.con spscq.loop rudp.wtb out.udp",
+      "n": "Aplicação → Rede UDP",
+      "sub": "candidata salva · 7 nós",
+      "was": "umur3gm0o"
+    }
+  },
+  {
+    "id": "rp34",
+    "kind": "segment",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rudp.wtb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "udpr.poll",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": null,
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq sbr.pub sbr.con spscq.loop rudp.wtb udpr.poll",
+      "n": "Aplicação → UdpReceiver<TState>.Poll",
+      "sub": "candidata salva · 7 nós",
+      "was": "umur3glgi"
+    }
+  },
+  {
+    "id": "rp33",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rshm.acc",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.shm",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.shm",
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq rshm.acc out.shm",
+      "n": "Aplicação → MMF",
+      "sub": "candidata salva · 4 nós",
+      "was": "umur3gk0z"
+    }
+  },
+  {
+    "id": "rp32",
+    "kind": "segment",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rudp.wtb",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": null,
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq sbr.pub sbr.con spscq.loop rudp.wtb",
+      "n": "Aplicação → UdpSink.WriteToBackend",
+      "sub": "candidata salva · 6 nós",
+      "was": "umur3gj5v"
+    }
+  },
+  {
+    "id": "rp31",
+    "kind": "segment",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rtcp.wtb",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": null,
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq sbr.pub sbr.con spscq.loop rtcp.wtb",
+      "n": "Aplicação → TcpSink.WriteToBackend",
+      "sub": "candidata salva · 6 nós",
+      "was": "umur3gil6"
+    }
+  },
+  {
+    "id": "rp30",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rrot.wtb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.file",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.file",
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq sbr.pub sbr.con spscq.loop rrot.wtb out.file",
+      "n": "Aplicação → Arquivo",
+      "sub": "candidata salva · 7 nós",
+      "was": "umur3ghya"
+    }
+  },
+  {
+    "id": "rp29",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "batch.wtb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "seq.flush",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.seq",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.seq",
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq sbr.pub sbr.con spscq.loop batch.wtb seq.flush out.seq",
+      "n": "Aplicação → HTTP / WebSocket",
+      "sub": "candidata salva · 8 nós",
+      "was": "umur3gh81"
+    }
+  },
+  {
+    "id": "rp28",
+    "kind": "segment",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "runix.wtb",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": null,
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq sbr.pub sbr.con spscq.loop runix.wtb",
+      "n": "Aplicação → UnixSocketSink.WriteToBackend",
+      "sub": "candidata salva · 6 nós",
+      "was": "umur3gggz"
+    }
+  },
+  {
+    "id": "rp27",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rpipe.wtb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.ipc",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.ipc",
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq sbr.pub sbr.con spscq.loop rpipe.wtb out.ipc",
+      "n": "Aplicação → Pipe / UDS",
+      "sub": "candidata salva · 7 nós",
+      "was": "umur3gfui"
+    }
+  },
+  {
+    "id": "rp26",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rtcp.wtb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.tcp",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.tcp",
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq sbr.pub sbr.con spscq.loop rtcp.wtb out.tcp",
+      "n": "Aplicação → Rede TCP",
+      "sub": "candidata salva · 7 nós",
+      "was": "umur3gev4"
+    }
+  },
+  {
+    "id": "rp25",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "runix.wtb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.ipc",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.ipc",
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq sbr.pub sbr.con spscq.loop runix.wtb out.ipc",
+      "n": "Aplicação → Pipe / UDS",
+      "sub": "candidata salva · 7 nós",
+      "was": "umur3ge8f"
+    }
+  },
+  {
+    "id": "rp24",
+    "kind": "segment",
+    "hops": [
+      {
+        "id": "rrot.wtb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.file",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": null,
+    "exit": "out.file",
+    "origin": "curated",
+    "props": {
+      "key": "rrot.wtb out.file",
+      "n": "⟨chamador⟩ RotatingFileSink.WriteToBackend → Arquivo",
+      "sub": "candidata salva · 2 nós",
+      "was": "umur3gddp"
+    }
+  },
+  {
+    "id": "rp23",
+    "kind": "segment",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rshm.acc",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": null,
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq rshm.acc",
+      "n": "Aplicação → SharedMemorySpscSink.Accept",
+      "sub": "candidata salva · 3 nós",
+      "was": "umur3gcrd"
+    }
+  },
+  {
+    "id": "rp22",
+    "kind": "segment",
+    "hops": [
+      {
+        "id": "in.app",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rpipe.wtb",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": null,
+    "origin": "curated",
+    "props": {
+      "key": "in.app ps.enq sbr.pub sbr.con spscq.loop rpipe.wtb",
+      "n": "Aplicação → NamedPipeSink.WriteToBackend",
+      "sub": "candidata salva · 6 nós",
+      "was": "umur3gc7a"
+    }
+  },
+  {
+    "id": "rp21",
+    "kind": "segment",
+    "hops": [
+      {
+        "id": "in.udp",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "udpr.poll",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.udp",
+    "exit": null,
+    "origin": "curated",
+    "props": {
+      "key": "in.udp udpr.poll",
+      "n": "Rede UDP → UdpReceiver<TState>.Poll",
+      "sub": "candidata salva · 2 nós",
+      "was": "umur3gbjv"
+    }
+  },
+  {
+    "id": "rp20",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.host.relay",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "pipr.poll",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "pcb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.host.relay",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.app",
+    "origin": "curated",
+    "props": {
+      "key": "in.host.relay pipr.poll pcb out.host.relay",
+      "n": "App host · Relay · via NamedPipeReceiver<TState>.Poll → Callback da app (PacketCallback)",
+      "sub": "candidata salva · 4 nós",
+      "was": "umur19i18"
+    }
+  },
+  {
+    "id": "rp19",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.host.relay",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "udpr.poll",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "pcb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.host.relay",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.app",
+    "origin": "curated",
+    "props": {
+      "key": "in.host.relay udpr.poll pcb out.host.relay",
+      "n": "App host · Relay · via UdpReceiver<TState>.Poll → Callback da app (PacketCallback)",
+      "sub": "candidata salva · 4 nós",
+      "was": "umur19hdi"
+    }
+  },
+  {
+    "id": "rp18",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.ipc",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "pipr.poll",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "pcb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.host.relay",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.ipc",
+    "exit": "out.app",
+    "origin": "curated",
+    "props": {
+      "key": "in.ipc pipr.poll pcb out.host.relay",
+      "n": "Processo local · pipe / UDS · via NamedPipeReceiver<TState>.Poll → Callback da app (PacketCallback)",
+      "sub": "candidata salva · 4 nós",
+      "was": "umur19gks"
+    }
+  },
+  {
+    "id": "rp17",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.host.relay",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "fork",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rpipe.wtb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "pipr.poll",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "pcb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.host.relay",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.app",
+    "origin": "curated",
+    "props": {
+      "key": "in.host.relay ps.enq fork sbr.pub sbr.con spscq.loop rpipe.wtb pipr.poll pcb out.host.relay",
+      "n": "App host · Relay · via ForkSink → Callback da app (PacketCallback)",
+      "sub": "candidata salva · 10 nós",
+      "was": "umur19fuw"
+    }
+  },
+  {
+    "id": "rp16",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.host.relay",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "tcpr.poll",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "pcb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.host.relay",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.app",
+    "origin": "curated",
+    "props": {
+      "key": "in.host.relay tcpr.poll pcb out.host.relay",
+      "n": "App host · Relay · via TcpReceiver<TState>.Poll → Callback da app (PacketCallback)",
+      "sub": "candidata salva · 4 nós",
+      "was": "umur19evu"
+    }
+  },
+  {
+    "id": "rp15",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.host.relay",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rshm.acc",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "shmr.poll",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "pcb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.host.relay",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.app",
+    "origin": "curated",
+    "props": {
+      "key": "in.host.relay ps.enq rshm.acc shmr.poll pcb out.host.relay",
+      "n": "App host · Relay · via SharedMemorySpscReceiver<TState>.Poll → Callback da app (PacketCallback)",
+      "sub": "candidata salva · 6 nós",
+      "was": "umur19e28"
+    }
+  },
+  {
+    "id": "rp14",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.host.relay",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "shmr.poll",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "pcb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.host.relay",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.app",
+    "origin": "curated",
+    "props": {
+      "key": "in.host.relay shmr.poll pcb out.host.relay",
+      "n": "App host · Relay · via SharedMemorySpscReceiver<TState>.Poll → Callback da app (PacketCallback)",
+      "sub": "candidata salva · 4 nós",
+      "was": "umur19dgr"
+    }
+  },
+  {
+    "id": "rp13",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.host.relay",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ps.enq",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.pub",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "sbr.con",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "spscq.loop",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "rtcp.wtb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "tcpr.poll",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "pcb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.host.relay",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.app",
+    "exit": "out.app",
+    "origin": "curated",
+    "props": {
+      "key": "in.host.relay ps.enq sbr.pub sbr.con spscq.loop rtcp.wtb tcpr.poll pcb out.host.relay",
+      "n": "App host · Relay · via TcpReceiver<TState>.Poll → Callback da app (PacketCallback)",
+      "sub": "candidata salva · 9 nós",
+      "was": "umur19cnn"
+    }
+  },
+  {
+    "id": "rp11",
+    "kind": "route",
+    "hops": [
+      {
+        "id": "in.udp",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "udpr.poll",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "ce.hb",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "nsm.tr",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "og.gate",
+        "lane": null,
+        "msg": null
+      },
+      {
+        "id": "out.tx",
+        "lane": null,
+        "msg": null
+      }
+    ],
+    "entry": "in.udp",
+    "exit": "out.tx",
+    "origin": "curated",
+    "props": {
+      "key": "in.udp udpr.poll ce.hb nsm.tr og.gate out.tx",
+      "n": "Rede · UDP (outro host) · via UdpReceiver<TState>.Poll → Exchange / Gateway TX",
+      "sub": "candidata salva · 6 nós",
+      "was": "umur0jn3a"
+    }
+  }
+]

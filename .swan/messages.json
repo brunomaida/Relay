@@ -1,0 +1,225 @@
+[
+  {
+    "id": "clef",
+    "f": [
+      [
+        "@t",
+        "N",
+        "ISO 8601"
+      ],
+      [
+        "@m",
+        "N"
+      ],
+      [
+        "@l",
+        "N",
+        "omitido para Info"
+      ],
+      [
+        "Source",
+        "N"
+      ],
+      [
+        "ThreadId",
+        "N"
+      ],
+      [
+        "@tr / @sp",
+        "N"
+      ]
+    ],
+    "n": "CLEF (JSON)",
+    "s": "uma linha por registro"
+  },
+  {
+    "id": "dgram",
+    "f": [
+      [
+        "Pacote LOG2",
+        "N",
+        "cabe em MTU 1500 sem fragmentar"
+      ]
+    ],
+    "n": "Datagrama UDP",
+    "s": "pacote LOG2 ≤ 1432 B"
+  },
+  {
+    "id": "frame",
+    "f": [
+      [
+        "Length",
+        4,
+        "big-endian"
+      ],
+      [
+        "Pacote LOG2",
+        "N"
+      ]
+    ],
+    "n": "Frame TCP",
+    "note": "Mesmo framing em TCP, named pipe e Unix socket.",
+    "s": "[4 B big-endian][pacote LOG2]"
+  },
+  {
+    "id": "hb",
+    "f": [
+      [
+        "Magic",
+        "?"
+      ],
+      [
+        "Version",
+        "?"
+      ],
+      [
+        "FrameType",
+        "?"
+      ],
+      [
+        "ClusterId",
+        "?"
+      ],
+      [
+        "NodeId",
+        "?"
+      ],
+      [
+        "ElectionTerm",
+        "?"
+      ],
+      [
+        "FenceToken",
+        "?"
+      ],
+      [
+        "Sequence",
+        "?"
+      ],
+      [
+        "TimestampTicks",
+        "?"
+      ],
+      [
+        "PayloadLength",
+        "?"
+      ],
+      [
+        "Checksum",
+        "?"
+      ]
+    ],
+    "n": "Frame de heartbeat",
+    "note": "Cabeçalho comum dos frames Reddy; tamanhos não constam na TOPOLOGY.",
+    "s": "plano de controle · tamanho fixo"
+  },
+  {
+    "id": "slot",
+    "f": [
+      [
+        "Length",
+        "len",
+        "prefixo de tamanho"
+      ],
+      [
+        "Bytes",
+        "N",
+        "pacote ou linha já codificada"
+      ]
+    ],
+    "n": "Slot do anel de bytes",
+    "note": "Log2 codifica uma vez; Relay só entrega o buffer.",
+    "s": "SpscByteRingBuffer · prefixado por tamanho"
+  },
+  {
+    "id": "text",
+    "f": [
+      [
+        "[LEVEL]",
+        "N"
+      ],
+      [
+        "HH:mm:ss.fff",
+        12
+      ],
+      [
+        "SOURCE",
+        "N"
+      ],
+      [
+        "Ttid",
+        "N"
+      ],
+      [
+        "mensagem",
+        "N"
+      ],
+      [
+        "\\n",
+        1
+      ]
+    ],
+    "n": "Linha de texto",
+    "note": "Layout TAG_DEFAULT, escrito direto em Span<byte>.",
+    "s": "LayoutRenderer → UTF-8"
+  },
+  {
+    "id": "wire",
+    "f": [
+      [
+        "Magic",
+        4,
+        "0x4C474F32 \"LOG2\""
+      ],
+      [
+        "Version",
+        2,
+        "= 1"
+      ],
+      [
+        "EntryCount",
+        2,
+        "advisory"
+      ],
+      [
+        "BatchTimestampTicks",
+        8,
+        "UTC"
+      ],
+      [
+        "Level",
+        1
+      ],
+      [
+        "Source",
+        1
+      ],
+      [
+        "TypeCode",
+        2,
+        "0 = UTF-8"
+      ],
+      [
+        "TimestampOffsetMs",
+        4,
+        "relativo ao lote"
+      ],
+      [
+        "ThreadId",
+        2
+      ],
+      [
+        "PayloadLength",
+        2
+      ],
+      [
+        "Payload",
+        "N",
+        "≤ 1404 B em UDP"
+      ]
+    ],
+    "n": "Log2 Wire v1",
+    "note": "Little-endian. MAX_PACKET 1432 B é limite de datagrama, não do formato. Fonte: wire-protocol.md.",
+    "s": "16 B de header + 12 B por entrada + payload"
+  }
+]

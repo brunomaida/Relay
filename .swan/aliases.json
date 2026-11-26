@@ -1,0 +1,234 @@
+{
+  "out.seq": {
+    "nodeId": "out.seq",
+    "symbol": null
+  },
+  "relay": {
+    "nodeId": "relay",
+    "symbol": null
+  },
+  "a.relay": {
+    "nodeId": "a.relay",
+    "symbol": null
+  },
+  "n.r": {
+    "nodeId": "n.r",
+    "symbol": null
+  },
+  "ps": {
+    "nodeId": "ps",
+    "symbol": null
+  },
+  "ps.enq": {
+    "nodeId": "ps.enq",
+    "symbol": null
+  },
+  "spscq": {
+    "nodeId": "spscq",
+    "symbol": null
+  },
+  "spscq.loop": {
+    "nodeId": "spscq.loop",
+    "symbol": null
+  },
+  "spscq.prev": {
+    "nodeId": "spscq.prev",
+    "symbol": null
+  },
+  "batch": {
+    "nodeId": "batch",
+    "symbol": null
+  },
+  "batch.wtb": {
+    "nodeId": "batch.wtb",
+    "symbol": null
+  },
+  "fork": {
+    "nodeId": "fork",
+    "symbol": null
+  },
+  "multi": {
+    "nodeId": "multi",
+    "symbol": null
+  },
+  "n.rb": {
+    "nodeId": "n.rb",
+    "symbol": null
+  },
+  "sbr": {
+    "nodeId": "sbr",
+    "symbol": null
+  },
+  "sbr.pub": {
+    "nodeId": "sbr.pub",
+    "symbol": null
+  },
+  "sbr.con": {
+    "nodeId": "sbr.con",
+    "symbol": null
+  },
+  "n.rs": {
+    "nodeId": "n.rs",
+    "symbol": null
+  },
+  "rtcp": {
+    "nodeId": "rtcp",
+    "symbol": null
+  },
+  "rtcp.wtb": {
+    "nodeId": "rtcp.wtb",
+    "symbol": null
+  },
+  "rudp": {
+    "nodeId": "rudp",
+    "symbol": null
+  },
+  "rudp.wtb": {
+    "nodeId": "rudp.wtb",
+    "symbol": null
+  },
+  "rrot": {
+    "nodeId": "rrot",
+    "symbol": null
+  },
+  "rrot.wtb": {
+    "nodeId": "rrot.wtb",
+    "symbol": null
+  },
+  "rshm": {
+    "nodeId": "rshm",
+    "symbol": null
+  },
+  "rshm.acc": {
+    "nodeId": "rshm.acc",
+    "symbol": null
+  },
+  "rmem": {
+    "nodeId": "rmem",
+    "symbol": null
+  },
+  "rmem.drain": {
+    "nodeId": "rmem.drain",
+    "symbol": null
+  },
+  "n.rr": {
+    "nodeId": "n.rr",
+    "symbol": null
+  },
+  "udpr": {
+    "nodeId": "udpr",
+    "symbol": null
+  },
+  "udpr.poll": {
+    "nodeId": "udpr.poll",
+    "symbol": null
+  },
+  "tcpr": {
+    "nodeId": "tcpr",
+    "symbol": null
+  },
+  "tcpr.poll": {
+    "nodeId": "tcpr.poll",
+    "symbol": null
+  },
+  "n.rbl": {
+    "nodeId": "n.rbl",
+    "symbol": null
+  },
+  "scb": {
+    "nodeId": "scb",
+    "symbol": null
+  },
+  "scb.to": {
+    "nodeId": "scb.to",
+    "symbol": null
+  },
+  "scb.fork": {
+    "nodeId": "scb.fork",
+    "symbol": null
+  },
+  "a.rhttp": {
+    "nodeId": "a.rhttp",
+    "symbol": null
+  },
+  "n.rhttp": {
+    "nodeId": "n.rhttp",
+    "symbol": null
+  },
+  "hbs": {
+    "nodeId": "hbs",
+    "symbol": null
+  },
+  "a.robs": {
+    "nodeId": "a.robs",
+    "symbol": null
+  },
+  "n.seq": {
+    "nodeId": "n.seq",
+    "symbol": null
+  },
+  "seq": {
+    "nodeId": "seq",
+    "symbol": null
+  },
+  "seq.flush": {
+    "nodeId": "seq.flush",
+    "symbol": null
+  },
+  "rpipe": {
+    "nodeId": "rpipe",
+    "symbol": null
+  },
+  "rpipe.wtb": {
+    "nodeId": "rpipe.wtb",
+    "symbol": null
+  },
+  "runix": {
+    "nodeId": "runix",
+    "symbol": null
+  },
+  "runix.wtb": {
+    "nodeId": "runix.wtb",
+    "symbol": null
+  },
+  "pipr": {
+    "nodeId": "pipr",
+    "symbol": null
+  },
+  "pipr.poll": {
+    "nodeId": "pipr.poll",
+    "symbol": null
+  },
+  "shmr": {
+    "nodeId": "shmr",
+    "symbol": null
+  },
+  "shmr.poll": {
+    "nodeId": "shmr.poll",
+    "symbol": null
+  },
+  "pcb": {
+    "nodeId": "pcb",
+    "symbol": null
+  },
+  "ppred": {
+    "nodeId": "ppred",
+    "symbol": null
+  },
+  "in.udp": {
+    "nodeId": "in.udp",
+    "symbol": null
+  },
+  "in.mmf": {
+    "nodeId": "in.mmf",
+    "symbol": null
+  },
+  "out.tcp": {
+    "nodeId": "out.tcp",
+    "symbol": null
+  },
+  "out.ipc": {
+    "nodeId": "out.ipc",
+    "symbol": null
+  }
+}
