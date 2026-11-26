@@ -21,7 +21,7 @@ public sealed class ReceiverRouteTests : IDisposable
 {
     private const int TimeoutMs         = 5_000;
     private const int RecoveryTimeoutMs = 10_000; // >= 3x FileSink.MinBackoffMs; the first retry waits 2 s
-    private const int BacklogFrames     = 600;    // > 2x the consumer batch (256) so records remain for TryDrainToPrev
+    private const int BacklogFrames     = 1_500;  // 8 B records (12 000 B) fit the 16 384 B ring; Stop must land before the consumer empties it
 
     private readonly string _dir = Directory.CreateTempSubdirectory("relay-swan-").FullName;
 
@@ -42,8 +42,8 @@ public sealed class ReceiverRouteTests : IDisposable
         var primaryDir   = Path.Combine(_dir, "primary");
         var primaryPath  = Path.Combine(primaryDir, "primary.bin");
         var fallbackPath = Path.Combine(_dir, "fallback.bin");
-        using var primary  = new FileSink(primaryPath, ringCapacity: 16_384, flushIntervalMs: 50);
-        using var fallback = new FileSink(fallbackPath, ringCapacity: 16_384, flushIntervalMs: 0);
+        using var primary  = new FileSink(primaryPath, ringCapacity: 16_384, flushIntervalMs: 1_000);
+        using var fallback = new FileSink(fallbackPath, writeBufferCapacity: 1, ringCapacity: 16_384, flushIntervalMs: 0);
         var chain = RelayBuilder.StartPacket(primary).To(fallback);
         using var receiver = new NamedPipeReceiver<int>(pipeName, state: 0, static (_, _) => { }, next: chain.Head);
         using var client   = new NamedPipeClientStream(".", pipeName, PipeDirection.Out);
@@ -58,7 +58,7 @@ public sealed class ReceiverRouteTests : IDisposable
         SpinWait.SpinUntil(() => probe.IsCompleted, TimeoutMs).Should().BeTrue("Poll returns once the client's first frame is read");
         (await probe).Should().BeTrue();
         SpinWait.SpinUntil(() => !primary.IsHealthy, TimeoutMs).Should().BeTrue("the primary's first open fails while its directory is missing");
-        var backlog = Task.Run(() => PollFrames(receiver, BacklogFrames));
+        var backlog = Task.Run(() => { int n = 0; while (n < BacklogFrames && receiver.Poll()) n++; return n; });
         SpinWait.SpinUntil(() => backlog.IsCompleted, TimeoutMs).Should().BeTrue("Poll returns once each remaining frame is read");
         (await backlog).Should().Be(BacklogFrames);
         SpinWait.SpinUntil(() => write.IsCompleted, TimeoutMs).Should().BeTrue("the client's writes complete once Poll read them");
@@ -76,13 +76,6 @@ public sealed class ReceiverRouteTests : IDisposable
         kept.CopyTo(delivered, 0);
         drained.CopyTo(delivered, kept.Length);
         delivered.Should().Equal(Frames(first: 1, count: BacklogFrames));
-    }
-
-    private static int PollFrames(NamedPipeReceiver<int> receiver, int count)
-    {
-        int polled = 0;
-        while (polled < count && receiver.Poll()) polled++;
-        return polled;
     }
 
     // Blocks until Poll reads: NamedPipeReceiver's server pipe has no in-buffer on Windows; no Flush (FlushFileBuffers waits too).

@@ -54,7 +54,9 @@ public sealed class PacketSinkEnqueueUnixSocketRouteTests : IDisposable
         SpinWait.SpinUntil(() => peer.Available >= 4 + payload.Length, TimeoutMs).Should().BeTrue("the peer must receive the whole frame");
 
         var frame = new byte[4 + payload.Length];
-        peer.Receive(frame).Should().Be(frame.Length);
+        int got = 0, read;
+        while (got < frame.Length && (read = peer.Receive(frame.AsSpan(got))) > 0) got += read;
+        got.Should().Be(frame.Length);
         BinaryPrimitives.ReadUInt32BigEndian(frame).Should().Be((uint)payload.Length);
         frame.AsSpan(4).ToArray().Should().Equal(payload);
     }
