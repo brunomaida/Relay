@@ -16,7 +16,7 @@ namespace Relay.Tests.SwanRoutes;
 /// Flow tests for the SWAN hot routes of Relay whose first code hop is <see cref="PacketSink.TryEnqueue"/> on a queue fallback
 /// and whose gated hop is <c>TryDrainToPrev</c> (SWAN S5.5d): the backlog is published into the fallback's ring before its
 /// <c>Start</c>; its <c>Stop</c> flips <c>_running</c> while the one-record-per-write backend still holds the backlog, so the
-/// shutdown deadline drains the rest to <c>Prev</c>. Each test asserts in its body an effect only <c>Prev.Enqueue</c> can produce.
+/// next flush-deadline hit (<c>flushIntervalMs: 0</c>) drains the rest to <c>Prev</c>. Each test asserts in its body an effect only <c>Prev.Enqueue</c> can produce.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class PacketSinkTryEnqueueDrainRouteTests : IDisposable
@@ -141,8 +141,11 @@ public sealed class PacketSinkTryEnqueueDrainRouteTests : IDisposable
         return bytes;
     }
 
-    // Chain sink, not a helper: src/ has no concrete packet MpscQueueSink. Like a FileSink with a one-byte write buffer,
-    // each record is its own write, which widens the window between Stop and the consumer emptying its ring.
+    /// <summary>
+    /// Chain sink, not a helper: src/ has no concrete packet <see cref="MpscQueueSink"/> (precedent: <c>MpscQueueSinkPacketTests.InMemoryMpscByteSink</c>).
+    /// Like a <c>FileSink</c> with a one-byte write buffer, each record is its own write, which widens the window between
+    /// <c>Stop</c> and the consumer emptying its ring.
+    /// </summary>
     private sealed class FileMpscSink : MpscQueueSink
     {
         private readonly string _path;
