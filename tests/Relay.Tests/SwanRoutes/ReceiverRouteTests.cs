@@ -2,6 +2,8 @@ using System;
 using System.Buffers.Binary;
 using System.IO;
 using System.IO.Pipes;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -22,6 +24,9 @@ public sealed class ReceiverRouteTests : IDisposable
     private const int TimeoutMs         = 5_000;
     private const int RecoveryTimeoutMs = 10_000; // >= 3x FileSink.MinBackoffMs; the first retry waits 2 s
     private const int BacklogFrames     = 1_500;  // 8 B records (12 000 B) fit the 16 384 B ring; Stop must land before the consumer empties it
+    private const int NoDeadlineMs      = 60_000; // no deadline flush runs within a test
+
+    private static readonly DateTime Day = new(2026, 11, 25, 0, 0, 0, DateTimeKind.Utc);
 
     private readonly string _dir = Directory.CreateTempSubdirectory("relay-swan-").FullName;
 
@@ -76,6 +81,30 @@ public sealed class ReceiverRouteTests : IDisposable
         kept.CopyTo(delivered, 0);
         drained.CopyTo(delivered, kept.Length);
         delivered.Should().Equal(Frames(first: 1, count: BacklogFrames));
+    }
+
+    /// <summary>
+    /// Route <c>scan.in.app.out.system.io.filestream.write.b45fc8ae</c>:
+    /// <c>UdpReceiver.Poll &gt; PacketSink.Enqueue &gt; SpscQueueSink.Accept &gt; ConsumeLoop &gt; RotatingFileSink.DisposeBackend &gt; FlushToStream</c>.
+    /// With no deadline flush the bytes reach the file at shutdown; the consumer <c>finally</c> runs <c>FlushBackend</c> before
+    /// <c>DisposeBackend</c> (<c>SpscQueueSink.Packet.cs:218-219</c>), so the write itself is <c>FlushBackend &gt; FlushToStream</c> and
+    /// <c>DisposeBackend &gt; FlushToStream</c> only flushes the stream.
+    /// </summary>
+    [Fact]
+    public void Poll_UdpDatagramIntoRotatingFileSink_ShutdownWritesFile()
+    {
+        byte[] payload = [0x5A, 0x17, 0xC3, 0x01, 0x8E];
+        using var sink     = new RotatingFileSink(_dir, "route", ringCapacity: 4_096, flushIntervalMs: NoDeadlineMs,
+                                                  utcNow: static () => Day);
+        using var receiver = new UdpReceiver<int>(new IPEndPoint(IPAddress.Loopback, 0), state: 0, static (_, _) => { }, next: sink);
+        using var sender   = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        sink.Start();
+
+        sender.SendTo(payload, receiver.LocalEndPoint);
+        SpinWait.SpinUntil(() => receiver.Poll(), TimeoutMs).Should().BeTrue("Poll returns once the datagram arrives");
+        sink.Stop(drainTimeoutMs: 1_000);
+
+        File.ReadAllBytes(Path.Combine(_dir, "route-20261125.0000.log")).Should().Equal(payload);
     }
 
     // Blocks until Poll reads: NamedPipeReceiver's server pipe has no in-buffer on Windows; no Flush (FlushFileBuffers waits too).
