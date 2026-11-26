@@ -47,7 +47,9 @@ public sealed class PacketSinkEnqueueRouteTests : IDisposable
         SpinWait.SpinUntil(() => sink.IsHealthy, RecoveryTimeoutMs).Should().BeTrue("TryRecoverBackend must reopen the file after the backoff");
         sink.Stop(drainTimeoutMs: 1_000);
 
-        File.ReadAllBytes(Path.Combine(dir, "route-20261125.0000.log")).Should().Equal(header);
+        var path = Path.Combine(dir, "route-20261125.0000.log");
+        SpinWait.SpinUntil(() => ReadShared(path).AsSpan().SequenceEqual(header), TimeoutMs).Should().BeTrue("the reopened file holds only the header");
+        ReadShared(path).Should().Equal(header);
     }
 
     /// <summary>
@@ -70,7 +72,8 @@ public sealed class PacketSinkEnqueueRouteTests : IDisposable
         sink.Stop(drainTimeoutMs: 1_000);
 
         byte[] expected = [.. first, .. second];
-        File.ReadAllBytes(path).Should().Equal(expected);
+        SpinWait.SpinUntil(() => ReadShared(path).AsSpan().SequenceEqual(expected), TimeoutMs).Should().BeTrue("the consumer's final flush appends the second payload");
+        ReadShared(path).Should().Equal(expected);
     }
 
     // The sink holds the file open for write: read with FileShare.ReadWrite.

@@ -48,8 +48,9 @@ public sealed class PacketSinkEnqueueHttpBatchRouteTests
         firstPost.Body.Should().Equal(first);
         sink.Stop(drainTimeoutMs: 2_000);
 
+        SpinWait.SpinUntil(() => received.Count >= 2, TimeoutMs).Should().BeTrue("the consumer's final flush posts the second batch");
         var posts = received.ToArray();
-        posts.Should().HaveCount(2, "the consumer's final flush posts the second batch");
+        posts.Should().HaveCount(2);
         posts[1].Body.Should().Equal(second);
     }
 
@@ -70,6 +71,7 @@ public sealed class PacketSinkEnqueueHttpBatchRouteTests
         sink.Enqueue(payload);
         sink.Stop(drainTimeoutMs: 2_000);
 
+        SpinWait.SpinUntil(() => received.Count >= 1, TimeoutMs).Should().BeTrue("the consumer loop flushes the batch");
         var posts = received.ToArray();
         posts.Should().ContainSingle("the consumer loop flushes the batch once");
         posts[0].Path.Should().Be(SeqPath);

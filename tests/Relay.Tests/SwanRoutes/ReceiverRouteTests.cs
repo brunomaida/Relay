@@ -74,13 +74,10 @@ public sealed class ReceiverRouteTests : IDisposable
         fallback.Stop(drainTimeoutMs: 2_000);
         primary.Stop(drainTimeoutMs: 2_000);
 
-        byte[] drained = File.ReadAllBytes(primaryPath);
-        drained.Should().NotBeEmpty("the fallback's backlog beyond one batch must drain to Prev");
-        byte[] kept    = File.ReadAllBytes(fallbackPath);
-        var delivered = new byte[kept.Length + drained.Length];
-        kept.CopyTo(delivered, 0);
-        drained.CopyTo(delivered, kept.Length);
-        delivered.Should().Equal(Frames(first: 1, count: BacklogFrames));
+        byte[] expected = Frames(first: 1, count: BacklogFrames);
+        SpinWait.SpinUntil(() => Delivered(fallbackPath, primaryPath).AsSpan().SequenceEqual(expected), TimeoutMs).Should().BeTrue("every backlog frame lands once, in order, across the fallback and primary files");
+        ReadShared(primaryPath).Should().NotBeEmpty("the fallback's backlog beyond one batch must drain to Prev");
+        Delivered(fallbackPath, primaryPath).Should().Equal(expected);
     }
 
     /// <summary>
@@ -104,7 +101,30 @@ public sealed class ReceiverRouteTests : IDisposable
         SpinWait.SpinUntil(() => receiver.Poll(), TimeoutMs).Should().BeTrue("Poll returns once the datagram arrives");
         sink.Stop(drainTimeoutMs: 1_000);
 
-        File.ReadAllBytes(Path.Combine(_dir, "route-20261125.0000.log")).Should().Equal(payload);
+        var path = Path.Combine(_dir, "route-20261125.0000.log");
+        SpinWait.SpinUntil(() => ReadShared(path).AsSpan().SequenceEqual(payload), TimeoutMs).Should().BeTrue("the consumer's final flush lands the payload");
+        ReadShared(path).Should().Equal(payload);
+    }
+
+    // The sink may still hold the file open for write after Stop (Join result ignored): read with FileShare.ReadWrite.
+    private static byte[] ReadShared(string path)
+    {
+        if (!File.Exists(path)) return [];
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        var bytes = new byte[stream.Length];
+        stream.ReadExactly(bytes);
+        return bytes;
+    }
+
+    // The fallback's kept bytes followed by the bytes it drained to the primary.
+    private static byte[] Delivered(string keptPath, string drainedPath)
+    {
+        byte[] kept    = ReadShared(keptPath);
+        byte[] drained = ReadShared(drainedPath);
+        var delivered  = new byte[kept.Length + drained.Length];
+        kept.CopyTo(delivered, 0);
+        drained.CopyTo(delivered, kept.Length);
+        return delivered;
     }
 
     // Blocks until Poll reads: NamedPipeReceiver's server pipe has no in-buffer on Windows; no Flush (FlushFileBuffers waits too).

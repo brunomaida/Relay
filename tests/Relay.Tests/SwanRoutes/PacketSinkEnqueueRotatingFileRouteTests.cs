@@ -46,7 +46,8 @@ public sealed class PacketSinkEnqueueRotatingFileRouteTests : IDisposable
         sink.Stop(drainTimeoutMs: 1_000);
 
         byte[] expected = [.. Header, .. First];
-        File.ReadAllBytes(FilePath(0)).Should().Equal(expected);
+        SpinWait.SpinUntil(() => Holds(FilePath(0), expected), TimeoutMs).Should().BeTrue("the consumer's final flush lands the payload after the header");
+        ReadShared(FilePath(0)).Should().Equal(expected);
     }
 
     /// <summary>
@@ -67,7 +68,8 @@ public sealed class PacketSinkEnqueueRotatingFileRouteTests : IDisposable
         sink.Stop(drainTimeoutMs: 1_000);
 
         byte[] expected = [.. First, .. Second];
-        File.ReadAllBytes(FilePath(0)).Should().Equal(expected);
+        SpinWait.SpinUntil(() => Holds(FilePath(0), expected), TimeoutMs).Should().BeTrue("the consumer's final flush appends the second payload");
+        ReadShared(FilePath(0)).Should().Equal(expected);
     }
 
     /// <summary>
@@ -85,8 +87,9 @@ public sealed class PacketSinkEnqueueRotatingFileRouteTests : IDisposable
         sink.Enqueue(Second);
         sink.Stop(drainTimeoutMs: 1_000);
 
-        File.ReadAllBytes(FilePath(0)).Should().Equal(First);
-        File.ReadAllBytes(FilePath(1)).Should().Equal(Second);
+        SpinWait.SpinUntil(() => Holds(FilePath(0), First) && Holds(FilePath(1), Second), TimeoutMs).Should().BeTrue("RotateNow flushes the first payload to the old file; the final flush lands the second in the next");
+        ReadShared(FilePath(0)).Should().Equal(First);
+        ReadShared(FilePath(1)).Should().Equal(Second);
     }
 
     /// <summary>
@@ -108,8 +111,9 @@ public sealed class PacketSinkEnqueueRotatingFileRouteTests : IDisposable
 
         byte[] expectedOld  = [.. Header, .. first];
         byte[] expectedNext = [.. Header, .. second];
-        File.ReadAllBytes(FilePath(0)).Should().Equal(expectedOld);
-        File.ReadAllBytes(FilePath(1)).Should().Equal(expectedNext);
+        SpinWait.SpinUntil(() => Holds(FilePath(0), expectedOld) && Holds(FilePath(1), expectedNext), TimeoutMs).Should().BeTrue("RotateNow opens the next file with its header; the final flush lands the second payload");
+        ReadShared(FilePath(0)).Should().Equal(expectedOld);
+        ReadShared(FilePath(1)).Should().Equal(expectedNext);
     }
 
     /// <summary>
@@ -127,11 +131,15 @@ public sealed class PacketSinkEnqueueRotatingFileRouteTests : IDisposable
         sink.Enqueue(Second);
         sink.Stop(drainTimeoutMs: 1_000);
 
+        SpinWait.SpinUntil(() => !File.Exists(FilePath(0)) && Holds(FilePath(1), Second), TimeoutMs).Should().BeTrue("Cleanup deletes the rotated-out file; the final flush lands the second payload");
         File.Exists(FilePath(0)).Should().BeFalse("Cleanup keeps only the newest file");
-        File.ReadAllBytes(FilePath(1)).Should().Equal(Second);
+        ReadShared(FilePath(1)).Should().Equal(Second);
     }
 
     private string FilePath(int seq) => Path.Combine(_dir, $"route-20261125.{seq:D4}.log");
+
+    // Stop ignores its Join result: the final flush can land after Stop returns.
+    private static bool Holds(string path, byte[] expected) => ReadShared(path).AsSpan().SequenceEqual(expected);
 
     // The sink holds the file open for write: read with FileShare.ReadWrite.
     private static byte[] ReadShared(string path)
