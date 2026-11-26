@@ -1,1 +1,207 @@
-[]
+[
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueTcpRouteTests.cs::Enqueue_TcpSinkFrameOverflowsSendBuffer_WriteToBackendSendsFirstFrame",
+    "route": "rl1",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/UdpSinkTests.cs::Enqueue_PayloadDeliveredAsDatagram_NoLengthPrefix",
+    "route": "rl2",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/Sinks/RotatingFileSinkTests.cs::Accept_PayloadLargerThanBuffer_BypassesBuffer",
+    "route": "rl3",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueuePipeRouteTests.cs::Enqueue_NamedPipeSinkFrameExceedsSendBuffer_WriteToBackendWritesFrame",
+    "route": "rl5",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueUnixSocketRouteTests.cs::Enqueue_UnixSocketSinkConsumer_PeerReceivesFramedPayload",
+    "route": "rp25",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueHttpBatchRouteTests.cs::Enqueue_SeqSinkEventOverflowsBatch_WriteToBackendPostsFirstBatch",
+    "route": "rp29",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueUnixSocketRouteTests.cs::Enqueue_UnixSocketSinkFrameOverflowsSendBuffer_WriteToBackendSendsFirstFrame",
+    "route": "scan.in.app.out.ipc.2fee9b0f",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueUnixSocketRouteTests.cs::Enqueue_UnixSocketSinkFrameFitsSendBuffer_ConsumerFlushSendsFrame",
+    "route": "scan.in.app.out.ipc.f978dc96",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/ReceiverSharedMemoryRouteTests.cs::Poll_NamedPipeIntoSharedMemorySink_SharedMemoryReceiverCallbackGetsFrame",
+    "route": "scan.in.app.out.relay.packetcallback.invoke.8006079c",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/FilterSinkPacketTests.cs::Accept_MatchingPayload_RoutesToDownstream",
+    "route": "scan.in.app.out.relay.packetpredicate.invoke.9e74b512",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueHttpBatchRouteTests.cs::Enqueue_SeqSinkEventFitsBatch_ConsumerFlushPostsBatch",
+    "route": "scan.in.app.out.seq.eb202b39",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueRotatingFileRouteTests.cs::Enqueue_RotatingFileSinkRetentionOfOne_CleanupDeletesRotatedFile",
+    "route": "scan.in.app.out.system.io.file.delete.74b74c96",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueRotatingFileRouteTests.cs::Enqueue_RotatingFileSinkFirstWrite_TryOpenStreamWritesHeader",
+    "route": "scan.in.app.out.system.io.filestream.write.047f36f6",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/FileSinkTests.cs::Start_WithHeader_HeaderWrittenBeforePayloads",
+    "route": "scan.in.app.out.system.io.filestream.write.162f6df1",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueRouteTests.cs::Enqueue_FileSinkPayloadOverflowsWriteBuffer_WriteToBackendFlushesFirstPayload",
+    "route": "scan.in.app.out.system.io.filestream.write.1f4d3790",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/FileSinkTests.cs::Enqueue_PayloadWrittenToFile",
+    "route": "scan.in.app.out.system.io.filestream.write.56c73616",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueRotatingFileRouteTests.cs::Enqueue_RotatingFileSinkPayloadOverflowsWriteBuffer_WriteToBackendFlushesFirstPayload",
+    "route": "scan.in.app.out.system.io.filestream.write.6c4e263f",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueRotatingFileRouteTests.cs::Enqueue_RotatingFileSinkSizeRotation_RotateNowFlushesBufferedPayloadToOldFile",
+    "route": "scan.in.app.out.system.io.filestream.write.8a298010",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/Sinks/RotatingFileSinkTests.cs::Enqueue_BelowMaxBytes_NoRotation",
+    "route": "scan.in.app.out.system.io.filestream.write.8b0947dd",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueRouteTests.cs::Enqueue_RotatingFileSinkBackendRestored_RecoveryReopensFileWithHeader",
+    "route": "scan.in.app.out.system.io.filestream.write.c4f42784",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueRotatingFileRouteTests.cs::Enqueue_RotatingFileSinkSizeRotation_RotateNowOpensNextFileWithHeader",
+    "route": "scan.in.app.out.system.io.filestream.write.e68a1fc2",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/FileSinkTests.cs::Accept_PayloadLargerThanBuffer_BypassesBuffer",
+    "route": "scan.in.app.out.system.io.filestream.write.e872f557",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/ReceiverTcpRouteTests.cs::Poll_NamedPipeSinkServerRestored_RecoveryConnectDeliversFrame",
+    "route": "scan.in.app.out.system.io.pipes.namedpipeclientstream.connect.cc2fb93e",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueuePipeRouteTests.cs::Enqueue_NamedPipeSinkFrameFitsSendBuffer_ConsumerFlushWritesFrame",
+    "route": "scan.in.app.out.system.io.pipes.pipestream.write.3763d85d",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueuePipeRouteTests.cs::Enqueue_NamedPipeSinkFrameOverflowsSendBuffer_WriteToBackendFlushesFirstFrame",
+    "route": "scan.in.app.out.system.io.pipes.pipestream.write.ce87e2b8",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueUnixSocketRouteTests.cs::Enqueue_UnixSocketSinkListenerRestored_RecoveryConnectDeliversFrame",
+    "route": "scan.in.app.out.system.net.sockets.socket.connect.42de01c1",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueUdpRouteTests.cs::Enqueue_UdpSinkOversizedPayload_RecoveryCreatesSocketAndDeliversNextDatagram",
+    "route": "scan.in.app.out.system.net.sockets.socket.connect.7bdfa44c",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueTcpRouteTests.cs::Enqueue_TcpSinkListenerRestored_RecoveryConnectDeliversFrame",
+    "route": "scan.in.app.out.system.net.sockets.socket.connect.f74d0a9a",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkEnqueueTcpRouteTests.cs::Enqueue_TcpSinkFrameFitsSendBuffer_ConsumerFlushSendsFrame",
+    "route": "scan.in.app.out.tcp.f088d710",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/DrainRouteTests.cs::Enqueue_SerializeSinkIntoFileSink_WriteToBackendWritesRecord",
+    "route": "scan.in.relay.dispatchsink-1.enqueue.-0-.out.system.io.filestream.write.0da4d73d",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkTryEnqueueDrainRouteTests.cs::TryEnqueue_SpscFallbackBacklogDrainsToFilterPrev_PredicateDiscardsDrainedFrames",
+    "route": "scan.in.relay.packetsink.tryenqueue.system.readonlyspan-system.byte-.out.relay.packetpredicate.invoke.1ca71dc5",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkTryEnqueueRouteTests.cs::TryEnqueue_MultiSinkIntoFileSink_WritesPayloadToFile",
+    "route": "scan.in.relay.packetsink.tryenqueue.system.readonlyspan-system.byte-.out.system.io.filestream.write.1ef02571",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkTryEnqueueRouteTests.cs::TryEnqueue_ForkSinkIntoFileSink_WritesPayloadToFile",
+    "route": "scan.in.relay.packetsink.tryenqueue.system.readonlyspan-system.byte-.out.system.io.filestream.write.2f7ed61b",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkTryEnqueueDrainRouteTests.cs::TryEnqueue_MpscFallbackBacklogDrainsToFileSinkPrev_WritesDrainedFramesToPrimaryFile",
+    "route": "scan.in.relay.packetsink.tryenqueue.system.readonlyspan-system.byte-.out.system.io.filestream.write.648cbaf0",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkTryEnqueueRouteTests.cs::TryEnqueue_Multi2PacketSinkIntoFileSinks_WritesPayloadToBothFiles",
+    "route": "scan.in.relay.packetsink.tryenqueue.system.readonlyspan-system.byte-.out.system.io.filestream.write.64a355c8",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkTryEnqueueDrainRouteTests.cs::TryEnqueue_MpscFallbackConsumerDrainsBacklogToFileSinkPrev_WritesDrainedFramesToPrimaryFile",
+    "route": "scan.in.relay.packetsink.tryenqueue.system.readonlyspan-system.byte-.out.system.io.filestream.write.9dd18763",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/PacketSinkTryEnqueueRouteTests.cs::TryEnqueue_FilterSinkMatchingPayloadIntoFileSink_WritesPayloadToFile",
+    "route": "scan.in.relay.packetsink.tryenqueue.system.readonlyspan-system.byte-.out.system.io.filestream.write.d3fcfe15",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/DrainRouteTests.cs::DrainTo_TypedMemorySinkIntoSerializeSink_WriteToBackendWritesRecords",
+    "route": "scan.in.relay.sinks.memorysink-1.drainto.relay.dispatchsink--0-.out.system.io.filestream.write.c53223d5",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/DrainRouteTests.cs::DrainTo_PacketMemorySinkIntoFileSink_WriteToBackendWritesPayloads",
+    "route": "scan.in.relay.sinks.memorysink.drainto.relay.packetsink.out.system.io.filestream.write.fe0f149a",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/DrainRouteTests.cs::EnqueueBatch_UnhealthyHeadFallsBackToSerializeSink_WriteToBackendWritesRecords",
+    "route": "scan.in.relay.spscqueuesink-1.enqueuebatch.system.readonlyspan--0-.out.system.io.filestream.write.56b91a52",
+    "level": "flow"
+  },
+  {
+    "test": "Libs/Relay/tests/Relay.Tests/SwanRoutes/DrainCleanupRouteTests.cs::Enqueue_RotatingFileSinkSizeRotationWithOlderFilesListed_CleanupDeletesListedOlderFiles",
+    "route": "scan.in.system.io.directory.getfiles.out.system.io.file.delete.0068d74a",
+    "level": "flow"
+  }
+]
